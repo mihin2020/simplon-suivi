@@ -1,0 +1,108 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source "../**/*.blade.php";
+@source "../**/*.js";
+@source "../**/*.vue";
+
+@theme {
+    /* === Simplon BF — Design System (Material Design 3) === */
+
+    /* Primary — couleurs officielles Simplon Burkina Faso */
+    --color-primary: #E5004C;
+    --color-on-primary: #ffffff;
+    --color-primary-container: #b8003c;
+    --color-on-primary-container: #ffdcd7;
+    --color-primary-fixed: #ffdad4;
+    --color-primary-fixed-dim: #ffb4a8;
+    --color-on-primary-fixed: #410000;
+    --color-on-primary-fixed-variant: #930000;
+    --color-inverse-primary: #ffb4a8;
+
+    /* Secondary */
+    --color-secondary: #515f74;
+    --color-on-secondary: #ffffff;
+    --color-secondary-container: #d5e3fd;
+    --color-on-secondary-container: #57657b;
+    --color-secondary-fixed: #d5e3fd;
+    --color-secondary-fixed-dim: #b9c7e0;
+    --color-on-secondary-fixed: #1F3A4D;
+    --color-on-secondary-fixed-variant: #3a485c;
+
+    /* Tertiary */
+    --color-tertiary: #454d63;
+    --color-on-tertiary: #ffffff;
+    --color-tertiary-container: #5d657c;
+    --color-on-tertiary-container: #dce3fe;
+    --color-tertiary-fixed: #dae2fd;
+    --color-tertiary-fixed-dim: #bec6e0;
+    --color-on-tertiary-fixed: #131b2e;
+    --color-on-tertiary-fixed-variant: #3f465c;
+
+    /* Error */
+    --color-error: #ba1a1a;
+    --color-on-error: #ffffff;
+    --color-error-container: #ffdad6;
+    --color-on-error-container: #93000a;
+
+    /* Surface */
+    --color-surface: #f7f9fb;
+    --color-on-surface: #191c1e;
+    --color-surface-variant: #e0e3e5;
+    --color-on-surface-variant: #5e3f3a;
+    --color-surface-container-lowest: #ffffff;
+    --color-surface-container-low: #f2f4f6;
+    --color-surface-container: #eceef0;
+    --color-surface-container-high: #e6e8ea;
+    --color-surface-container-highest: #e0e3e5;
+    --color-surface-bright: #f7f9fb;
+    --color-surface-dim: #d8dadc;
+    --color-surface-tint: #c00000;
+
+    /* Background */
+    --color-background: #f7f9fb;
+    --color-on-background: #191c1e;
+
+    /* Outline */
+    --color-outline: #936e69;
+    --color-outline-variant: #e8bdb6;
+
+    /* Inverse */
+    --color-inverse-surface: #2d3133;
+    --color-inverse-on-surface: #eff1f3;
+
+    /* Spacing scale (matches mockups) */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --spacing-gutter: 20px;
+    --spacing-container-margin: 40px;
+
+    /* Font */
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+    /* Typography scale */
+    --text-h1: 32px;
+    --text-h1--line-height: 40px;
+    --text-h2: 24px;
+    --text-h2--line-height: 32px;
+    --text-h3: 20px;
+    --text-h3--line-height: 28px;
+    --text-body-lg: 16px;
+    --text-body-lg--line-height: 24px;
+    --text-body-md: 14px;
+    --text-body-md--line-height: 20px;
+    --text-body-sm: 12px;
+    --text-body-sm--line-height: 16px;
+    --text-label-caps: 11px;
+    --text-label-caps--line-height: 16px;
+    --text-data-tabular: 13px;
+    --text-data-tabular--line-height: 18px;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+}
