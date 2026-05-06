@@ -11,6 +11,11 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call([
+            EducationLevelSeeder::class,
+            PermissionSeeder::class,
+        ]);
+
         User::firstOrCreate(
             ['email' => 'superadmin@simplon.bf'],
             [
