@@ -1,0 +1,74 @@
+<?php
+
+namespace App\Models;
+
+use App\Enums\FormationStatus;
+use App\Enums\LearnerStatus;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Formation extends Model
+{
+    use HasFactory, HasUuids, SoftDeletes;
+
+    protected $fillable = [
+        'project_id',
+        'name',
+        'description',
+        'started_at',
+        'ended_at',
+        'status',
+        'capacity',
+        'location',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'started_at' => 'date',
+            'ended_at'   => 'date',
+            'status'     => FormationStatus::class,
+            'capacity'   => 'integer',
+        ];
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function learners(): BelongsToMany
+    {
+        return $this->belongsToMany(Learner::class)
+            ->withPivot(['status', 'enrolled_at', 'withdrawn_at', 'completed_at', 'notes'])
+            ->withTimestamps();
+    }
+
+    public function activeLearners(): BelongsToMany
+    {
+        return $this->learners()->wherePivot('status', LearnerStatus::InProgress->value);
+    }
+
+    public function trainers(): BelongsToMany
+    {
+        return $this->belongsToMany(Trainer::class)
+            ->withPivot(['is_lead', 'assigned_at'])
+            ->withTimestamps();
+    }
+
+    public function attendances(): HasMany
+    {
+        return $this->hasMany(Attendance::class);
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('status', FormationStatus::Active);
+    }
+}
