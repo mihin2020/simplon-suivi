@@ -12,8 +12,8 @@ class TrainerProfileController extends Controller
 {
     public function index(): Response
     {
-        return Inertia::render('TrainerProfiles/Index', [
-            'profiles' => TrainerProfile::orderBy('name')->get(),
+        return Inertia::render('Configuration/Index', [
+            'trainerProfiles' => TrainerProfile::orderBy('name')->get(['id', 'name']),
         ]);
     }
 

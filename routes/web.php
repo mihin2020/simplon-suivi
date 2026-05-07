@@ -11,21 +11,25 @@ use App\Http\Controllers\Learner\ImportLearnerController;
 use App\Http\Controllers\Learner\MoveLearnerController;
 use App\Http\Controllers\Learner\WithdrawLearnerController;
 use App\Http\Controllers\PartnerController;
+use App\Http\Controllers\ConfigurationController;
+use App\Http\Controllers\PresenceRedirectController;
 use App\Http\Controllers\TrainerProfileController;
 use App\Http\Controllers\ReferentielController;
 use App\Http\Controllers\LearnerController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TrainerController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes (invités uniquement)
 Route::middleware('guest')->group(function () {
     Route::get('/connexion', [LoginController::class, 'create'])->name('login');
     Route::post('/connexion', [LoginController::class, 'store']);
-
-    Route::get('/activation/{token}', [ActivationController::class, 'show'])->name('activation.show');
-    Route::post('/activation/{token}', [ActivationController::class, 'store'])->name('activation.store');
 });
+
+// Activation de compte — accessible sans être connecté (lien email)
+Route::get('/activation/{token}', [ActivationController::class, 'show'])->name('activation.show');
+Route::post('/activation/{token}', [ActivationController::class, 'store'])->name('activation.store');
 
 Route::post('/deconnexion', [LoginController::class, 'destroy'])
     ->name('logout')
@@ -34,6 +38,11 @@ Route::post('/deconnexion', [LoginController::class, 'destroy'])
 // Routes protégées
 Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Users (gestion des comptes — Super Admin)
+    Route::resource('users', UserController::class)->except(['show']);
+    Route::patch('users/{user}/toggle-active', [UserController::class, 'toggleActive'])
+        ->name('users.toggle-active');
 
     // Projects
     Route::resource('projects', ProjectController::class);
@@ -78,6 +87,12 @@ Route::middleware('auth')->group(function () {
         ->name('trainers.assign-formation');
     Route::delete('trainers/{trainer}/unassign-formation/{formation}', [TrainerController::class, 'unassignFormation'])
         ->name('trainers.unassign-formation');
+    // Présences — redirection selon le rôle
+    Route::get('presences', PresenceRedirectController::class)->name('presences');
+
+    // Configuration hub
+    Route::get('configuration', [ConfigurationController::class, 'index'])->name('configuration');
+
     Route::resource('trainer-profiles', TrainerProfileController::class)
         ->except(['create', 'edit', 'show']);
 

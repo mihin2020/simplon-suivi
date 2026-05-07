@@ -106,6 +106,7 @@ const closeModal = () => {
 const onProjectChange = async () => {
     if (!selectedProject.value) {
         availableFormations.value = []
+        assignForm.formation_ids = []
         return
     }
 
@@ -114,12 +115,22 @@ const onProjectChange = async () => {
         const response = await fetch(`/api/projects/${selectedProject.value}/formations`)
         if (response.ok) {
             availableFormations.value = await response.json()
+
+            // Pré-cocher les formations déjà assignées au formateur (pour ce projet)
+            const assignedIds = selectedTrainer.value?.formations.map(f => f.id) ?? []
+            assignForm.formation_ids = availableFormations.value
+                .filter(f => assignedIds.includes(f.id))
+                .map(f => f.id)
         }
     } catch (error) {
         console.error('Erreur lors du chargement des formations:', error)
     } finally {
         loadingFormations.value = false
     }
+}
+
+const isAlreadyAssigned = (formationId: string) => {
+    return selectedTrainer.value?.formations.some(f => f.id === formationId) ?? false
 }
 
 const submitAssign = () => {
@@ -354,6 +365,10 @@ const isFormationSelected = (formationId: string) => {
                                     <span class="formation-info-name">{{ f.name }}</span>
                                     <span class="formation-info-period">{{ f.period }}</span>
                                 </span>
+                                <span v-if="isAlreadyAssigned(f.id)" class="already-assigned-badge">
+                                    <span class="material-symbols-outlined" style="font-size:12px">check_circle</span>
+                                    Déjà assignée
+                                </span>
                             </label>
                         </div>
                         <p v-if="assignForm.errors.formation_ids" class="error-msg">{{ assignForm.errors.formation_ids }}</p>
@@ -539,6 +554,18 @@ const isFormationSelected = (formationId: string) => {
 .formation-info-period {
     font-size: 11px;
     color: #9aaabb;
+}
+.already-assigned-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 8px;
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
 }
 
 /* Barre de recherche */

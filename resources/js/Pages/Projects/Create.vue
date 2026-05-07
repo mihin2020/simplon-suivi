@@ -278,10 +278,9 @@ select.input { appearance: none; cursor: pointer; }
 
 /* Dropdown */
 .partner-dropdown {
-    position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
     background: #fff; border: 1px solid #E5004C; border-top: none;
     border-bottom-left-radius: 8px; border-bottom-right-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.04);
     max-height: 240px; overflow-y: auto;
 }
 .partner-empty {

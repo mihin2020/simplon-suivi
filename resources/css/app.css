@@ -103,6 +103,11 @@
     --text-data-tabular--line-height: 18px;
 }
 
+html, body {
+    overflow: hidden;
+    height: 100%;
+}
+
 body {
     font-family: 'Inter', sans-serif;
 }

@@ -3,16 +3,23 @@ import { Link, usePage, router } from '@inertiajs/vue3'
 
 const page = usePage()
 
-const navItems = [
-    { label: 'Tableau de Bord', icon: 'dashboard',   href: '/',             prefix: 'Dashboard/' },
-    { label: 'Projets',         icon: 'folder_open',  href: '/projects',     prefix: 'Projects/' },
-    { label: 'Apprenants',      icon: 'group',         href: '/learners',     prefix: 'Learners/' },
-    { label: 'Formateurs',      icon: 'school',        href: '/trainers',     prefix: 'Trainers/' },
-    { label: 'Présences',       icon: 'fact_check',    href: '/projects',      prefix: 'Attendances/' },
-    { label: 'Partenaires',     icon: 'handshake',     href: '/partners',      prefix: 'Partners/' },
-    { label: 'Référentiels',    icon: 'menu_book',     href: '/referentiels',  prefix: 'Referentiels/' },
-    { label: 'Communication',   icon: 'chat',          href: '/communication', prefix: 'Communication/' },
+const userRole   = (page.props.auth as any).user?.role as string | undefined
+const isSuperAdmin = userRole === 'super_admin'
+const isTrainer    = userRole === 'trainer'
+
+const allNavItems = [
+    { label: 'Tableau de Bord', icon: 'dashboard',            href: '/',             prefix: 'Dashboard/',      roles: ['super_admin', 'admin', 'trainer'] },
+    { label: 'Utilisateurs',    icon: 'admin_panel_settings', href: '/users',         prefix: 'Users/',          roles: ['super_admin'] },
+    { label: 'Projets',         icon: 'folder_open',          href: '/projects',      prefix: 'Projects/',       roles: ['super_admin', 'admin'] },
+    { label: 'Apprenants',      icon: 'group',                href: '/learners',      prefix: 'Learners/',       roles: ['super_admin', 'admin'] },
+    { label: 'Formateurs',      icon: 'school',               href: '/trainers',      prefix: 'Trainers/',       roles: ['super_admin', 'admin'] },
+    { label: 'Présences',       icon: 'fact_check',            href: '/presences',     prefix: 'Attendances/',    roles: ['super_admin', 'admin', 'trainer'] },
+    { label: 'Partenaires',     icon: 'handshake',             href: '/partners',      prefix: 'Partners/',       roles: ['super_admin', 'admin'] },
+    { label: 'Référentiels',    icon: 'menu_book',             href: '/referentiels',  prefix: 'Referentiels/',   roles: ['super_admin', 'admin'] },
+    { label: 'Communication',   icon: 'chat',                  href: '/communication', prefix: 'Communication/',  roles: ['super_admin', 'admin'] },
 ]
+
+const navItems = allNavItems.filter(item => !userRole || item.roles.includes(userRole))
 
 const isActive = (prefix: string) =>
     page.component === prefix.replace('/', '/Index') || page.component.startsWith(prefix)
@@ -54,7 +61,7 @@ const logout = () => router.post('/deconnexion')
                     class="text-secondary-fixed-dim pl-5 py-sm flex items-center gap-md hover:text-on-secondary hover:bg-white/5 transition-colors duration-200 ease-in-out"
                 >
                     <span class="material-symbols-outlined">settings</span>
-                    Paramètres
+                    Configuration
                 </Link>
                 <button
                     @click="logout"

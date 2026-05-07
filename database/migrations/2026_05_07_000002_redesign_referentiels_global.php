@@ -35,9 +35,23 @@ return new class extends Migration
         });
 
         // Step 4: Drop formation_id from referentiels.
-        // On SQLite, the unique index must be dropped separately before the column.
+        // Must drop FK constraint first, then index, then column.
         if (Schema::hasColumn('referentiels', 'formation_id')) {
-            DB::statement('DROP INDEX IF EXISTS referentiels_formation_id_unique');
+            // Drop foreign key constraint first (Laravel naming convention)
+            try {
+                Schema::table('referentiels', function (Blueprint $table) {
+                    $table->dropForeign('referentiels_formation_id_foreign');
+                });
+            } catch (\Exception $e) {
+                // FK may not exist, continue
+            }
+            // Drop unique index if exists
+            try {
+                DB::statement('DROP INDEX referentiels_formation_id_unique ON referentiels');
+            } catch (\Exception $e) {
+                // Index may not exist, continue
+            }
+            // Finally drop the column
             Schema::table('referentiels', function (Blueprint $table) {
                 $table->dropColumn('formation_id');
             });
