@@ -111,4 +111,12 @@ Route::middleware('auth')->group(function () {
         ->name('attendances.index');
     Route::post('formations/{formation}/attendances', [AttendanceController::class, 'store'])
         ->name('attendances.store');
+    Route::post('formations/{formation}/attendances/single', [AttendanceController::class, 'storeSingle'])
+        ->name('attendances.store-single');
+    Route::get('formations/{formation}/attendances/recap', [AttendanceController::class, 'recap'])
+        ->name('attendances.recap');
+    Route::get('formations/{formation}/attendances/pdf', [AttendanceController::class, 'pdf'])
+        ->name('attendances.pdf');
+    Route::get('formations/{formation}/attendances/pdf-recap', [AttendanceController::class, 'pdfRecap'])
+        ->name('attendances.pdf-recap');
 });
