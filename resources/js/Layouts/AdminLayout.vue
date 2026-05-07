@@ -4,15 +4,18 @@ import { Link, usePage, router } from '@inertiajs/vue3'
 const page = usePage()
 
 const navItems = [
-    { label: 'Tableau de Bord', icon: 'dashboard', href: '/', component: 'Dashboard/Index' },
-    { label: 'Formations', icon: 'school', href: '/formations', component: 'Formations/Index' },
-    { label: 'Apprenants', icon: 'group', href: '/apprenants', component: 'Learners/Index' },
-    { label: 'Présences', icon: 'fact_check', href: '/presences', component: 'Attendances/Index' },
-    { label: 'Insertion', icon: 'work_history', href: '/insertion', component: 'Insertion/Index' },
-    { label: 'Communication', icon: 'chat', href: '/communication', component: 'Communication/Index' },
+    { label: 'Tableau de Bord', icon: 'dashboard',   href: '/',             prefix: 'Dashboard/' },
+    { label: 'Projets',         icon: 'folder_open',  href: '/projects',     prefix: 'Projects/' },
+    { label: 'Apprenants',      icon: 'group',         href: '/learners',     prefix: 'Learners/' },
+    { label: 'Formateurs',      icon: 'school',        href: '/trainers',     prefix: 'Trainers/' },
+    { label: 'Présences',       icon: 'fact_check',    href: '/projects',      prefix: 'Attendances/' },
+    { label: 'Partenaires',     icon: 'handshake',     href: '/partners',      prefix: 'Partners/' },
+    { label: 'Référentiels',    icon: 'menu_book',     href: '/referentiels',  prefix: 'Referentiels/' },
+    { label: 'Communication',   icon: 'chat',          href: '/communication', prefix: 'Communication/' },
 ]
 
-const isActive = (component: string) => page.component === component
+const isActive = (prefix: string) =>
+    page.component === prefix.replace('/', '/Index') || page.component.startsWith(prefix)
 
 const logout = () => router.post('/deconnexion')
 </script>
@@ -31,17 +34,13 @@ const logout = () => router.post('/deconnexion')
             </div>
 
             <!-- Nav items -->
-            <nav class="flex-1 overflow-y-auto text-body-md flex flex-col gap-xs">
+            <nav class="flex-1 overflow-y-auto flex flex-col gap-xs">
                 <Link
                     v-for="item in navItems"
                     :key="item.href"
                     :href="item.href"
-                    :class="[
-                        'flex items-center gap-md py-sm transition-all duration-200 ease-in-out',
-                        isActive(item.component)
-                            ? 'text-on-secondary border-l-4 border-primary pl-4 bg-primary/10'
-                            : 'text-secondary-fixed-dim pl-5 hover:text-on-secondary hover:bg-white/5',
-                    ]"
+                    class="nav-link"
+                    :class="isActive(item.prefix) ? 'nav-active' : 'nav-inactive'"
                 >
                     <span class="material-symbols-outlined">{{ item.icon }}</span>
                     {{ item.label }}
@@ -112,6 +111,22 @@ const logout = () => router.post('/deconnexion')
                 {{ $page.props.flash.success }}
             </div>
 
+            <div
+                v-if="$page.props.flash.warning"
+                class="fixed top-20 right-4 z-50 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg px-md py-sm text-body-sm flex items-center gap-sm shadow-sm"
+            >
+                <span class="material-symbols-outlined text-amber-700" style="font-size: 18px;">warning</span>
+                {{ $page.props.flash.warning }}
+            </div>
+
+            <div
+                v-if="$page.props.flash.error"
+                class="fixed top-20 right-4 z-50 bg-rose-50 border border-rose-200 text-rose-900 rounded-lg px-md py-sm text-body-sm flex items-center gap-sm shadow-sm"
+            >
+                <span class="material-symbols-outlined text-rose-700" style="font-size: 18px;">error</span>
+                {{ $page.props.flash.error }}
+            </div>
+
             <!-- Page content -->
             <main class="flex-1 overflow-y-auto mt-16 p-xl bg-background">
                 <slot />
@@ -119,3 +134,30 @@ const logout = () => router.post('/deconnexion')
         </div>
     </div>
 </template>
+
+<style scoped>
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 0;
+    font-size: 14px;
+    line-height: 20px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+.nav-active {
+    color: #ffffff;
+    border-left: 4px solid #E5004C;
+    padding-left: 16px;
+    background: rgba(229, 0, 76, 0.1);
+}
+.nav-inactive {
+    color: #b9c7e0;
+    padding-left: 20px;
+}
+.nav-inactive:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
+}
+</style>

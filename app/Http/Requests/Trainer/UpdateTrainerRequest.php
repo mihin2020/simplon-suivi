@@ -14,9 +14,12 @@ class UpdateTrainerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'specialty' => ['nullable', 'string', 'max:255'],
-            'phone'     => ['nullable', 'string', 'max:20'],
-            'is_active' => ['required', 'boolean'],
+            'profile_id' => ['nullable', 'uuid', 'exists:trainer_profiles,id'],
+            'phone'      => ['nullable', 'string', 'max:20'],
+            'phone2'     => ['nullable', 'string', 'max:20'],
+            'cv'         => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
+            'remove_cv'  => ['nullable', 'boolean'],
+            'is_active'  => ['nullable', 'boolean'],
         ];
     }
 }

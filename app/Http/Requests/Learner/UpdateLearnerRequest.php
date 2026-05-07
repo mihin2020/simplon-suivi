@@ -28,6 +28,8 @@ class UpdateLearnerRequest extends FormRequest
             'emergency_contact_name'      => ['nullable', 'string', 'max:255'],
             'emergency_contact_firstname' => ['nullable', 'string', 'max:255'],
             'emergency_contact_phone'     => ['nullable', 'string', 'max:20'],
+            'photo'                       => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
+            'cnib'                        => ['nullable', 'file', 'mimes:pdf,jpeg,jpg,png', 'max:5120'],
         ];
     }
 }

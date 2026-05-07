@@ -3,10 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Enums\FormationStatus;
+use App\Enums\LearnerStatus;
 use App\Http\Requests\Formation\StoreFormationRequest;
 use App\Http\Requests\Formation\UpdateFormationRequest;
 use App\Models\Formation;
 use App\Models\Project;
+use App\Models\Referentiel;
+use App\Models\Trainer;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -18,7 +21,9 @@ class FormationController extends Controller
         $this->authorize('viewAny', Formation::class);
 
         $formations = $project->formations()
-            ->withCount('activeLearners')
+            ->withCount(['learners as active_learners_count' => fn ($q) =>
+                $q->where('formation_learner.status', LearnerStatus::InProgress->value)
+            ])
             ->orderByDesc('started_at')
             ->paginate(15);
 
@@ -33,11 +38,9 @@ class FormationController extends Controller
         $this->authorize('create', Formation::class);
 
         return Inertia::render('Formations/Create', [
-            'project'  => $project,
-            'statuses' => collect(FormationStatus::cases())->map(fn ($s) => [
-                'value' => $s->value,
-                'label' => $s->label(),
-            ]),
+            'project'       => $project,
+            'statuses'      => collect(FormationStatus::cases())->map(fn ($s) => ['value' => $s->value, 'label' => $s->label()]),
+            'referentiels'  => Referentiel::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -57,11 +60,27 @@ class FormationController extends Controller
         $formation->load([
             'project',
             'trainers.user',
-            'activeLearners.educationLevel',
+            'referentiel',
         ]);
+
+        $activeLearners = $formation->activeLearners()
+            ->with('educationLevel')
+            ->orderBy('last_name')
+            ->paginate(10)
+            ->withQueryString();
+
+        // Formateurs non assignés à cette formation
+        $assignedTrainerIds = $formation->trainers->pluck('id');
+        $availableTrainers = Trainer::with('user')
+            ->whereNotIn('id', $assignedTrainerIds)
+            ->where('is_active', true)
+            ->orderBy('created_at', 'desc')
+            ->get(['id', 'user_id']);
 
         return Inertia::render('Formations/Show', [
             'formation' => $formation,
+            'activeLearners' => $activeLearners,
+            'availableTrainers' => $availableTrainers,
         ]);
     }
 
@@ -70,11 +89,9 @@ class FormationController extends Controller
         $this->authorize('update', $formation);
 
         return Inertia::render('Formations/Edit', [
-            'formation' => $formation->load('project'),
-            'statuses'  => collect(FormationStatus::cases())->map(fn ($s) => [
-                'value' => $s->value,
-                'label' => $s->label(),
-            ]),
+            'formation'    => $formation->load('project'),
+            'statuses'     => collect(FormationStatus::cases())->map(fn ($s) => ['value' => $s->value, 'label' => $s->label()]),
+            'referentiels' => Referentiel::orderBy('name')->get(['id', 'name']),
         ]);
     }
 

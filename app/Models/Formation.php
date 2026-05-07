@@ -26,6 +26,7 @@ class Formation extends Model
         'status',
         'capacity',
         'location',
+        'referentiel_id',
     ];
 
     protected function casts(): array
@@ -46,8 +47,7 @@ class Formation extends Model
     public function learners(): BelongsToMany
     {
         return $this->belongsToMany(Learner::class)
-            ->withPivot(['status', 'enrolled_at', 'withdrawn_at', 'completed_at', 'notes'])
-            ->withTimestamps();
+            ->withPivot(['status', 'enrolled_at', 'withdrawn_at', 'completed_at', 'notes']);
     }
 
     public function activeLearners(): BelongsToMany
@@ -58,8 +58,12 @@ class Formation extends Model
     public function trainers(): BelongsToMany
     {
         return $this->belongsToMany(Trainer::class)
-            ->withPivot(['is_lead', 'assigned_at'])
-            ->withTimestamps();
+            ->withPivot(['is_lead', 'assigned_at']);
+    }
+
+    public function referentiel(): BelongsTo
+    {
+        return $this->belongsTo(Referentiel::class);
     }
 
     public function attendances(): HasMany

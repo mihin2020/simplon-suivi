@@ -16,11 +16,13 @@ class UpdateProjectRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'        => ['required', 'string', 'max:255'],
-            'description' => ['nullable', 'string'],
-            'started_at'  => ['required', 'date'],
-            'ended_at'    => ['nullable', 'date', 'after:started_at'],
-            'status'      => ['required', Rule::enum(ProjectStatus::class)],
+            'name'          => ['required', 'string', 'max:255'],
+            'description'   => ['nullable', 'string'],
+            'started_at'    => ['required', 'date'],
+            'ended_at'      => ['nullable', 'date', 'after:started_at'],
+            'status'        => ['required', Rule::enum(ProjectStatus::class)],
+            'partner_ids'   => ['nullable', 'array'],
+            'partner_ids.*' => ['uuid', 'exists:partners,id'],
         ];
     }
 }

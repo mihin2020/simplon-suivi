@@ -16,8 +16,10 @@ class Trainer extends Model
 
     protected $fillable = [
         'user_id',
-        'specialty',
+        'profile_id',
         'phone',
+        'phone2',
+        'cv_path',
         'is_active',
     ];
 
@@ -33,11 +35,15 @@ class Trainer extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function profile(): BelongsTo
+    {
+        return $this->belongsTo(TrainerProfile::class, 'profile_id');
+    }
+
     public function formations(): BelongsToMany
     {
         return $this->belongsToMany(Formation::class)
-            ->withPivot(['is_lead', 'assigned_at'])
-            ->withTimestamps();
+            ->withPivot(['is_lead', 'assigned_at']);
     }
 
     public function getFullNameAttribute(): string

@@ -6,8 +6,13 @@ use App\Actions\InviteUser;
 use App\Enums\UserRole;
 use App\Http\Requests\Trainer\StoreTrainerRequest;
 use App\Http\Requests\Trainer\UpdateTrainerRequest;
+use App\Models\Formation;
+use App\Models\Project;
 use App\Models\Trainer;
+use Illuminate\Http\Request;
+use App\Models\TrainerProfile;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -17,7 +22,7 @@ class TrainerController extends Controller
     {
         $this->authorize('viewAny', Trainer::class);
 
-        $trainers = Trainer::with('user')
+        $trainers = Trainer::with(['user', 'profile', 'formations.project'])
             ->when(request('search'), function ($q, $s) {
                 $q->whereHas('user', fn ($u) => $u->where('first_name', 'like', "%{$s}%")
                     ->orWhere('last_name', 'like', "%{$s}%")
@@ -27,9 +32,13 @@ class TrainerController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        // Projets pour le sélecteur d'assignation
+        $projects = Project::orderBy('name')->get(['id', 'name']);
+
         return Inertia::render('Trainers/Index', [
             'trainers' => $trainers,
             'filters'  => request()->only('search'),
+            'projects' => $projects,
         ]);
     }
 
@@ -37,7 +46,9 @@ class TrainerController extends Controller
     {
         $this->authorize('create', Trainer::class);
 
-        return Inertia::render('Trainers/Create');
+        return Inertia::render('Trainers/Create', [
+            'profiles' => TrainerProfile::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     public function store(StoreTrainerRequest $request, InviteUser $inviteUser): RedirectResponse
@@ -49,14 +60,21 @@ class TrainerController extends Controller
             role:      UserRole::Trainer,
         );
 
-        $trainer = Trainer::create([
-            'user_id'   => $user->id,
-            'specialty' => $request->validated('specialty'),
-            'phone'     => $request->validated('phone'),
+        $cvPath = null;
+        if ($request->hasFile('cv')) {
+            $cvPath = $request->file('cv')->store('trainers/cvs', 'public');
+        }
+
+        Trainer::create([
+            'user_id'    => $user->id,
+            'profile_id' => $request->validated('profile_id'),
+            'phone'      => $request->validated('phone'),
+            'phone2'     => $request->validated('phone2'),
+            'cv_path'    => $cvPath,
         ]);
 
         return redirect()
-            ->route('trainers.show', $trainer)
+            ->route('trainers.index')
             ->with('success', 'Formateur invité avec succès. Un email d\'activation a été envoyé.');
     }
 
@@ -64,7 +82,7 @@ class TrainerController extends Controller
     {
         $this->authorize('view', $trainer);
 
-        $trainer->load(['user', 'formations.project']);
+        $trainer->load(['user', 'profile', 'formations.project']);
 
         return Inertia::render('Trainers/Show', [
             'trainer' => $trainer,
@@ -76,13 +94,31 @@ class TrainerController extends Controller
         $this->authorize('update', $trainer);
 
         return Inertia::render('Trainers/Edit', [
-            'trainer' => $trainer->load('user'),
+            'trainer'  => $trainer->load(['user', 'profile']),
+            'profiles' => TrainerProfile::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
     public function update(UpdateTrainerRequest $request, Trainer $trainer): RedirectResponse
     {
-        $trainer->update($request->validated());
+        $data = $request->validated();
+
+        // Gestion du CV
+        if ($request->hasFile('cv')) {
+            // Nouveau CV uploadé
+            if ($trainer->cv_path) {
+                Storage::disk('public')->delete($trainer->cv_path);
+            }
+            $data['cv_path'] = $request->file('cv')->store('trainers/cvs', 'public');
+        } elseif (!empty($data['remove_cv']) && $trainer->cv_path) {
+            // Suppression du CV existant demandée
+            Storage::disk('public')->delete($trainer->cv_path);
+            $data['cv_path'] = null;
+        }
+
+        unset($data['cv'], $data['remove_cv']);
+
+        $trainer->update($data);
 
         return redirect()
             ->route('trainers.show', $trainer)
@@ -98,5 +134,54 @@ class TrainerController extends Controller
         return redirect()
             ->route('trainers.index')
             ->with('success', 'Formateur supprimé.');
+    }
+
+    /**
+     * Assigner un formateur à une ou plusieurs formations
+     */
+    public function assignFormation(Request $request, Trainer $trainer): RedirectResponse
+    {
+        $this->authorize('update', $trainer);
+
+        $data = $request->validate([
+            'formation_ids'   => ['required', 'array', 'min:1'],
+            'formation_ids.*' => ['uuid', 'exists:formations,id'],
+        ]);
+
+        $assignedCount = 0;
+
+        foreach ($data['formation_ids'] as $formationId) {
+            $formation = Formation::findOrFail($formationId);
+            $this->authorize('update', $formation);
+
+            $alreadyAssigned = $formation->trainers()->where('trainers.id', $trainer->id)->exists();
+
+            if (!$alreadyAssigned) {
+                $formation->trainers()->attach($trainer->id, [
+                    'is_lead'     => false,
+                    'assigned_at' => now(),
+                ]);
+                $assignedCount++;
+            }
+        }
+
+        $message = $assignedCount > 0
+            ? "Formateur assigné à {$assignedCount} formation(s) avec succès."
+            : 'Le formateur est déjà assigné à toutes les formations sélectionnées.';
+
+        return back()->with('success', $message);
+    }
+
+    /**
+     * Désassigner un formateur d'une formation
+     */
+    public function unassignFormation(Trainer $trainer, Formation $formation): RedirectResponse
+    {
+        $this->authorize('update', $trainer);
+        $this->authorize('update', $formation);
+
+        $formation->trainers()->detach($trainer->id);
+
+        return back()->with('success', 'Formateur retiré de la formation.');
     }
 }

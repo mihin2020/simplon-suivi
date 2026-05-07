@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Enums\Gender;
-use App\Enums\InsertionStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,6 +26,7 @@ class Learner extends Model
         'gender',
         'education_level_id',
         'photo_path',
+        'cnib_path',
         'talent',
         'emergency_contact_name',
         'emergency_contact_firstname',
@@ -43,7 +43,7 @@ class Learner extends Model
 
     public function getFullNameAttribute(): string
     {
-        return "{$this->first_name} {$this->last_name}";
+        return "{$this->last_name} {$this->first_name}";
     }
 
     public function educationLevel(): BelongsTo
@@ -54,8 +54,7 @@ class Learner extends Model
     public function formations(): BelongsToMany
     {
         return $this->belongsToMany(Formation::class)
-            ->withPivot(['status', 'enrolled_at', 'withdrawn_at', 'completed_at', 'notes'])
-            ->withTimestamps();
+            ->withPivot(['status', 'enrolled_at', 'withdrawn_at', 'completed_at', 'notes']);
     }
 
     public function attendances(): HasMany

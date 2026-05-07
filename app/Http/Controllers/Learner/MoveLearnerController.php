@@ -17,16 +17,23 @@ class MoveLearnerController extends Controller
     {
         $this->authorize('move', $learner);
 
-        $learner->load(['formations.project']);
-
         $activeFormations = $learner->formations()
             ->wherePivot('status', 'in_progress')
+            ->with('project')
+            ->get();
+
+        $enrolledIds = $learner->formations()->pluck('formations.id');
+
+        $targetFormations = Formation::whereIn('project_id', $activeFormations->pluck('project_id'))
+            ->whereNotIn('id', $enrolledIds)
+            ->where('status', 'active')
             ->with('project')
             ->get();
 
         return Inertia::render('Learners/Move', [
             'learner'          => $learner,
             'activeFormations' => $activeFormations,
+            'targetFormations' => $targetFormations,
         ]);
     }
 

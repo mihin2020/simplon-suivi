@@ -15,11 +15,13 @@ class StoreTrainerRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'first_name' => ['required', 'string', 'max:255'],
             'last_name'  => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
             'email'      => ['required', 'email', 'max:255', 'unique:users,email'],
-            'specialty'  => ['nullable', 'string', 'max:255'],
+            'profile_id' => ['nullable', 'uuid', 'exists:trainer_profiles,id'],
             'phone'      => ['nullable', 'string', 'max:20'],
+            'phone2'     => ['nullable', 'string', 'max:20'],
+            'cv'         => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
         ];
     }
 }
