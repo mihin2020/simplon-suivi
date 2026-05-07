@@ -55,6 +55,31 @@ class Formation extends Model
         return $this->learners()->wherePivot('status', LearnerStatus::InProgress->value);
     }
 
+    public function withdrawnLearners(): BelongsToMany
+    {
+        return $this->learners()->wherePivot('status', LearnerStatus::Withdrawn->value);
+    }
+
+    public function completedLearners(): BelongsToMany
+    {
+        return $this->learners()->wherePivot('status', LearnerStatus::Completed->value);
+    }
+
+    public function movedLearners(): BelongsToMany
+    {
+        return $this->learners()->wherePivot('status', LearnerStatus::Moved->value);
+    }
+
+    public function inactiveLearners(): BelongsToMany
+    {
+        return $this->learners()
+            ->wherePivotIn('status', [
+                LearnerStatus::Withdrawn->value,
+                LearnerStatus::Completed->value,
+                LearnerStatus::Moved->value,
+            ]);
+    }
+
     public function trainers(): BelongsToMany
     {
         return $this->belongsToMany(Trainer::class)

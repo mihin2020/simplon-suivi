@@ -92,19 +92,19 @@ const statusClass: Record<string, string> = {
 
         <!-- KPI cards -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-md">
-            <div class="kpi-card kpi-accent">
+            <div class="kpi-card">
                 <span class="kpi-icon material-symbols-outlined">folder_open</span>
                 <div class="kpi-value">{{ stats!.projects.total }}</div>
                 <div class="kpi-label">Projets</div>
                 <div class="kpi-sub">{{ stats!.projects.active }} en cours</div>
             </div>
-            <div class="kpi-card kpi-accent">
+            <div class="kpi-card">
                 <span class="kpi-icon material-symbols-outlined">school</span>
                 <div class="kpi-value">{{ stats!.formations.total }}</div>
                 <div class="kpi-label">Formations</div>
                 <div class="kpi-sub">{{ stats!.formations.active }} actives</div>
             </div>
-            <div class="kpi-card kpi-primary">
+            <div class="kpi-card">
                 <span class="kpi-icon material-symbols-outlined">groups</span>
                 <div class="kpi-value">{{ stats!.learners.total.toLocaleString('fr-FR') }}</div>
                 <div class="kpi-label">Apprenants</div>
@@ -116,11 +116,11 @@ const statusClass: Record<string, string> = {
                 <div class="kpi-label">Formateurs</div>
                 <div class="kpi-sub">&nbsp;</div>
             </div>
-            <div class="kpi-card kpi-accent">
+            <div class="kpi-card">
                 <span class="kpi-icon material-symbols-outlined">trending_up</span>
                 <div class="kpi-value">{{ stats!.insertion_rate }}<span style="font-size:18px">%</span></div>
                 <div class="kpi-label">Taux d'insertion</div>
-                <div class="kpi-sub">Promotion en cours</div>
+                <div class="kpi-sub">Promo en cours</div>
             </div>
         </div>
 
@@ -303,16 +303,11 @@ const statusClass: Record<string, string> = {
     gap: 4px;
     border-left: 4px solid #e0e3e5;
 }
-.kpi-card.kpi-primary { border-left-color: #E5004C; }
-.kpi-card.kpi-accent  { border-left-color: #1F3A4D; }
-
 .kpi-icon {
     font-size: 22px;
     color: #9aaabb;
     margin-bottom: 4px;
 }
-.kpi-card.kpi-primary .kpi-icon { color: #E5004C; }
-.kpi-card.kpi-accent  .kpi-icon { color: #1F3A4D; }
 
 .kpi-value {
     font-size: 32px;

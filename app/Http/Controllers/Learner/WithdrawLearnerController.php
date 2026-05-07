@@ -19,4 +19,13 @@ class WithdrawLearnerController extends Controller
             ->route('formations.show', $formation)
             ->with('success', "{$learner->full_name} a été retiré(e) de la formation.");
     }
+
+    public function abandon(WithdrawLearnerRequest $request, Formation $formation, Learner $learner, WithdrawLearner $action): RedirectResponse
+    {
+        $action->execute($formation, $learner, $request->validated('notes'));
+
+        return redirect()
+            ->route('formations.show', $formation)
+            ->with('success', "{$learner->full_name} a été marqué(e) comme abandonné(e).");
+    }
 }

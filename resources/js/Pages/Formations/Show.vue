@@ -16,7 +16,7 @@ interface Learner {
     email: string | null
     phone: string | null
     education_level: EducationLevel | null
-    pivot: { status: string; enrolled_at: string }
+    pivot: { status: string; enrolled_at: string; withdrawn_at: string | null; notes: string | null }
 }
 
 interface User {
@@ -61,6 +61,7 @@ const props = defineProps<{
         from: number | null
         to: number | null
     }
+    inactiveLearners: Learner[]
     availableTrainers: Trainer[]
 }>()
 
@@ -77,6 +78,52 @@ const withdrawLearner = (learner: Learner) => {
     if (confirm(`Retirer ${learner.first_name} ${learner.last_name} de cette formation ?`)) {
         router.delete(`/formations/${props.formation.id}/learners/${learner.id}`)
     }
+}
+
+// Modal abandon apprenant
+const showAbandonModal = ref(false)
+const abandonLearnerData = ref<Learner | null>(null)
+const abandonNotes = ref('')
+
+const openAbandonModal = (learner: Learner) => {
+    abandonLearnerData.value = learner
+    abandonNotes.value = ''
+    showAbandonModal.value = true
+}
+
+const closeAbandonModal = () => {
+    showAbandonModal.value = false
+    abandonLearnerData.value = null
+    abandonNotes.value = ''
+}
+
+const confirmAbandon = () => {
+    if (!abandonLearnerData.value) return
+    router.post(`/formations/${props.formation.id}/learners/${abandonLearnerData.value.id}/abandon`, {
+        notes: abandonNotes.value,
+    }, {
+        preserveState: true,
+        onSuccess: () => {
+            closeAbandonModal()
+        },
+    })
+}
+
+// Onglet apprenants
+const activeTab = ref<'actifs' | 'inactifs'>('actifs')
+
+const statusLabelsLearner: Record<string, string> = {
+    in_progress: 'En cours',
+    withdrawn: 'Abandonné',
+    completed: 'Diplômé',
+    moved: 'Transféré',
+}
+
+const statusColors: Record<string, string> = {
+    in_progress: '#22c55e',
+    withdrawn: '#ef4444',
+    completed: '#3b82f6',
+    moved: '#f97316',
 }
 
 // Modal assignation formateurs
@@ -132,6 +179,32 @@ const unassignTrainer = (trainer: Trainer) => {
         router.delete(`/formations/${props.formation.id}/trainers/${trainer.id}`)
     }
 }
+
+// Recherche apprenants actifs
+const learnerSearch = ref('')
+const filteredLearners = computed(() => {
+    const q = learnerSearch.value.toLowerCase().trim()
+    if (!q) return props.activeLearners.data
+    return props.activeLearners.data.filter(l =>
+        `${l.first_name} ${l.last_name}`.toLowerCase().includes(q) ||
+        l.last_name.toLowerCase().includes(q) ||
+        l.first_name.toLowerCase().includes(q) ||
+        (l.email && l.email.toLowerCase().includes(q))
+    )
+})
+
+// Recherche apprenants inactifs
+const inactiveSearch = ref('')
+const filteredInactiveLearners = computed(() => {
+    const q = inactiveSearch.value.toLowerCase().trim()
+    if (!q) return props.inactiveLearners
+    return props.inactiveLearners.filter(l =>
+        `${l.first_name} ${l.last_name}`.toLowerCase().includes(q) ||
+        l.last_name.toLowerCase().includes(q) ||
+        l.first_name.toLowerCase().includes(q) ||
+        (l.email && l.email.toLowerCase().includes(q))
+    )
+})
 </script>
 
 <template>
@@ -240,96 +313,211 @@ const unassignTrainer = (trainer: Trainer) => {
                 </div>
             </div>
 
-            <!-- Apprenants -->
+            <!-- Apprenants avec onglets -->
             <div class="lg:col-span-2 bg-surface-container-lowest border border-surface-container-highest rounded-xl overflow-hidden shadow-sm">
-                <div class="px-lg py-md border-b border-surface-container-highest flex items-center justify-between">
-                    <h2 class="text-h2 font-semibold text-on-surface">
+                <!-- Onglets -->
+                <div class="flex border-b border-surface-container-highest">
+                    <button
+                        @click="activeTab = 'actifs'"
+                        class="tab-btn"
+                        :class="{ 'tab-active': activeTab === 'actifs' }"
+                    >
+                        <span class="material-symbols-outlined" style="font-size:18px">groups</span>
                         Apprenants actifs
-                        <span class="count-badge ml-sm">{{ activeLearners.total }}</span>
-                    </h2>
-                    <p class="text-body-sm text-secondary" v-if="activeLearners.total > 0">
-                        {{ activeLearners.from ?? 0 }}–{{ activeLearners.to ?? 0 }} / {{ activeLearners.total }}
-                    </p>
+                        <span class="tab-badge">{{ activeLearners.total }}</span>
+                    </button>
+                    <button
+                        @click="activeTab = 'inactifs'"
+                        class="tab-btn"
+                        :class="{ 'tab-active': activeTab === 'inactifs' }"
+                    >
+                        <span class="material-symbols-outlined" style="font-size:18px">person_off</span>
+                        Inactifs
+                        <span class="tab-badge">{{ inactiveLearners.length }}</span>
+                    </button>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-surface border-b border-surface-container-highest">
-                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide w-10 text-center">N°</th>
-                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Apprenant</th>
-                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Niveau</th>
-                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Inscrit le</th>
-                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-right">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-surface-container-highest">
-                            <tr v-if="activeLearners.data.length === 0">
-                                <td colspan="5" class="px-md py-xl text-center text-secondary text-body-md">
-                                    Aucun apprenant inscrit.
-                                </td>
-                            </tr>
-                            <tr
-                                v-for="(learner, idx) in activeLearners.data"
-                                :key="learner.id"
-                                class="hover:bg-surface-bright transition-colors group"
-                            >
-                                <td class="px-md py-sm text-secondary text-center text-body-sm">
-                                    {{ String((activeLearners.from ?? 1) + idx).padStart(2, '0') }}
-                                </td>
-                                <td class="px-md py-sm">
-                                    <Link
-                                        :href="`/learners/${learner.id}`"
-                                        class="font-semibold text-on-surface hover:text-primary transition-colors"
-                                    >
-                                        {{ learner.last_name }} {{ learner.first_name }}
-                                    </Link>
-                                    <p v-if="learner.email" class="text-body-sm text-secondary">{{ learner.email }}</p>
-                                </td>
-                                <td class="px-md py-sm text-on-surface-variant text-body-sm">
-                                    {{ learner.education_level?.name ?? '—' }}
-                                </td>
-                                <td class="px-md py-sm text-on-surface-variant text-body-sm whitespace-nowrap">
-                                    {{ fmt(learner.pivot.enrolled_at) }}
-                                </td>
-                                <td class="px-md py-sm text-right">
-                                    <div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+
+                <!-- Contenu Actifs -->
+                <div v-if="activeTab === 'actifs'">
+                    <div class="px-lg py-md border-b border-surface-container-highest">
+                        <div class="search-bar">
+                            <span class="material-symbols-outlined search-icon">search</span>
+                            <input
+                                v-model="learnerSearch"
+                                type="text"
+                                placeholder="Rechercher un apprenant par nom ou email..."
+                                class="search-input"
+                            />
+                            <button v-if="learnerSearch" @click="learnerSearch = ''" class="search-clear">
+                                <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                            </button>
+                            <span v-if="learnerSearch" class="search-count">
+                                {{ filteredLearners.length }} trouvé{{ filteredLearners.length > 1 ? 's' : '' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-surface border-b border-surface-container-highest">
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide w-10 text-center">N°</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Apprenant</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Niveau</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Inscrit le</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-surface-container-highest">
+                                <tr v-if="filteredLearners.length === 0">
+                                    <td colspan="5" class="px-md py-xl text-center text-secondary text-body-md">
+                                        {{ learnerSearch ? 'Aucun apprenant correspond à cette recherche.' : 'Aucun apprenant inscrit.' }}
+                                    </td>
+                                </tr>
+                                <tr
+                                    v-for="(learner, idx) in filteredLearners"
+                                    :key="learner.id"
+                                    class="hover:bg-surface-bright transition-colors group"
+                                >
+                                    <td class="px-md py-sm text-secondary text-center text-body-sm">
+                                        {{ String((activeLearners.from ?? 1) + activeLearners.data.findIndex(l => l.id === learner.id)).padStart(2, '0') }}
+                                    </td>
+                                    <td class="px-md py-sm">
+                                        <Link
+                                            :href="`/learners/${learner.id}`"
+                                            class="font-semibold text-on-surface hover:text-primary transition-colors"
+                                        >
+                                            {{ learner.last_name }} {{ learner.first_name }}
+                                        </Link>
+                                        <p v-if="learner.email" class="text-body-sm text-secondary">{{ learner.email }}</p>
+                                    </td>
+                                    <td class="px-md py-sm text-on-surface-variant text-body-sm">
+                                        {{ learner.education_level?.name ?? '—' }}
+                                    </td>
+                                    <td class="px-md py-sm text-on-surface-variant text-body-sm whitespace-nowrap">
+                                        {{ fmt(learner.pivot.enrolled_at) }}
+                                    </td>
+                                    <td class="px-md py-sm text-right">
+                                        <div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <Link :href="`/learners/${learner.id}`" class="icon-btn" title="Voir le profil">
+                                                <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
+                                            </Link>
+                                            <button @click="openAbandonModal(learner)" class="icon-btn warning" title="Marquer comme abandonné">
+                                                <span class="material-symbols-outlined" style="font-size:18px">logout</span>
+                                            </button>
+                                            <button @click="withdrawLearner(learner)" class="icon-btn danger" title="Retirer de la formation">
+                                                <span class="material-symbols-outlined" style="font-size:18px">person_remove</span>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div v-if="activeLearners.links?.length" class="px-lg py-md border-t border-surface-container-highest flex items-center justify-between gap-md flex-wrap">
+                        <p class="text-body-sm text-secondary">
+                            Page {{ activeLearners.current_page }} / {{ activeLearners.last_page }}
+                        </p>
+                        <nav class="flex items-center gap-xs flex-wrap">
+                            <template v-for="(l, i) in activeLearners.links" :key="i">
+                                <Link
+                                    v-if="l.url"
+                                    :href="l.url"
+                                    class="pager-btn"
+                                    :class="{ 'pager-active': l.active }"
+                                    preserve-scroll
+                                >
+                                    <span v-html="l.label"></span>
+                                </Link>
+                                <span
+                                    v-else
+                                    class="pager-btn pager-disabled"
+                                    aria-disabled="true"
+                                >
+                                    <span v-html="l.label"></span>
+                                </span>
+                            </template>
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- Contenu Inactifs -->
+                <div v-else>
+                    <div class="px-lg py-md border-b border-surface-container-highest">
+                        <div class="search-bar">
+                            <span class="material-symbols-outlined search-icon">search</span>
+                            <input
+                                v-model="inactiveSearch"
+                                type="text"
+                                placeholder="Rechercher parmi les apprenants inactifs..."
+                                class="search-input"
+                            />
+                            <button v-if="inactiveSearch" @click="inactiveSearch = ''" class="search-clear">
+                                <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                            </button>
+                            <span v-if="inactiveSearch" class="search-count">
+                                {{ filteredInactiveLearners.length }} trouvé{{ filteredInactiveLearners.length > 1 ? 's' : '' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-surface border-b border-surface-container-highest">
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide w-10 text-center">N°</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Apprenant</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Statut</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Date</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Notes</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-surface-container-highest">
+                                <tr v-if="filteredInactiveLearners.length === 0">
+                                    <td colspan="6" class="px-md py-xl text-center text-secondary text-body-md">
+                                        {{ inactiveSearch ? 'Aucun résultat pour cette recherche.' : 'Aucun apprenant inactif.' }}
+                                    </td>
+                                </tr>
+                                <tr
+                                    v-for="(learner, idx) in filteredInactiveLearners"
+                                    :key="learner.id"
+                                    class="hover:bg-surface-bright transition-colors"
+                                >
+                                    <td class="px-md py-sm text-secondary text-center text-body-sm">
+                                        {{ String(idx + 1).padStart(2, '0') }}
+                                    </td>
+                                    <td class="px-md py-sm">
+                                        <Link
+                                            :href="`/learners/${learner.id}`"
+                                            class="font-semibold text-on-surface hover:text-primary transition-colors"
+                                        >
+                                            {{ learner.last_name }} {{ learner.first_name }}
+                                        </Link>
+                                        <p v-if="learner.email" class="text-body-sm text-secondary">{{ learner.email }}</p>
+                                    </td>
+                                    <td class="px-md py-sm">
+                                        <span
+                                            class="status-badge-learner"
+                                            :style="{ background: statusColors[learner.pivot.status] + '20', color: statusColors[learner.pivot.status] }"
+                                        >
+                                            {{ statusLabelsLearner[learner.pivot.status] ?? learner.pivot.status }}
+                                        </span>
+                                    </td>
+                                    <td class="px-md py-sm text-on-surface-variant text-body-sm whitespace-nowrap">
+                                        {{ fmt(learner.pivot.withdrawn_at) }}
+                                    </td>
+                                    <td class="px-md py-sm text-on-surface-variant text-body-sm max-w-[200px] truncate" :title="learner.pivot.notes ?? ''">
+                                        {{ learner.pivot.notes || '—' }}
+                                    </td>
+                                    <td class="px-md py-sm text-right">
                                         <Link :href="`/learners/${learner.id}`" class="icon-btn" title="Voir le profil">
                                             <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
                                         </Link>
-                                        <button @click="withdrawLearner(learner)" class="icon-btn danger" title="Retirer de la formation">
-                                            <span class="material-symbols-outlined" style="font-size:18px">person_remove</span>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div v-if="activeLearners.links?.length" class="px-lg py-md border-t border-surface-container-highest flex items-center justify-between gap-md flex-wrap">
-                    <p class="text-body-sm text-secondary">
-                        Page {{ activeLearners.current_page }} / {{ activeLearners.last_page }}
-                    </p>
-                    <nav class="flex items-center gap-xs flex-wrap">
-                        <template v-for="(l, i) in activeLearners.links" :key="i">
-                            <Link
-                                v-if="l.url"
-                                :href="l.url"
-                                class="pager-btn"
-                                :class="{ 'pager-active': l.active }"
-                                preserve-scroll
-                            >
-                                <span v-html="l.label"></span>
-                            </Link>
-                            <span
-                                v-else
-                                class="pager-btn pager-disabled"
-                                aria-disabled="true"
-                            >
-                                <span v-html="l.label"></span>
-                            </span>
-                        </template>
-                    </nav>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -407,6 +595,42 @@ const unassignTrainer = (trainer: Trainer) => {
                     >
                         Assigner
                         <span v-if="selectedTrainerIds.length > 0" class="btn-count">{{ selectedTrainerIds.length }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Abandon -->
+        <div v-if="showAbandonModal" class="modal-overlay" @click.self="closeAbandonModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h3 class="modal-title">Marquer comme abandonné</h3>
+                        <p class="modal-subtitle" v-if="abandonLearnerData">
+                            {{ abandonLearnerData.first_name }} {{ abandonLearnerData.last_name }}
+                        </p>
+                    </div>
+                    <button @click="closeAbandonModal" class="modal-close">
+                        <span class="material-symbols-outlined" style="font-size:20px">close</span>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Motif / Notes (optionnel)</label>
+                        <textarea
+                            v-model="abandonNotes"
+                            rows="3"
+                            class="form-textarea"
+                            placeholder="Raison de l'abandon, date effective, etc."
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button @click="closeAbandonModal" class="btn-secondary">Annuler</button>
+                    <button @click="confirmAbandon" class="btn-primary btn-danger">
+                        Confirmer l'abandon
                     </button>
                 </div>
             </div>
@@ -823,5 +1047,148 @@ const unassignTrainer = (trainer: Trainer) => {
 .btn-primary:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+/* Barre de recherche apprenants */
+.search-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #fff;
+    border: 1px solid #e0e3e5;
+    border-radius: 8px;
+    max-width: 480px;
+}
+.search-icon {
+    font-size: 18px;
+    color: #9aaabb;
+    flex-shrink: 0;
+}
+.search-input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    color: #191c1e;
+    background: transparent;
+    padding: 4px 0;
+}
+.search-input::placeholder { color: #9aaabb; }
+.search-clear {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 50%;
+    background: #f5f7f9;
+    color: #515f74;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+.search-clear:hover { background: #eceef0; }
+.search-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9aaabb;
+    background: #f5f7f9;
+    padding: 2px 8px;
+    border-radius: 99px;
+    flex-shrink: 0;
+}
+
+/* Onglets */
+.tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #515f74;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.tab-btn:hover { color: #191c1e; background: #f9fafb; }
+.tab-active {
+    color: #E5004C;
+    border-bottom-color: #E5004C;
+    background: #fff5f8;
+}
+.tab-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: #f2f4f6;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #515f74;
+}
+.tab-active .tab-badge { background: #E5004C; color: #fff; }
+
+/* Badge statut apprenant */
+.status-badge-learner {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Bouton warning */
+.icon-btn.warning {
+    color: #d97706;
+}
+.icon-btn.warning:hover {
+    color: #b45309;
+    background: #fef3c7;
+}
+
+/* Bouton danger */
+.btn-danger {
+    background: #dc2626;
+}
+.btn-danger:hover {
+    background: #b91c1c;
+}
+
+/* Formulaire modal */
+.form-group {
+    margin-bottom: 16px;
+}
+.form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #515f74;
+    margin-bottom: 6px;
+}
+.form-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #e0e3e5;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #191c1e;
+    background: #fafafa;
+    outline: none;
+    resize: vertical;
+    transition: all 0.15s;
+}
+.form-textarea:focus {
+    border-color: #E5004C;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(229, 0, 76, 0.08);
 }
 </style>

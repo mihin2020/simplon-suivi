@@ -69,6 +69,11 @@ class FormationController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        $inactiveLearners = $formation->inactiveLearners()
+            ->with('educationLevel')
+            ->orderBy('last_name')
+            ->get();
+
         // Formateurs non assignés à cette formation
         $assignedTrainerIds = $formation->trainers->pluck('id');
         $availableTrainers = Trainer::with('user')
@@ -80,6 +85,7 @@ class FormationController extends Controller
         return Inertia::render('Formations/Show', [
             'formation' => $formation,
             'activeLearners' => $activeLearners,
+            'inactiveLearners' => $inactiveLearners,
             'availableTrainers' => $availableTrainers,
         ]);
     }

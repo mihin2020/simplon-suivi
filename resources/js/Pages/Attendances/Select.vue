@@ -66,16 +66,22 @@ const statusClass = (s: string) => ({
                     <option v-for="p in projectOptions" :key="p" :value="p">{{ p }}</option>
                 </select>
             </div>
-            <div class="filter-group">
-                <label class="filter-label">Formation</label>
+            <div class="filter-group" style="flex:2">
+                <label class="filter-label">Recherche</label>
                 <div class="search-wrap">
                     <span class="material-symbols-outlined search-icon">search</span>
                     <input
                         v-model="filterFormation"
                         type="text"
-                        placeholder="Rechercher une formation…"
+                        placeholder="Rechercher une formation par nom..."
                         class="filter-input"
                     />
+                    <button v-if="filterFormation" class="clear-btn" @click="filterFormation = ''">
+                        <span class="material-symbols-outlined" style="font-size:14px">close</span>
+                    </button>
+                    <span v-if="filterFormation" class="result-count">
+                        {{ filtered.length }} résultat{{ filtered.length > 1 ? 's' : '' }}
+                    </span>
                 </div>
             </div>
             <button
@@ -193,22 +199,52 @@ const statusClass = (s: string) => ({
 }
 .search-icon {
     position: absolute;
-    left: 9px;
-    font-size: 16px;
+    left: 10px;
+    font-size: 18px;
     color: #9aaabb;
     pointer-events: none;
 }
 .filter-input {
     width: 100%;
-    padding: 7px 12px 7px 30px;
+    padding: 9px 90px 9px 36px;
     border: 1px solid #e0e3e5;
-    border-radius: 6px;
-    font-size: 13px;
+    border-radius: 8px;
+    font-size: 14px;
     color: #191c1e;
     background: #fff;
     outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
-.filter-input:focus { border-color: #E5004C; }
+.filter-input:focus {
+    border-color: #E5004C;
+    box-shadow: 0 0 0 3px rgba(229, 0, 76, 0.08);
+}
+.clear-btn {
+    position: absolute;
+    right: 70px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    border-radius: 50%;
+    background: #f5f7f9;
+    color: #515f74;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.clear-btn:hover { background: #eceef0; }
+.result-count {
+    position: absolute;
+    right: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #9aaabb;
+    background: #f5f7f9;
+    padding: 2px 8px;
+    border-radius: 99px;
+}
 .reset-btn {
     display: inline-flex;
     align-items: center;

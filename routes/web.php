@@ -73,6 +73,8 @@ Route::middleware('auth')->group(function () {
         ->name('formations.learners.store-new');
     Route::delete('formations/{formation}/learners/{learner}', WithdrawLearnerController::class)
         ->name('formations.learners.withdraw');
+    Route::post('formations/{formation}/learners/{learner}/abandon', [WithdrawLearnerController::class, 'abandon'])
+        ->name('formations.learners.abandon');
     Route::get('learners/{learner}/move', [MoveLearnerController::class, 'create'])
         ->name('learners.move.create');
     Route::post('learners/{learner}/move', [MoveLearnerController::class, 'store'])
