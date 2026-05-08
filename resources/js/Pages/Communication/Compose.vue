@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import { ref } from 'vue'
 import RecipientSelector from '@/Components/RecipientSelector.vue'
@@ -7,26 +7,53 @@ import TiptapEditor from '@/Components/TiptapEditor.vue'
 
 defineOptions({ layout: AdminLayout })
 
+defineProps<{ projects?: { id: string; name: string }[] }>()
+
 const to = ref<{ email: string; name?: string }[]>([])
+const cc = ref('')
 const subject = ref('')
 const body = ref('')
 const files = ref<File[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 
+const sending = ref(false)
+
 function submit() {
+    if (sending.value) return
+    sending.value = true
+
     const formData = new FormData()
-    formData.append('to', JSON.stringify(to.value))
+    to.value.forEach((r, i) => {
+        formData.append(`to[${i}][email]`, r.email)
+        if (r.name) formData.append(`to[${i}][name]`, r.name)
+    })
+    // Parse CC emails (comma-separated)
+    if (cc.value.trim()) {
+        const ccEmails = cc.value.split(',').map((e: string) => e.trim()).filter((e: string) => e)
+        ccEmails.forEach((email: string, i: number) => {
+            formData.append(`cc[${i}][email]`, email)
+        })
+    }
     formData.append('subject', subject.value)
     formData.append('body', body.value)
     files.value.forEach((f, i) => formData.append(`attachments[${i}]`, f))
 
     router.post('/communication/emails', formData, {
+        forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
             to.value = []
+            cc.value = ''
             subject.value = ''
             body.value = ''
             files.value = []
+        },
+        onError: (errors) => {
+            console.error('Erreurs validation:', errors)
+            alert('Erreur d\'envoi : ' + Object.values(errors).join(', '))
+        },
+        onFinish: () => {
+            sending.value = false
         },
     })
 }
@@ -46,82 +73,308 @@ function removeFile(index: number) {
 <template>
     <Head title="Nouveau message" />
 
-    <div class="max-w-3xl mx-auto space-y-xl">
-        <h1 class="text-h1 font-bold text-on-surface">Nouveau message</h1>
-
-        <form @submit.prevent="submit" class="space-y-lg bg-surface-container-lowest border border-surface-container-highest rounded-xl p-lg shadow-sm" @dragover.prevent @drop="onDrop">
+    <div class="page-wrap">
+        <!-- Header avec bouton retour -->
+        <div class="page-header">
+            <Link href="/communication/emails" class="back-btn" title="Retour">
+                <span class="material-symbols-outlined">arrow_back</span>
+            </Link>
             <div>
-                <label class="block text-body-sm font-medium text-on-surface mb-xs">Destinataires</label>
-                <RecipientSelector v-model="to" />
+                <h1 class="page-title">Nouveau message</h1>
+                <p class="page-subtitle">Composez et envoyez un email à un ou plusieurs destinataires</p>
+            </div>
+        </div>
+
+        <form @submit.prevent="submit" class="compose-form" @dragover.prevent @drop="onDrop">
+            <div class="form-section">
+                <label class="form-label">
+                    <span class="material-symbols-outlined label-icon">group</span>
+                    Destinataires
+                </label>
+                <RecipientSelector v-model="to" :projects="projects ?? []" />
             </div>
 
-            <div>
-                <label class="block text-body-sm font-medium text-on-surface mb-xs">Objet</label>
-                <input v-model="subject" type="text" class="w-full border border-surface-container-highest rounded-lg px-sm py-xs text-body-sm text-on-surface bg-surface focus:outline-none focus:border-primary" />
+            <div class="form-section">
+                <label class="form-label">
+                    <span class="material-symbols-outlined label-icon">mail</span>
+                    Copie à (CC)
+                </label>
+                <input v-model="cc" type="text" class="form-input" placeholder="Emails en copie, séparés par des virgules..." />
             </div>
 
-            <div>
-                <label class="block text-body-sm font-medium text-on-surface mb-xs">Message</label>
+            <div class="form-section">
+                <label class="form-label">
+                    <span class="material-symbols-outlined label-icon">subject</span>
+                    Objet
+                </label>
+                <input v-model="subject" type="text" class="form-input" placeholder="Sujet de votre message..." required />
+            </div>
+
+            <div class="form-section">
+                <label class="form-label">
+                    <span class="material-symbols-outlined label-icon">edit_note</span>
+                    Message
+                </label>
                 <TiptapEditor v-model="body" />
             </div>
 
-            <div>
-                <label class="block text-body-sm font-medium text-on-surface mb-xs">Pièces jointes</label>
-                <div
-                    class="border border-dashed border-surface-container-highest rounded-lg p-lg text-center cursor-pointer hover:bg-surface-container-low transition-colors"
-                    @click="fileInput?.click()"
-                >
-                    <span class="material-symbols-outlined text-on-surface-variant">upload_file</span>
-                    <p class="text-body-sm text-on-surface-variant mt-xs">Glissez-déposez des fichiers ici ou cliquez pour sélectionner</p>
+            <div class="form-section">
+                <label class="form-label">
+                    <span class="material-symbols-outlined label-icon">attach_file</span>
+                    Pièces jointes
+                </label>
+                <div class="upload-zone" @click="fileInput?.click()">
+                    <span class="material-symbols-outlined upload-icon">upload_file</span>
+                    <p class="upload-text">Glissez-déposez des fichiers ici ou <strong>cliquez pour sélectionner</strong></p>
                     <input ref="fileInput" type="file" multiple class="hidden" @change="e => files.push(...Array.from((e.target as HTMLInputElement).files || []))" />
                 </div>
-                <div v-if="files.length" class="mt-sm space-y-xs">
-                    <div v-for="(f, i) in files" :key="i" class="flex items-center justify-between bg-surface-container-low px-sm py-xs rounded text-body-sm text-on-surface">
-                        <span class="truncate">{{ f.name }}</span>
-                        <button type="button" @click="removeFile(i)" class="text-error">
-                            <span class="material-symbols-outlined" style="font-size:18px">close</span>
+                <div v-if="files.length" class="file-list">
+                    <div v-for="(f, i) in files" :key="i" class="file-item">
+                        <span class="material-symbols-outlined file-icon">description</span>
+                        <span class="file-name">{{ f.name }}</span>
+                        <span class="file-size">{{ (f.size / 1024).toFixed(1) }} Ko</span>
+                        <button type="button" @click="removeFile(i)" class="file-remove">
+                            <span class="material-symbols-outlined" style="font-size:16px">close</span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div class="flex items-center justify-end gap-sm">
-                <button type="button" @click="$router.visit('/communication/emails')" class="btn-secondary">Annuler</button>
-                <button type="submit" class="btn-primary">Envoyer</button>
+            <div class="form-actions">
+                <Link href="/communication/emails" class="btn-secondary">
+                    <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                    Annuler
+                </Link>
+                <button type="submit" class="btn-primary" :disabled="sending || to.length === 0 || !subject || !body">
+                    <span class="material-symbols-outlined" style="font-size:16px">{{ sending ? 'progress_activity' : 'send' }}</span>
+                    {{ sending ? 'Envoi en cours...' : 'Envoyer' }}
+                </button>
             </div>
         </form>
     </div>
 </template>
 
 <style scoped>
+.page-wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+.page-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #515f74;
+    transition: all 0.15s;
+    flex-shrink: 0;
+    text-decoration: none;
+}
+.back-btn:hover {
+    background: #f2f4f6;
+    color: #191c1e;
+}
+.page-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #191c1e;
+    margin: 0;
+    line-height: 1.2;
+}
+.page-subtitle {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 4px 0 0 0;
+}
+
+.compose-form {
+    background: #fff;
+    border: 1px solid #e0e3e5;
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.form-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #515f74;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.label-icon {
+    font-size: 16px;
+    color: #E5004C;
+}
+.form-input {
+    padding: 10px 14px;
+    border: 1px solid #e0e3e5;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #191c1e;
+    background: #fafafa;
+    outline: none;
+    transition: all 0.15s;
+    width: 100%;
+}
+.form-input:focus {
+    border-color: #E5004C;
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(229, 0, 76, 0.08);
+}
+
+/* Upload */
+.upload-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 28px 20px;
+    border: 2px dashed #e0e3e5;
+    border-radius: 12px;
+    background: #fafbfc;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.upload-zone:hover {
+    border-color: #E5004C;
+    background: #fff5f8;
+}
+.upload-icon {
+    font-size: 36px;
+    color: #9aaabb;
+    margin-bottom: 6px;
+}
+.upload-text {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0;
+    text-align: center;
+}
+.upload-text strong {
+    color: #E5004C;
+}
+.hidden {
+    display: none;
+}
+.file-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 8px;
+}
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #fafafa;
+    border: 1px solid #e0e3e5;
+    border-radius: 8px;
+}
+.file-icon {
+    font-size: 18px;
+    color: #6b7280;
+}
+.file-name {
+    flex: 1;
+    font-size: 13px;
+    color: #191c1e;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.file-size {
+    font-size: 11px;
+    color: #9aaabb;
+}
+.file-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: transparent;
+    color: #dc2626;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.file-remove:hover {
+    background: #fee2e2;
+}
+
+/* Actions */
+.form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 16px;
+    border-top: 1px solid #f0f0f0;
+}
 .btn-primary {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 16px;
+    padding: 10px 20px;
     background: #E5004C;
     color: #fff;
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     border: none;
     cursor: pointer;
-    transition: background 0.15s;
+    transition: all 0.15s;
+    text-decoration: none;
 }
-.btn-primary:hover { background: #c4003f; }
+.btn-primary:hover:not(:disabled) {
+    background: #c4003f;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(229, 0, 76, 0.2);
+}
+.btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 .btn-secondary {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 16px;
+    padding: 10px 20px;
     background: #f2f4f6;
-    color: #191c1e;
+    color: #515f74;
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     border: none;
     cursor: pointer;
     transition: background 0.15s;
+    text-decoration: none;
 }
-.btn-secondary:hover { background: #e0e3e5; }
+.btn-secondary:hover {
+    background: #e0e3e5;
+    color: #191c1e;
+}
 </style>

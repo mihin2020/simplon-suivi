@@ -74,7 +74,13 @@ class EmailController extends Controller
 
     public function compose()
     {
-        return Inertia::render('Communication/Compose');
+        $projects = \App\Models\Project::select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('Communication/Compose', [
+            'projects' => $projects,
+        ]);
     }
 
     public function store(Request $request)
@@ -83,6 +89,8 @@ class EmailController extends Controller
             'to' => ['required', 'array', 'min:1'],
             'to.*.email' => ['required', 'email'],
             'to.*.name' => ['nullable', 'string'],
+            'cc' => ['nullable', 'array'],
+            'cc.*.email' => ['required', 'email'],
             'subject' => ['required', 'string', 'max:255'],
             'body' => ['required', 'string'],
             'attachments' => ['nullable', 'array'],
@@ -105,8 +113,10 @@ class EmailController extends Controller
             $data['subject'],
             $data['body'],
             $attachments,
-            null,
-            auth()->id()
+            null,  // replyToEmail
+            auth()->id(),
+            $data['cc'] ?? null,
+            null  // replyToMessageId
         );
 
         return redirect()->route('emails.sent')->with('success', 'Email envoyé.');
@@ -119,6 +129,11 @@ class EmailController extends Controller
             'attachments' => ['nullable', 'array'],
             'attachments.*' => ['file', 'max:10240'],
         ]);
+
+        // Validate that the sender email is a valid email address
+        if (! filter_var($email->from_email, FILTER_VALIDATE_EMAIL)) {
+            return redirect()->back()->with('error', 'Impossible de répondre : l\'adresse email de l\'expéditeur n\'est pas valide.');
+        }
 
         $attachments = [];
         if ($request->hasFile('attachments')) {
@@ -139,8 +154,10 @@ class EmailController extends Controller
             $subject,
             $data['body'],
             $attachments,
-            $email->id,
-            auth()->id()
+            $email->from_email,  // replyToEmail - for reply-to header
+            auth()->id(),
+            null,  // cc
+            $email->id  // replyToMessageId - for threading
         );
 
         return redirect()->route('emails.show', $email->thread_id)->with('success', 'Réponse envoyée.');
@@ -163,8 +180,10 @@ class EmailController extends Controller
             $subject,
             $body,
             [],
-            null,
-            auth()->id()
+            null,  // replyToEmail
+            auth()->id(),
+            null,  // cc
+            null   // replyToMessageId
         );
 
         return redirect()->route('emails.sent')->with('success', 'Email transféré.');

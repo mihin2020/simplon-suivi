@@ -41,9 +41,26 @@ class EmailService
                 continue;
             }
 
-            $from = $message->getFrom()->first();
-            $toList = $message->getTo()->map(fn ($r) => ['email' => $r->mail, 'name' => $r->personal])->toArray();
-            $ccList = $message->getCc()?->map(fn ($r) => ['email' => $r->mail, 'name' => $r->personal])->toArray() ?? [];
+            $fromAttr = $message->getFrom();
+            $from = is_array($fromAttr) ? ($fromAttr[0] ?? null) : $fromAttr->first();
+
+            // Validate from email address
+            $fromEmail = $from?->mail ?? null;
+            if ($fromEmail && ! filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+                $fromEmail = 'unknown';
+            }
+
+            $toList = collect($message->getTo() ?? [])
+                ->map(fn ($r) => ['email' => $r->mail ?? null, 'name' => $r->personal ?? null])
+                ->filter(fn ($r) => $r['email'])
+                ->values()
+                ->toArray();
+
+            $ccList = collect($message->getCc() ?? [])
+                ->map(fn ($r) => ['email' => $r->mail ?? null, 'name' => $r->personal ?? null])
+                ->filter(fn ($r) => $r['email'])
+                ->values()
+                ->toArray();
 
             $threadId = $this->resolveThreadId($message);
 
@@ -51,7 +68,7 @@ class EmailService
                 'message_id' => $messageId,
                 'thread_id' => $threadId,
                 'direction' => 'received',
-                'from_email' => $from?->mail ?? 'unknown',
+                'from_email' => $fromEmail ?? 'unknown',
                 'from_name' => $from?->personal ?? null,
                 'to' => $toList,
                 'cc' => $ccList ?: null,
@@ -60,7 +77,7 @@ class EmailService
                 'body_text' => $message->getTextBody() ?? null,
                 'is_read' => false,
                 'is_archived' => false,
-                'received_at' => $message->getDate()?->toDateTime(),
+                'received_at' => $message->getDate()?->first()?->toDateTime() ?? now(),
             ]);
 
             foreach ($message->getAttachments() as $attachment) {
@@ -84,17 +101,22 @@ class EmailService
     /**
      * Send an email via Laravel Mail and store it locally.
      */
-    public function sendEmail(array $to, string $subject, string $bodyHtml, ?array $attachments = [], ?string $replyTo = null, ?string $sentBy = null): Email
+    public function sendEmail(array $to, string $subject, string $bodyHtml, ?array $attachments = [], ?string $replyToEmail = null, ?string $sentBy = null, ?array $cc = null, ?string $replyToMessageId = null): Email
     {
         $toEmails = collect($to)->pluck('email')->toArray();
+        $ccEmails = $cc ? collect($cc)->pluck('email')->toArray() : [];
 
-        Mail::send([], [], function ($message) use ($toEmails, $subject, $bodyHtml, $attachments, $replyTo) {
+        Mail::send([], [], function ($message) use ($toEmails, $ccEmails, $subject, $bodyHtml, $attachments, $replyToEmail) {
             $message->to($toEmails)
                 ->subject($subject)
                 ->html($bodyHtml);
 
-            if ($replyTo) {
-                $message->replyTo($replyTo);
+            if ($ccEmails) {
+                $message->cc($ccEmails);
+            }
+
+            if ($replyToEmail && filter_var($replyToEmail, FILTER_VALIDATE_EMAIL)) {
+                $message->replyTo($replyToEmail);
             }
 
             foreach ($attachments ?? [] as $file) {
@@ -102,8 +124,8 @@ class EmailService
             }
         });
 
-        $threadId = $replyTo ? Email::where('id', $replyTo)->value('thread_id') : (string) \Illuminate\Support\Str::uuid();
-        $parentId = $replyTo ?: null;
+        $threadId = $replyToMessageId ? Email::where('id', $replyToMessageId)->value('thread_id') : (string) \Illuminate\Support\Str::uuid();
+        $parentId = $replyToMessageId ?: null;
 
         $email = Email::create([
             'thread_id' => $threadId,
@@ -111,7 +133,7 @@ class EmailService
             'from_email' => config('mail.from.address'),
             'from_name' => config('mail.from.name'),
             'to' => $to,
-            'cc' => null,
+            'cc' => $cc,
             'subject' => $subject,
             'body_html' => $bodyHtml,
             'body_text' => strip_tags($bodyHtml),
@@ -166,7 +188,8 @@ class EmailService
 
     protected function resolveThreadId($message): string
     {
-        $inReplyTo = $message->getInReplyTo()?->first();
+        $inReplyToAttr = $message->getInReplyTo();
+        $inReplyTo = is_array($inReplyToAttr) ? ($inReplyToAttr[0] ?? null) : $inReplyToAttr?->first();
         if ($inReplyTo) {
             $parent = Email::where('message_id', $inReplyTo)->first();
             if ($parent) {
@@ -174,7 +197,8 @@ class EmailService
             }
         }
 
-        $references = $message->getReferences()?->toArray() ?? [];
+        $refsAttr = $message->getReferences();
+        $references = is_array($refsAttr) ? $refsAttr : ($refsAttr?->toArray() ?? []);
         foreach ($references as $ref) {
             $parent = Email::where('message_id', $ref)->first();
             if ($parent) {

@@ -166,10 +166,9 @@ class LearnerController extends Controller
         $q = request('q');
         $formationId = request('formation_id');
         $projectId = request('project_id');
-        $status = request('status');
 
         $learners = Learner::query()
-            ->select('id', 'first_name', 'last_name', 'email', 'phone', 'status')
+            ->select('id', 'first_name', 'last_name', 'email', 'phone')
             ->when($q, fn ($query) => $query->where(function ($sq) use ($q) {
                 $sq->where('first_name', 'like', "%{$q}%")
                    ->orWhere('last_name', 'like', "%{$q}%")
@@ -177,9 +176,9 @@ class LearnerController extends Controller
             }))
             ->when($formationId, fn ($query) => $query->whereHas('formations', fn ($fq) => $fq->where('formations.id', $formationId)))
             ->when($projectId, fn ($query) => $query->whereHas('formations', fn ($fq) => $fq->where('project_id', $projectId)))
-            ->when($status, fn ($query) => $query->where('status', $status))
+            ->whereNotNull('email')
             ->orderBy('last_name')
-            ->limit(50)
+            ->limit(100)
             ->get();
 
         return response()->json($learners);
