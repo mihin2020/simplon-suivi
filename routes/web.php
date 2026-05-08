@@ -3,7 +3,10 @@
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\FormationTrainerController;
 use App\Http\Controllers\Auth\ActivationController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FormationController;
 use App\Http\Controllers\Learner\EnrollLearnerController;
@@ -35,6 +38,14 @@ Route::middleware('guest')->group(function () {
 Route::get('/activation/{token}', [ActivationController::class, 'show'])->name('activation.show');
 Route::post('/activation/{token}', [ActivationController::class, 'store'])->name('activation.store');
 
+// Mot de passe oublié
+Route::get('/mot-de-passe-oublie', [ForgotPasswordController::class, 'create'])->name('password.request');
+Route::post('/mot-de-passe-oublie', [ForgotPasswordController::class, 'store'])->name('password.email');
+
+// Réinitialisation du mot de passe
+Route::get('/reinitialisation/{token}', [ResetPasswordController::class, 'show'])->name('password.reset');
+Route::post('/reinitialisation/{token}', [ResetPasswordController::class, 'store'])->name('password.update');
+
 Route::post('/deconnexion', [LoginController::class, 'destroy'])
     ->name('logout')
     ->middleware('auth');
@@ -42,6 +53,11 @@ Route::post('/deconnexion', [LoginController::class, 'destroy'])
 // Routes protégées
 Route::middleware('auth')->group(function () {
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+
+    // Profil utilisateur
+    Route::get('/profil', [ProfileController::class, 'show'])->name('profile.show');
+    Route::put('/profil/informations', [ProfileController::class, 'updateInfo'])->name('profile.info');
+    Route::put('/profil/mot-de-passe', [ProfileController::class, 'updatePassword'])->name('profile.password');
 
     // Users (gestion des comptes — Super Admin)
     Route::resource('users', UserController::class)->except(['show']);

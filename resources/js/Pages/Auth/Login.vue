@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm } from '@inertiajs/vue3'
+import { Head, Link, useForm } from '@inertiajs/vue3'
 import AuthLayout from '@/Layouts/AuthLayout.vue'
 
 defineOptions({ layout: AuthLayout })
@@ -7,7 +7,6 @@ defineOptions({ layout: AuthLayout })
 const form = useForm({
     email: '',
     password: '',
-    remember: false,
 })
 
 const submit = () => {
@@ -57,14 +56,9 @@ const submit = () => {
                 <span v-if="form.errors.password" class="error-msg">{{ form.errors.password }}</span>
             </div>
 
-            <!-- Se souvenir de moi -->
-            <div class="remember">
-                <input
-                    id="remember"
-                    v-model="form.remember"
-                    type="checkbox"
-                />
-                <label for="remember">Se souvenir de moi</label>
+            <!-- Mot de passe oublié -->
+            <div class="forgot-row">
+                <Link href="/mot-de-passe-oublie" class="forgot-link">Mot de passe oublié ?</Link>
             </div>
 
             <!-- Bouton -->
@@ -97,6 +91,7 @@ const submit = () => {
     font-weight: 700;
     color: #111827;
     margin: 0 0 0.25rem;
+    text-align: center;
 }
 
 .login-heading p {
@@ -159,11 +154,18 @@ form {
     color: #dc2626;
 }
 
-.remember {
+.forgot-row {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    justify-content: flex-end;
 }
+
+.forgot-link {
+    font-size: 0.875rem;
+    color: #E5004C;
+    text-decoration: none;
+    font-weight: 500;
+}
+.forgot-link:hover { text-decoration: underline; }
 
 .remember input[type="checkbox"] {
     width: 1rem;

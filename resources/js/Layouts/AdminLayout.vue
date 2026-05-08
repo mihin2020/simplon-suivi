@@ -94,7 +94,7 @@ const logout = () => router.post('/deconnexion')
                 <div class="flex items-center gap-md">
                     <NotificationBell :initial-count="($page.props.unread_notifications_count as number) ?? 0" />
                     <div class="h-6 w-px bg-surface-container-highest mx-xs"></div>
-                    <div class="flex items-center gap-sm">
+                    <Link href="/profil" class="flex items-center gap-sm hover:opacity-80 transition-opacity">
                         <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary text-body-sm font-bold">
                             {{ $page.props.auth.user?.full_name?.charAt(0) ?? 'A' }}
                         </div>
@@ -106,7 +106,7 @@ const logout = () => router.post('/deconnexion')
                                 {{ $page.props.auth.user?.role_label ?? '' }}
                             </span>
                         </div>
-                    </div>
+                    </Link>
                 </div>
             </header>
 
