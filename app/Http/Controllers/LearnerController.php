@@ -93,8 +93,24 @@ class LearnerController extends Controller
             'formations.project',
         ]);
 
+        $insertionRecords = $learner->insertionRecords()
+            ->with('recorder:id,first_name,last_name')
+            ->orderBy('status_changed_at', 'desc')
+            ->get();
+
+        $latestInsertion = $insertionRecords->first();
+
         return Inertia::render('Learners/Show', [
             'learner' => $learner,
+            'insertionRecords' => $insertionRecords,
+            'latestInsertion' => $latestInsertion,
+            'insertionStatuses' => collect(\App\Enums\InsertionStatus::cases())->map(fn ($s) => [
+                'value' => $s->value,
+                'label' => $s->label(),
+                'color' => $s->color(),
+                'is_stage' => $s->isStage(),
+                'is_employment' => $s->isEmployment(),
+            ]),
         ]);
     }
 

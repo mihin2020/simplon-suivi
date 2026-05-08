@@ -16,6 +16,7 @@ const allNavItems = [
     { label: 'Présences',       icon: 'fact_check',            href: '/presences',     prefix: 'Attendances/',    roles: ['super_admin', 'admin', 'trainer'] },
     { label: 'Partenaires',     icon: 'handshake',             href: '/partners',      prefix: 'Partners/',       roles: ['super_admin', 'admin'] },
     { label: 'Référentiels',    icon: 'menu_book',             href: '/referentiels',  prefix: 'Referentiels/',   roles: ['super_admin', 'admin'] },
+    { label: 'Statistiques',    icon: 'bar_chart',             href: '/statistics',    prefix: 'Statistics/',     roles: ['super_admin', 'admin'] },
     { label: 'Communication',   icon: 'chat',                  href: '/communication', prefix: 'Communication/',  roles: ['super_admin', 'admin'] },
 ]
 
@@ -41,7 +42,7 @@ const logout = () => router.post('/deconnexion')
             </div>
 
             <!-- Nav items -->
-            <nav class="flex-1 overflow-y-auto flex flex-col gap-xs">
+            <nav class="flex-1 overflow-y-auto flex flex-col gap-xs custom-scroll">
                 <Link
                     v-for="item in navItems"
                     :key="item.href"
@@ -143,6 +144,26 @@ const logout = () => router.post('/deconnexion')
 </template>
 
 <style scoped>
+/* Scrollbar discrète sidebar */
+.custom-scroll {
+    padding-right: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+.custom-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 99px;
+}
+aside:hover .custom-scroll::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.35);
+}
+
 .nav-link {
     display: flex;
     align-items: center;

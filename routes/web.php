@@ -15,8 +15,10 @@ use App\Http\Controllers\ConfigurationController;
 use App\Http\Controllers\PresenceRedirectController;
 use App\Http\Controllers\TrainerProfileController;
 use App\Http\Controllers\ReferentielController;
+use App\Http\Controllers\InsertionRecordController;
 use App\Http\Controllers\LearnerController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\TrainerController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -61,6 +63,16 @@ Route::middleware('auth')->group(function () {
 
     // Learners
     Route::resource('learners', LearnerController::class);
+    
+    // Insertion records (Stage et Emploi)
+    Route::get('learners/{learner}/insertion', [InsertionRecordController::class, 'index'])
+        ->name('learners.insertion.index');
+    Route::post('learners/{learner}/insertion', [InsertionRecordController::class, 'store'])
+        ->name('learners.insertion.store');
+    Route::put('learners/{learner}/insertion/{record}', [InsertionRecordController::class, 'update'])
+        ->name('learners.insertion.update');
+    Route::delete('learners/{learner}/insertion/{record}', [InsertionRecordController::class, 'destroy'])
+        ->name('learners.insertion.destroy');
 
     // Enrollment / withdrawal / move
     Route::get('formations/{formation}/learners/enroll', [EnrollLearnerController::class, 'create'])
@@ -97,6 +109,10 @@ Route::middleware('auth')->group(function () {
 
     Route::resource('trainer-profiles', TrainerProfileController::class)
         ->except(['create', 'edit', 'show']);
+
+    // Statistics
+    Route::get('statistics', [StatisticsController::class, 'index'])
+        ->name('statistics.index');
 
     // API pour récupérer les formations d'un projet (JSON)
     Route::get('api/projects/{project}/formations', [ProjectController::class, 'formationsJson'])

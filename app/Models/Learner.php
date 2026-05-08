@@ -62,6 +62,16 @@ class Learner extends Model
         return $this->hasMany(Attendance::class);
     }
 
+    public function insertionRecords(): HasMany
+    {
+        return $this->hasMany(InsertionRecord::class)->orderBy('status_changed_at', 'desc');
+    }
+
+    public function latestInsertionRecord(): ?InsertionRecord
+    {
+        return $this->insertionRecords()->first();
+    }
+
     public function scopeSearch(Builder $query, string $term): Builder
     {
         return $query->where(function (Builder $q) use ($term) {
