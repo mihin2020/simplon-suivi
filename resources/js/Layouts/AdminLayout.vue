@@ -59,6 +59,7 @@ const logout = () => router.post('/deconnexion')
             <!-- Bottom -->
             <div class="mt-auto pt-md border-t border-on-secondary-fixed-variant flex flex-col gap-xs text-body-md">
                 <Link
+                    v-if="!isTrainer"
                     href="/configuration"
                     class="text-secondary-fixed-dim pl-5 py-sm flex items-center gap-md hover:text-on-secondary hover:bg-white/5 transition-colors duration-200 ease-in-out"
                 >

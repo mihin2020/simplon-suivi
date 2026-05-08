@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Email;
+use App\Models\Formation;
 use App\Services\EmailService;
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -193,6 +195,60 @@ class EmailController extends Controller
     {
         $this->emailService->syncInbox();
         return back()->with('success', 'Boîte de réception synchronisée.');
+    }
+
+    public function whatsapp()
+    {
+        $formations = Formation::with(['project', 'learners' => function ($query) {
+            $query->whereNotNull('phone');
+        }])
+            ->whereHas('learners', function ($query) {
+                $query->whereNotNull('phone');
+            })
+            ->get()
+            ->map(fn ($f) => [
+                'id' => $f->id,
+                'name' => $f->name,
+                'project' => ['id' => $f->project->id, 'name' => $f->project->name],
+                'learners' => $f->learners->map(fn ($l) => [
+                    'id' => $l->id,
+                    'first_name' => $l->first_name,
+                    'last_name' => $l->last_name,
+                    'phone' => $l->phone,
+                    'email' => $l->email,
+                ]),
+            ]);
+
+        return Inertia::render('Communication/WhatsApp', [
+            'formations' => $formations,
+        ]);
+    }
+
+    public function sendWhatsAppBulk(Request $request, WhatsAppService $whatsAppService)
+    {
+        $validated = $request->validate([
+            'recipients' => 'required|array|min:1',
+            'recipients.*.phone' => 'required|string',
+            'recipients.*.name' => 'nullable|string',
+            'message' => 'required|string|max:1600', // WhatsApp limite
+        ]);
+
+        // Vérifier si Twilio est configuré
+        if (!$whatsAppService->isConfigured()) {
+            return back()->with('error', 'Twilio non configuré. Ajoutez TWILIO_SID, TWILIO_AUTH_TOKEN et TWILIO_WHATSAPP_FROM dans le fichier .env');
+        }
+
+        $results = $whatsAppService->sendBulk($validated['recipients'], $validated['message']);
+
+        if ($results['failed'] === 0) {
+            return back()->with('success', "✅ {$results['success']} message(s) WhatsApp envoyé(s) avec succès !");
+        } elseif ($results['success'] === 0) {
+            $firstError = $results['errors'][0]['error'] ?? 'Erreur inconnue';
+            return back()->with('error', "❌ Échec de l'envoi. Erreur: {$firstError}");
+        } else {
+            $msg = "⚠️ {$results['success']} envoyé(s), {$results['failed']} échec(s)";
+            return back()->with('warning', $msg);
+        }
     }
 
     public function archive(Email $email)

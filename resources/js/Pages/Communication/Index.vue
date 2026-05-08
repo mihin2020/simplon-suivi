@@ -79,6 +79,10 @@ onUnmounted(() => {
             <Link href="/communication/emails" :class="filter === 'inbox' ? 'tab-active' : 'tab-inactive'">Boîte de réception</Link>
             <Link href="/communication/emails/sent" class="tab-inactive">Envoyés</Link>
             <Link href="/communication/emails?filter=archived" :class="filter === 'archived' ? 'tab-active' : 'tab-inactive'">Archivés</Link>
+            <Link href="/communication/whatsapp" class="tab-inactive flex items-center gap-xs">
+                <span class="material-symbols-outlined" style="font-size:16px">chat</span>
+                WhatsApp
+            </Link>
         </div>
 
         <div v-if="selected.length > 0" class="flex items-center gap-sm">

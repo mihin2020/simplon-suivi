@@ -144,7 +144,7 @@ Route::middleware('auth')->group(function () {
     Route::get('formations/{formation}/attendances/pdf-recap', [AttendanceController::class, 'pdfRecap'])
         ->name('attendances.pdf-recap');
 
-    // Communication - Emails
+    // Communication - Emails & WhatsApp
     Route::prefix('communication')->group(function () {
         Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
         Route::get('/emails/sent', [EmailController::class, 'sent'])->name('emails.sent');
@@ -156,6 +156,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/emails/sync', [EmailController::class, 'sync'])->name('emails.sync');
         Route::patch('/emails/{email}/archive', [EmailController::class, 'archive'])->name('emails.archive');
         Route::delete('/emails/{email}', [EmailController::class, 'destroy'])->name('emails.destroy');
+        // WhatsApp
+        Route::get('/whatsapp', [EmailController::class, 'whatsapp'])->name('whatsapp.index');
+        Route::post('/whatsapp/send', [EmailController::class, 'sendWhatsAppBulk'])->name('whatsapp.send');
     });
 
     // Notifications

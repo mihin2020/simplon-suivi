@@ -35,9 +35,8 @@ class DashboardController extends Controller
                 $q->where('formation_learner.status', LearnerStatus::InProgress->value)
             ])
             ->orderByDesc('started_at')
-            ->limit(6)
-            ->get()
-            ->map(fn ($f) => [
+            ->paginate(5)
+            ->through(fn ($f) => [
                 'id'                    => $f->id,
                 'name'                  => $f->name,
                 'project_name'          => $f->project->name,

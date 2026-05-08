@@ -21,6 +21,22 @@ interface ActiveFormation {
     ended_at: string | null
 }
 
+interface PaginationLink {
+    url: string | null
+    label: string
+    active: boolean
+}
+
+interface PaginatedActiveFormations {
+    data: ActiveFormation[]
+    current_page: number
+    last_page: number
+    from: number
+    to: number
+    total: number
+    links: PaginationLink[]
+}
+
 interface RecentEnrollment {
     id: string
     first_name: string
@@ -52,7 +68,7 @@ const props = defineProps<{
     role: 'admin' | 'trainer'
     // Admin props
     stats?: Stats
-    activeFormations?: ActiveFormation[]
+    activeFormations?: PaginatedActiveFormations
     recentEnrollments?: RecentEnrollment[]
     // Trainer props
     trainer?: { id: string; full_name: string; speciality: string | null } | null
@@ -132,11 +148,11 @@ const statusClass: Record<string, string> = {
                     <h2 class="text-h2 font-semibold text-on-surface">Formations actives</h2>
                     <span class="count-badge">{{ stats!.formations.active }}</span>
                 </div>
-                <div v-if="!activeFormations?.length" class="px-lg py-xl text-center text-secondary text-body-md">
+                <div v-if="!activeFormations?.data?.length" class="px-lg py-xl text-center text-secondary text-body-md">
                     Aucune formation active pour le moment.
                 </div>
                 <div class="divide-y divide-surface-container-highest">
-                    <div v-for="f in activeFormations" :key="f.id"
+                    <div v-for="f in activeFormations?.data" :key="f.id"
                         class="px-lg py-md flex items-center justify-between gap-md hover:bg-surface-bright transition-colors">
                         <div class="flex-1 min-w-0">
                             <Link :href="`/formations/${f.id}`"
@@ -159,6 +175,25 @@ const statusClass: Record<string, string> = {
                             <Link :href="`/formations/${f.id}/attendances`" class="icon-action" title="Présences">
                                 <span class="material-symbols-outlined" style="font-size:18px">fact_check</span>
                             </Link>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div v-if="activeFormations && activeFormations.last_page > 1" class="px-lg py-md border-t border-surface-container-highest">
+                    <div class="flex items-center justify-between">
+                        <span class="text-body-sm text-secondary">
+                            {{ activeFormations.from }} - {{ activeFormations.to }} sur {{ activeFormations.total }}
+                        </span>
+                        <div class="flex items-center gap-xs">
+                            <Link
+                                v-for="link in activeFormations.links"
+                                :key="link.label"
+                                :href="link.url ?? '#'"
+                                class="px-3 py-1 text-sm rounded-md transition-colors"
+                                :class="link.active ? 'bg-primary text-white' : 'bg-surface-bright text-secondary hover:bg-surface-container-highest'"
+                                v-html="link.label"
+                            />
                         </div>
                     </div>
                 </div>
