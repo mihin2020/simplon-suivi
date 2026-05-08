@@ -64,6 +64,16 @@ class User extends Authenticatable
         return $this->hasMany(Attendance::class, 'recorded_by');
     }
 
+    public function sentEmails(): HasMany
+    {
+        return $this->hasMany(Email::class, 'sent_by');
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(\App\Models\Notification::class);
+    }
+
     public function hasPermission(string $slug): bool
     {
         if ($this->isSuperAdmin()) {

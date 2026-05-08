@@ -31,6 +31,7 @@ class HandleInertiaRequests extends Middleware
                         : $request->user()->permissions->pluck('slug'),
                 ] : null,
             ],
+            'unread_notifications_count' => $request->user() ? $request->user()->notifications()->unread()->count() : 0,
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'warning' => $request->session()->get('warning'),

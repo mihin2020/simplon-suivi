@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage, router } from '@inertiajs/vue3'
+import NotificationBell from '@/Components/NotificationBell.vue'
 
 const page = usePage()
 
@@ -17,7 +18,7 @@ const allNavItems = [
     { label: 'Partenaires',     icon: 'handshake',             href: '/partners',      prefix: 'Partners/',       roles: ['super_admin', 'admin'] },
     { label: 'Référentiels',    icon: 'menu_book',             href: '/referentiels',  prefix: 'Referentiels/',   roles: ['super_admin', 'admin'] },
     { label: 'Statistiques',    icon: 'bar_chart',             href: '/statistics',    prefix: 'Statistics/',     roles: ['super_admin', 'admin'] },
-    { label: 'Communication',   icon: 'chat',                  href: '/communication', prefix: 'Communication/',  roles: ['super_admin', 'admin'] },
+    { label: 'Communication',   icon: 'chat',                  href: '/communication/emails', prefix: 'Communication/',  roles: ['super_admin', 'admin'] },
 ]
 
 const navItems = allNavItems.filter(item => !userRole || item.roles.includes(userRole))
@@ -90,9 +91,7 @@ const logout = () => router.post('/deconnexion')
                 </div>
 
                 <div class="flex items-center gap-md">
-                    <button class="text-on-surface-variant hover:bg-surface-container-low rounded-xl p-sm transition-transform scale-95 active:scale-90">
-                        <span class="material-symbols-outlined">notifications</span>
-                    </button>
+                    <NotificationBell :initial-count="($page.props.unread_notifications_count as number) ?? 0" />
                     <div class="h-6 w-px bg-surface-container-highest mx-xs"></div>
                     <div class="flex items-center gap-sm">
                         <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary text-body-sm font-bold">

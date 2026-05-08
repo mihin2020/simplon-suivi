@@ -20,6 +20,8 @@ use App\Http\Controllers\LearnerController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\TrainerController;
+use App\Http\Controllers\EmailController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -118,6 +120,10 @@ Route::middleware('auth')->group(function () {
     Route::get('api/projects/{project}/formations', [ProjectController::class, 'formationsJson'])
         ->name('api.projects.formations');
 
+    // API recherche apprenants pour emails
+    Route::get('api/learners/search', [LearnerController::class, 'search'])
+        ->name('api.learners.search');
+
     // Formateurs d'une formation (assignation/désassignation)
     Route::post('formations/{formation}/trainers', [FormationTrainerController::class, 'store'])
         ->name('formations.trainers.store');
@@ -137,4 +143,24 @@ Route::middleware('auth')->group(function () {
         ->name('attendances.pdf');
     Route::get('formations/{formation}/attendances/pdf-recap', [AttendanceController::class, 'pdfRecap'])
         ->name('attendances.pdf-recap');
+
+    // Communication - Emails
+    Route::prefix('communication')->group(function () {
+        Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
+        Route::get('/emails/sent', [EmailController::class, 'sent'])->name('emails.sent');
+        Route::get('/emails/compose', [EmailController::class, 'compose'])->name('emails.compose');
+        Route::post('/emails', [EmailController::class, 'store'])->name('emails.store');
+        Route::get('/emails/thread/{threadId}', [EmailController::class, 'show'])->name('emails.show');
+        Route::post('/emails/{email}/reply', [EmailController::class, 'reply'])->name('emails.reply');
+        Route::post('/emails/{email}/forward', [EmailController::class, 'forward'])->name('emails.forward');
+        Route::post('/emails/sync', [EmailController::class, 'sync'])->name('emails.sync');
+        Route::patch('/emails/{email}/archive', [EmailController::class, 'archive'])->name('emails.archive');
+        Route::delete('/emails/{email}', [EmailController::class, 'destroy'])->name('emails.destroy');
+    });
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+    Route::patch('/notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.mark-read');
+    Route::post('/notifications/mark-all-read', [NotificationController::class, 'markAllAsRead'])->name('notifications.mark-all-read');
 });
