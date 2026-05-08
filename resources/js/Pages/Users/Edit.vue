@@ -69,7 +69,8 @@ const onCvChange = (e: Event) => {
 }
 
 const submit = () => {
-    form.patch(`/users/${props.user.id}`, { forceFormData: true })
+    form.transform(data => ({ ...data, _method: 'PUT' }))
+        .post(`/users/${props.user.id}`, { forceFormData: true })
 }
 
 const groupedPermissions = computed(() => {
@@ -106,7 +107,7 @@ const togglePermission = (id: number) => {
             </Link>
             <h1 class="text-h1 font-bold text-on-surface mt-sm">Modifier l'utilisateur</h1>
             <p class="text-body-md text-secondary mt-xs">
-                {{ user.last_name }} {{ user.first_name }} — {{ user.email }}
+                {{ user.last_name }} {{ user.first_name }} · {{ user.email }}
             </p>
         </div>
 
@@ -193,17 +194,20 @@ const togglePermission = (id: number) => {
                             </a>
                         </div>
                         <select v-model="form.profile_id" class="input" :class="{ 'input-error': form.errors.profile_id }">
-                            <option value="">— Sélectionner —</option>
+                            <option value="">Sélectionner</option>
                             <option v-for="p in trainerProfiles" :key="p.id" :value="p.id">{{ p.name }}</option>
                         </select>
                         <p v-if="form.errors.profile_id" class="error-msg">{{ form.errors.profile_id }}</p>
                     </div>
                     <div class="field">
                         <label class="label">CV (PDF, Word)</label>
-                        <p v-if="trainerData?.cv_path" class="cv-current">
-                            <span class="material-symbols-outlined" style="font-size:14px">attach_file</span>
-                            CV existant — remplacer ci-dessous
-                        </p>
+                        <div v-if="trainerData?.cv_path" class="cv-existing">
+                            <span class="material-symbols-outlined" style="font-size:16px;color:#E5004C">picture_as_pdf</span>
+                            <a :href="`/storage/${trainerData.cv_path}`" target="_blank" class="cv-link">
+                                Voir le CV actuel
+                            </a>
+                            <span class="cv-replace-hint"> pour remplacer, sélectionnez un nouveau fichier ci-dessous</span>
+                        </div>
                         <input type="file" accept=".pdf,.doc,.docx" @change="onCvChange" class="input file-input" />
                         <p v-if="form.errors.cv" class="error-msg">{{ form.errors.cv }}</p>
                     </div>
@@ -512,15 +516,28 @@ select.input {
 }
 .config-link:hover { color: #E5004C; }
 
-.cv-current {
-    display: inline-flex;
+.cv-existing {
+    display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     font-size: 12px;
-    color: #515f74;
-    background: #f3f4f6;
-    padding: 4px 8px;
+    background: #fff5f7;
+    border: 1px solid #fcd5e0;
+    padding: 6px 10px;
     border-radius: 6px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+}
+.cv-link {
+    color: #E5004C;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 12px;
+}
+.cv-link:hover { text-decoration: underline; }
+.cv-replace-hint {
+    color: #6b7280;
+    font-size: 12px;
 }
 .sr-only {
     position: absolute;

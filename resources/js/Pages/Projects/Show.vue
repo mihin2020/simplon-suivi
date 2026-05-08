@@ -37,7 +37,7 @@ const props = defineProps<{ project: Project }>()
 const showPartnersModal = ref(false)
 
 const fmt = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
 
 const statusLabels: Record<string, string> = {
     active: 'Actif',

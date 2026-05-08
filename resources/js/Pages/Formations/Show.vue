@@ -66,7 +66,7 @@ const props = defineProps<{
 }>()
 
 const fmt = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
 
 const statusLabels: Record<string, string> = {
     active: 'Active',
@@ -245,7 +245,7 @@ const filteredInactiveLearners = computed(() => {
                 <Link
                     :href="formation.referentiel ? `/referentiels/${formation.referentiel.id}` : `/formations/${formation.id}/edit`"
                     class="btn-secondary"
-                    :title="formation.referentiel ? formation.referentiel.name : 'Aucun référentiel — cliquez pour en assigner un'"
+                    :title="formation.referentiel ? formation.referentiel.name : 'Aucun référentiel · cliquez pour en assigner un'"
                 >
                     <span class="material-symbols-outlined" style="font-size:18px">menu_book</span>
                     {{ formation.referentiel ? 'Référentiel' : 'Assigner un référentiel' }}
@@ -391,7 +391,7 @@ const filteredInactiveLearners = computed(() => {
                                         <p v-if="learner.email" class="text-body-sm text-secondary">{{ learner.email }}</p>
                                     </td>
                                     <td class="px-md py-sm text-on-surface-variant text-body-sm">
-                                        {{ learner.education_level?.name ?? '—' }}
+                                        {{ learner.education_level?.name ?? '' }}
                                     </td>
                                     <td class="px-md py-sm text-on-surface-variant text-body-sm whitespace-nowrap">
                                         {{ fmt(learner.pivot.enrolled_at) }}
@@ -507,7 +507,7 @@ const filteredInactiveLearners = computed(() => {
                                         {{ fmt(learner.pivot.withdrawn_at) }}
                                     </td>
                                     <td class="px-md py-sm text-on-surface-variant text-body-sm max-w-[200px] truncate" :title="learner.pivot.notes ?? ''">
-                                        {{ learner.pivot.notes || '—' }}
+                                        {{ learner.pivot.notes || '' }}
                                     </td>
                                     <td class="px-md py-sm text-right">
                                         <Link :href="`/learners/${learner.id}`" class="icon-btn" title="Voir le profil">

@@ -159,7 +159,7 @@ const toggleActive = (u: UserItem) => {
                             </td>
                             <td class="px-md py-sm">
                                 <div v-if="user.role === 'super_admin'" class="text-body-sm text-on-surface-variant">Toutes</div>
-                                <div v-else-if="user.permissions.length === 0" class="text-body-sm text-on-surface-variant">—</div>
+                                <div v-else-if="user.permissions.length === 0" class="text-body-sm text-on-surface-variant"></div>
                                 <div v-else class="flex flex-wrap gap-xs">
                                     <span
                                         v-for="p in user.permissions.slice(0, 3)"

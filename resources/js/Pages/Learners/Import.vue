@@ -56,9 +56,9 @@ const optionalColumns = [
     { key: 'lieu_naissance', label: 'Lieu de naissance' },
     { key: 'niveau_etudes', label: 'Niveau d\'études (Infrabac | Bac+2 | Bac+3 et plus)' },
     { key: 'talent', label: 'Talent / compétences' },
-    { key: 'contact_urgence_nom', label: 'Contact urgence — Nom' },
-    { key: 'contact_urgence_prenom', label: 'Contact urgence — Prénom' },
-    { key: 'contact_urgence_telephone', label: 'Contact urgence — Téléphone' },
+    { key: 'contact_urgence_nom', label: 'Contact urgence · Nom' },
+    { key: 'contact_urgence_prenom', label: 'Contact urgence · Prénom' },
+    { key: 'contact_urgence_telephone', label: 'Contact urgence · Téléphone' },
 ]
 </script>
 
@@ -76,7 +76,7 @@ const optionalColumns = [
                     <template v-if="formation">
                         Formation : <span class="font-semibold text-on-surface">{{ formation.name }}</span>
                     </template>
-                    <template v-else>Import général — les apprenants ne seront pas inscrits dans une formation.</template>
+                    <template v-else>Import général · les apprenants ne seront pas inscrits dans une formation.</template>
                 </p>
             </div>
         </div>
@@ -91,7 +91,7 @@ const optionalColumns = [
                         Téléchargez le modèle, remplissez les données dans Excel, puis importez-le.
                     </p>
                     <p class="text-body-sm text-secondary">
-                        <span class="badge-xlsx">XLSX</span> Format Excel — pas de problème d'encodage ou de séparateur.
+                        <span class="badge-xlsx">XLSX</span> Format Excel · pas de problème d'encodage ou de séparateur.
                     </p>
                 </div>
                 <a href="/learners/import/template" class="btn-download">

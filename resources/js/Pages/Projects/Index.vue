@@ -26,7 +26,7 @@ defineProps<{
 }>()
 
 const fmt = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
 
 const destroy = (p: Project) => {
     if (confirm(`Supprimer le projet « ${p.name} » ?`)) {

@@ -107,7 +107,7 @@ const submit = () => form.post('/trainers', { forceFormData: true })
                     class="input"
                     :class="{ 'input-error': form.errors.profile_id }"
                 >
-                    <option value="">— Sélectionner un profil —</option>
+                    <option value="">Sélectionner un profil</option>
                     <option v-for="p in profiles" :key="p.id" :value="p.id">{{ p.name }}</option>
                 </select>
                 <p v-if="form.errors.profile_id" class="error-msg">{{ form.errors.profile_id }}</p>
@@ -161,7 +161,7 @@ const submit = () => form.post('/trainers', { forceFormData: true })
                 <label v-else class="cv-upload" :class="{ 'upload-error': form.errors.cv }">
                     <span class="material-symbols-outlined" style="font-size:28px;color:#adb5bd">upload_file</span>
                     <span class="cv-upload-text">Cliquer pour uploader le CV</span>
-                    <span class="cv-upload-hint">PDF, DOC, DOCX — 5 Mo max</span>
+                    <span class="cv-upload-hint">PDF, DOC, DOCX · 5 Mo max</span>
                     <input type="file" accept=".pdf,.doc,.docx" class="sr-only" @change="onCvChange" />
                 </label>
 

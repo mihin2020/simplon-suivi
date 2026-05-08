@@ -122,7 +122,7 @@ const photoUrl = (path: string | null) =>
                 <select v-model="formationId" class="filter-input" :disabled="formationsForProject.length === 0">
                     <option value="">Toutes les formations</option>
                     <option v-for="f in formationsForProject" :key="f.id" :value="f.id">
-                        {{ f.name }} <template v-if="!projectId">— {{ f.project.name }}</template>
+                        {{ f.name }} <template v-if="!projectId"> {{ f.project.name }}</template>
                     </option>
                 </select>
             </div>
@@ -184,16 +184,16 @@ const photoUrl = (path: string | null) =>
                                 </div>
                             </td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant">
-                                {{ learner.email ?? '—' }}
+                                {{ learner.email ?? '' }}
                             </td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant">
-                                {{ learner.phone ?? '—' }}
+                                {{ learner.phone ?? '' }}
                             </td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant">
-                                {{ learner.formations?.[0]?.project?.name ?? '—' }}
+                                {{ learner.formations?.[0]?.project?.name ?? '' }}
                             </td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant">
-                                {{ learner.formations?.[0]?.name ?? '—' }}
+                                {{ learner.formations?.[0]?.name ?? '' }}
                             </td>
                             <td class="px-md py-sm text-right">
                                 <div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">

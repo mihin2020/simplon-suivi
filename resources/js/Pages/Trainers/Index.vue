@@ -242,7 +242,7 @@ const isFormationSelected = (formationId: string) => {
                             </td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant">{{ trainer.user.email }}</td>
                             <td class="px-md py-sm">
-                                <div v-if="trainer.formations.length === 0" class="text-on-surface-variant text-body-sm">—</div>
+                                <div v-if="trainer.formations.length === 0" class="text-on-surface-variant text-body-sm"></div>
                                 <div v-else class="flex flex-wrap gap-xs">
                                     <div
                                         v-for="formation in trainer.formations"
@@ -327,7 +327,7 @@ const isFormationSelected = (formationId: string) => {
                             @change="onProjectChange"
                             :disabled="loadingFormations"
                         >
-                            <option value="">— Sélectionner un projet —</option>
+                            <option value="">Sélectionner un projet</option>
                             <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
                         </select>
                     </div>

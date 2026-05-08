@@ -40,7 +40,7 @@ const props = defineProps<{
 }>()
 
 const fmt = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
 
 const statusLabels: Record<string, string> = {
     active: 'Active',
@@ -96,15 +96,15 @@ const statusLabels: Record<string, string> = {
                         </div>
                         <div class="info-row">
                             <dt>Téléphone 1</dt>
-                            <dd>{{ trainer.phone ?? '—' }}</dd>
+                            <dd>{{ trainer.phone ?? '' }}</dd>
                         </div>
                         <div class="info-row">
                             <dt>Téléphone 2</dt>
-                            <dd>{{ trainer.phone2 ?? '—' }}</dd>
+                            <dd>{{ trainer.phone2 ?? '' }}</dd>
                         </div>
                         <div class="info-row">
                             <dt>Profil</dt>
-                            <dd>{{ trainer.profile?.name ?? '—' }}</dd>
+                            <dd>{{ trainer.profile?.name ?? '' }}</dd>
                         </div>
                         <div class="info-row" v-if="trainer.cv_path">
                             <dt>CV</dt>

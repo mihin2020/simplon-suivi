@@ -178,7 +178,7 @@ const submit = () => form.post(`/learners/${props.learner.id}`, {
                     <div class="field">
                         <label class="label">Niveau d'études</label>
                         <select v-model="form.education_level_id" class="input">
-                            <option value="">— Sélectionner —</option>
+                            <option value="">Sélectionner</option>
                             <option v-for="lvl in educationLevels" :key="lvl.id" :value="lvl.id">{{ lvl.name }}</option>
                         </select>
                     </div>

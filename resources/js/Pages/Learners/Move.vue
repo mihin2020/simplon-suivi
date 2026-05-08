@@ -85,7 +85,7 @@ const submit = () => form.post(`/learners/${props.learner.id}/move`)
                     :class="{ 'input-error': form.errors.source_formation_id }"
                     @change="form.target_formation_id = ''"
                 >
-                    <option value="">— Sélectionner —</option>
+                    <option value="">Sélectionner</option>
                     <option v-for="f in activeFormations" :key="f.id" :value="f.id">
                         {{ f.name }} ({{ f.project.name }})
                     </option>
@@ -104,8 +104,8 @@ const submit = () => form.post(`/learners/${props.learner.id}/move`)
                 >
                     <option value="">
                         {{ form.source_formation_id
-                            ? (availableTargets.length === 0 ? 'Aucune formation disponible dans ce projet' : '— Sélectionner —')
-                            : '— Sélectionner d\'abord la formation de départ —' }}
+                            ? (availableTargets.length === 0 ? 'Aucune formation disponible dans ce projet' : 'Sélectionner')
+                            : ' Sélectionner d\'abord la formation de départ ' }}
                     </option>
                     <option v-for="f in availableTargets" :key="f.id" :value="f.id">
                         {{ f.name }}

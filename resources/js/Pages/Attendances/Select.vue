@@ -143,7 +143,7 @@ const statusClass = (s: string) => ({
                         <span class="material-symbols-outlined" style="font-size:14px">radio_button_unchecked</span>
                         Saisie du jour en attente
                     </span>
-                    <span v-else class="text-secondary text-body-sm">—</span>
+                    <span v-else class="text-secondary text-body-sm"></span>
                     <span class="cta">
                         Saisir les présences
                         <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span>

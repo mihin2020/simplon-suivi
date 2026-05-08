@@ -48,7 +48,7 @@ const destroy = (p: Profile) => {
         <!-- En-tête -->
         <div class="flex items-center gap-md">
             <div>
-                <h1 class="text-h1 font-bold text-on-surface">Configuration — Profils Formateurs</h1>
+                <h1 class="text-h1 font-bold text-on-surface">Configuration · Profils Formateurs</h1>
                 <p class="text-body-md text-secondary mt-xs">Gérez les profils disponibles lors de l'invitation d'un formateur.</p>
             </div>
         </div>

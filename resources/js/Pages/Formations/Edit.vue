@@ -100,7 +100,7 @@ const submit = () => form.put(`/formations/${props.formation.id}`)
             <div class="field">
                 <label class="label">Référentiel de compétences</label>
                 <select v-model="form.referentiel_id" class="input">
-                    <option value="">— Aucun référentiel —</option>
+                    <option value=""> Aucun référentiel </option>
                     <option v-for="r in referentiels" :key="r.id" :value="r.id">{{ r.name }}</option>
                 </select>
                 <p style="font-size:11px; color:#9aaabb; margin-top:4px;">

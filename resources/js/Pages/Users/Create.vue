@@ -127,7 +127,7 @@ const submit = () => {
                 <div class="field">
                     <label class="label">Type de compte <span class="required">*</span></label>
                     <select v-model="selectedRole" class="input" :class="{ 'input-error': form.errors.role }">
-                        <option value="">— Sélectionner —</option>
+                        <option value="">Sélectionner</option>
                         <option v-for="r in roles" :key="r.value" :value="r.value">{{ r.label }}</option>
                     </select>
                     <p v-if="form.errors.role" class="error-msg">{{ form.errors.role }}</p>
@@ -168,7 +168,7 @@ const submit = () => {
                             </a>
                         </div>
                         <select v-model="form.profile_id" class="input" :class="{ 'input-error': form.errors.profile_id }">
-                            <option value="">— Sélectionner —</option>
+                            <option value="">Sélectionner</option>
                             <option v-for="p in trainerProfiles" :key="p.id" :value="p.id">{{ p.name }}</option>
                         </select>
                         <p v-if="form.errors.profile_id" class="error-msg">{{ form.errors.profile_id }}</p>

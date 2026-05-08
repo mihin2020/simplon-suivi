@@ -31,7 +31,7 @@ const props = defineProps<{
 }>()
 
 const fmt = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
 
 const statusLabels: Record<string, string> = {
     active: 'Active',

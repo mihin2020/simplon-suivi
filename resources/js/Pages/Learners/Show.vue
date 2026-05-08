@@ -41,8 +41,8 @@ const props = defineProps<{
 
 const activeTab = ref<'info' | 'formations'>('info')
 
-const fmt = (d: string | null) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—'
-const genderLabel = (g: string | null) => ({ male: 'Masculin', female: 'Féminin' }[g ?? ''] ?? '—')
+const fmt = (d: string | null) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : ''
+const genderLabel = (g: string | null) => ({ male: 'Masculin', female: 'Féminin' }[g ?? ''] ?? '')
 const photoUrl = (path: string | null) => path ? `/storage/${path}` : null
 
 const enrollmentStatusLabels: Record<string, string> = {
@@ -97,10 +97,10 @@ const currentFormation = computed(() => props.learner.formations.find(f => f.piv
                 <div class="card">
                     <h2 class="section-title">Informations personnelles</h2>
                     <dl class="info-list">
-                        <div class="info-row"><dt>Email</dt><dd>{{ learner.email ?? '—' }}</dd></div>
-                        <div class="info-row"><dt>Téléphone</dt><dd>{{ learner.phone ?? '—' }}</dd></div>
+                        <div class="info-row"><dt>Email</dt><dd>{{ learner.email ?? '' }}</dd></div>
+                        <div class="info-row"><dt>Téléphone</dt><dd>{{ learner.phone ?? '' }}</dd></div>
                         <div class="info-row"><dt>Date de naissance</dt><dd>{{ fmt(learner.birth_date) }}</dd></div>
-                        <div class="info-row"><dt>Lieu de naissance</dt><dd>{{ learner.birth_place ?? '—' }}</dd></div>
+                        <div class="info-row"><dt>Lieu de naissance</dt><dd>{{ learner.birth_place ?? '' }}</dd></div>
                         <div v-if="learner.talent" class="info-row"><dt>Talent</dt><dd>{{ learner.talent }}</dd></div>
                     </dl>
                 </div>

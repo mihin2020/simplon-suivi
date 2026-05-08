@@ -18,7 +18,7 @@ const forwardTo = ref('')
 const forwardBody = ref('')
 
 function fmtDate(d: string | null) {
-    if (!d) return '—'
+    if (!d) return ''
     const date = new Date(d)
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }

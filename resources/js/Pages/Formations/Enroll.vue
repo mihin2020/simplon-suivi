@@ -77,7 +77,7 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners`)
                             <p class="font-semibold text-on-surface text-body-sm">
                                 {{ selectedLearner.last_name }} {{ selectedLearner.first_name }}
                             </p>
-                            <p class="text-body-sm text-secondary">{{ selectedLearner.email ?? '—' }}</p>
+                            <p class="text-body-sm text-secondary">{{ selectedLearner.email ?? '' }}</p>
                         </div>
                     </div>
                     <button type="button" class="icon-btn" @click="form.learner_id = ''">
@@ -122,7 +122,7 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners`)
                             <p class="font-semibold text-on-surface text-body-sm">
                                 {{ learner.last_name }} {{ learner.first_name }}
                             </p>
-                            <p class="text-body-sm text-secondary">{{ learner.email ?? '—' }}</p>
+                            <p class="text-body-sm text-secondary">{{ learner.email ?? '' }}</p>
                         </div>
                         <span class="material-symbols-outlined ml-auto text-secondary" style="font-size:18px">add_circle</span>
                     </button>

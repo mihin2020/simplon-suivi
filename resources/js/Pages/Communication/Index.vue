@@ -41,7 +41,7 @@ function deleteSelected() {
 }
 
 function fmtDate(d: string | null) {
-    if (!d) return '—'
+    if (!d) return ''
     const date = new Date(d)
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }

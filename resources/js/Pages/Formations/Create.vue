@@ -53,7 +53,7 @@ const submit = () => form.post(`/projects/${props.project.id}/formations`)
                     type="text"
                     class="input"
                     :class="{ 'input-error': form.errors.name }"
-                    placeholder="Ex : Développement Web & Mobile — Cohorte 3"
+                    placeholder="Ex : Développement Web & Mobile · Cohorte 3"
                     autofocus
                 />
                 <p v-if="form.errors.name" class="error-msg">{{ form.errors.name }}</p>
@@ -101,7 +101,7 @@ const submit = () => form.post(`/projects/${props.project.id}/formations`)
             <div class="field">
                 <label class="label">Référentiel de compétences</label>
                 <select v-model="form.referentiel_id" class="input">
-                    <option value="">— Aucun référentiel —</option>
+                    <option value=""> Aucun référentiel </option>
                     <option v-for="r in referentiels" :key="r.id" :value="r.id">{{ r.name }}</option>
                 </select>
                 <p class="text-body-sm text-secondary" style="font-size:11px; color:#9aaabb;">

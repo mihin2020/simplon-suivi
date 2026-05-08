@@ -79,7 +79,7 @@ const props = defineProps<{
 const photoUrl = (path: string | null) => path ? `/storage/${path}` : null
 
 const fmtDate = (d: string | null) =>
-    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+    d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
 
 const statusLabel: Record<string, string> = {
     active: 'Active',
@@ -418,7 +418,7 @@ const statusClass: Record<string, string> = {
 }
 .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 
-/* Trainer — status badges */
+/* Trainer · status badges */
 .status-badge {
     display: inline-flex;
     align-items: center;

@@ -227,7 +227,7 @@ const recapCodeClass: Record<string, string> = {
             <div class="legend-bar">
                 <span v-for="c in codes" :key="c.value" class="legend-item">
                     <span class="legend-dot" :class="`dot-${c.value}`"></span>
-                    <strong>{{ c.value }}</strong> — {{ c.label }}
+                    <strong>{{ c.value }}</strong> · {{ c.label }}
                 </span>
             </div>
 
@@ -336,7 +336,7 @@ const recapCodeClass: Record<string, string> = {
                                     <span v-if="row.days[d]" class="rc-badge" :class="recapCodeClass[row.days[d]!]">
                                         {{ row.days[d] }}
                                     </span>
-                                    <span v-else class="rc-empty">—</span>
+                                    <span v-else class="rc-empty"></span>
                                 </td>
                             </tr>
                         </tbody>

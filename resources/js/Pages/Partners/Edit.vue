@@ -57,7 +57,7 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
                 Partenaires
             </Link>
             <span class="material-symbols-outlined breadcrumb-sep">chevron_right</span>
-            <span class="breadcrumb-current">Modifier — {{ partner.name }}</span>
+            <span class="breadcrumb-current">Modifier · {{ partner.name }}</span>
         </div>
 
         <div class="page-title-row">

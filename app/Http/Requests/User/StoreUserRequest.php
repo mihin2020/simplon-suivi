@@ -31,4 +31,24 @@ class StoreUserRequest extends FormRequest
             'cv'            => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'first_name.required' => 'Le prénom est obligatoire.',
+            'first_name.max'      => 'Le prénom ne peut pas dépasser 255 caractères.',
+            'last_name.required'  => 'Le nom est obligatoire.',
+            'last_name.max'       => 'Le nom ne peut pas dépasser 255 caractères.',
+            'email.required'      => 'L\'adresse email est obligatoire.',
+            'email.email'         => 'L\'adresse email n\'est pas valide.',
+            'email.max'           => 'L\'adresse email ne peut pas dépasser 255 caractères.',
+            'email.unique'        => 'Cette adresse email est déjà utilisée.',
+            'role.required'       => 'Le type de compte est obligatoire.',
+            'role.enum'           => 'Le type de compte sélectionné est invalide.',
+            'profile_id.exists'   => 'Le profil sélectionné est invalide.',
+            'cv.file'             => 'Le CV doit être un fichier.',
+            'cv.mimes'            => 'Le CV doit être au format PDF, DOC ou DOCX.',
+            'cv.max'              => 'Le CV ne peut pas dépasser 5 Mo.',
+        ];
+    }
 }
