@@ -46,6 +46,25 @@ class PermissionSeeder extends Seeder
             ['name' => 'Voir les présences',          'slug' => 'attendances.view',   'group' => 'Présences'],
             ['name' => 'Saisir les présences',        'slug' => 'attendances.create', 'group' => 'Présences'],
             ['name' => 'Modifier les présences',      'slug' => 'attendances.update', 'group' => 'Présences'],
+
+            // Partenaires
+            ['name' => 'Voir les partenaires',        'slug' => 'partners.view',    'group' => 'Partenaires'],
+            ['name' => 'Créer un partenaire',         'slug' => 'partners.create',  'group' => 'Partenaires'],
+            ['name' => 'Modifier un partenaire',      'slug' => 'partners.update',  'group' => 'Partenaires'],
+            ['name' => 'Supprimer un partenaire',     'slug' => 'partners.delete',  'group' => 'Partenaires'],
+
+            // Statistiques
+            ['name' => 'Voir les statistiques',        'slug' => 'statistics.view',    'group' => 'Statistiques'],
+
+            // Référentiels
+            ['name' => 'Voir les référentiels',        'slug' => 'referentiels.view',    'group' => 'Référentiels'],
+            ['name' => 'Créer un référentiel',         'slug' => 'referentiels.create',  'group' => 'Référentiels'],
+            ['name' => 'Modifier un référentiel',      'slug' => 'referentiels.update',  'group' => 'Référentiels'],
+            ['name' => 'Supprimer un référentiel',   'slug' => 'referentiels.delete',  'group' => 'Référentiels'],
+
+            // Communication
+            ['name' => 'Voir la communication',       'slug' => 'communication.view',    'group' => 'Communication'],
+            ['name' => 'Envoyer des emails',           'slug' => 'communication.send',    'group' => 'Communication'],
         ];
 
         foreach ($permissions as $permission) {

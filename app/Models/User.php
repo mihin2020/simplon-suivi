@@ -39,9 +39,16 @@ class User extends Authenticatable
         ];
     }
 
+    protected $appends = ['role_label', 'full_name'];
+
     public function getFullNameAttribute(): string
     {
         return "{$this->first_name} {$this->last_name}";
+    }
+
+    public function getRoleLabelAttribute(): string
+    {
+        return $this->role?->label() ?? '';
     }
 
     public function isSuperAdmin(): bool

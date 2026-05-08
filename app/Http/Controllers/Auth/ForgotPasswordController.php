@@ -47,23 +47,36 @@ class ForgotPasswordController extends Controller
             ]);
 
             $resetUrl = url('/reinitialisation/' . $plainToken);
+            $userEmail = $user->email;
+            $userName = $user->full_name;
 
-            Mail::send([], [], function ($message) use ($user, $resetUrl) {
-                $message->to($user->email)
-                    ->subject('Réinitialisation de votre mot de passe — Simplon BF')
-                    ->html(
-                        '<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">'
-                        . '<h2 style="color:#1F3A4D;">Réinitialisation de mot de passe</h2>'
-                        . '<p>Bonjour <strong>' . e($user->full_name) . '</strong>,</p>'
-                        . '<p>Vous avez demandé la réinitialisation de votre mot de passe.</p>'
-                        . '<p>Cliquez sur le bouton ci-dessous (lien valable <strong>1 heure</strong>) :</p>'
-                        . '<p style="text-align:center;margin:2rem 0;">'
-                        . '<a href="' . $resetUrl . '" style="background:#E5004C;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Réinitialiser mon mot de passe</a>'
-                        . '</p>'
-                        . '<p style="color:#6b7280;font-size:13px;">Si vous n\'avez pas fait cette demande, ignorez cet email.</p>'
-                        . '</div>'
-                    );
-            });
+            // Envoi après la réponse HTTP (non bloquant)
+            dispatch(function () use ($userEmail, $userName, $resetUrl) {
+                @set_time_limit(120);
+                try {
+                    Mail::send([], [], function ($message) use ($userEmail, $userName, $resetUrl) {
+                        $message->to($userEmail)
+                            ->subject('Réinitialisation de votre mot de passe - Simplon BF')
+                            ->html(
+                                '<div style="font-family:sans-serif;max-width:520px;margin:0 auto;">'
+                                . '<h2 style="color:#1F3A4D;">Réinitialisation de mot de passe</h2>'
+                                . '<p>Bonjour <strong>' . e($userName) . '</strong>,</p>'
+                                . '<p>Vous avez demandé la réinitialisation de votre mot de passe.</p>'
+                                . '<p>Cliquez sur le bouton ci-dessous (lien valable <strong>1 heure</strong>) :</p>'
+                                . '<p style="text-align:center;margin:2rem 0;">'
+                                . '<a href="' . $resetUrl . '" style="background:#E5004C;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Réinitialiser mon mot de passe</a>'
+                                . '</p>'
+                                . '<p style="color:#6b7280;font-size:13px;">Si vous n\'avez pas fait cette demande, ignorez cet email.</p>'
+                                . '</div>'
+                            );
+                    });
+                } catch (\Throwable $e) {
+                    logger()->error('Échec envoi email réinitialisation', [
+                        'email' => $userEmail,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+            })->afterResponse();
         }
 
         return back()->with('success', 'Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.');

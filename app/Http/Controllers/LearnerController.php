@@ -70,9 +70,11 @@ class LearnerController extends Controller
 
         if ($request->hasFile('photo')) {
             $data['photo_path'] = $request->file('photo')->store('learners', 'public');
+            $data['photo_original_name'] = $request->file('photo')->getClientOriginalName();
         }
         if ($request->hasFile('cnib')) {
             $data['cnib_path'] = $request->file('cnib')->store('learners/cnib', 'public');
+            $data['cnib_original_name'] = $request->file('cnib')->getClientOriginalName();
         }
 
         unset($data['photo'], $data['cnib']);
@@ -133,12 +135,14 @@ class LearnerController extends Controller
                 Storage::disk('public')->delete($learner->photo_path);
             }
             $data['photo_path'] = $request->file('photo')->store('learners', 'public');
+            $data['photo_original_name'] = $request->file('photo')->getClientOriginalName();
         }
         if ($request->hasFile('cnib')) {
             if ($learner->cnib_path) {
                 Storage::disk('public')->delete($learner->cnib_path);
             }
             $data['cnib_path'] = $request->file('cnib')->store('learners/cnib', 'public');
+            $data['cnib_original_name'] = $request->file('cnib')->getClientOriginalName();
         }
 
         unset($data['photo'], $data['cnib']);

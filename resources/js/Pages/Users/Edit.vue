@@ -94,6 +94,14 @@ const togglePermission = (id: number) => {
     }
 }
 
+const selectAllPermissions = () => {
+    form.permissions = props.permissions.map(p => p.id)
+}
+
+const deselectAllPermissions = () => {
+    form.permissions = []
+}
+
 </script>
 
 <template>
@@ -216,25 +224,41 @@ const togglePermission = (id: number) => {
 
             <!-- Permissions (Admin uniquement) -->
             <div v-if="showPermissions" class="section">
-                <h2 class="section-title">Permissions</h2>
-                <div v-for="(perms, group) in groupedPermissions" :key="group" class="perm-group">
-                    <h3 class="perm-group-title">{{ group }}</h3>
-                    <div class="perm-list">
-                        <div
-                            v-for="p in perms"
-                            :key="p.id"
-                            class="perm-checkbox"
-                            :class="{ 'perm-selected': isSelected(p.id) }"
-                            @click.prevent="togglePermission(p.id)"
-                        >
-                            <span class="perm-check">
-                                <span v-if="isSelected(p.id)" class="material-symbols-outlined" style="font-size:14px">check</span>
-                            </span>
-                            <span class="perm-name">{{ p.name }}</span>
+                <div class="perm-panel">
+                    <div class="perm-panel-header">
+                        <div>
+                            <h2 class="section-title" style="margin-bottom:0">Permissions</h2>
+                            <p class="perm-count">{{ form.permissions.length }} / {{ props.permissions.length }} sélectionnée{{ form.permissions.length > 1 ? 's' : '' }}</p>
+                        </div>
+                        <div class="perm-bulk-actions">
+                            <button type="button" @click="selectAllPermissions" class="perm-bulk-btn">Tout cocher</button>
+                            <button type="button" @click="deselectAllPermissions" class="perm-bulk-btn">Tout décocher</button>
                         </div>
                     </div>
+                    <div class="perm-groups">
+                        <div v-for="(perms, group) in groupedPermissions" :key="group" class="perm-group-card">
+                            <div class="perm-group-card-header">
+                                <h3 class="perm-group-card-title">{{ group }}</h3>
+                                <span class="perm-group-badge">{{ perms.filter(p => isSelected(p.id)).length }} / {{ perms.length }}</span>
+                            </div>
+                            <div class="perm-chips">
+                                <div
+                                    v-for="p in perms"
+                                    :key="p.id"
+                                    class="perm-chip"
+                                    :class="{ 'perm-chip-selected': isSelected(p.id) }"
+                                    @click.prevent="togglePermission(p.id)"
+                                >
+                                    <span class="perm-chip-check">
+                                        <span v-if="isSelected(p.id)" class="material-symbols-outlined" style="font-size:12px">check</span>
+                                    </span>
+                                    <span class="perm-chip-name">{{ p.name }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p v-if="form.errors.permissions" class="error-msg">{{ form.errors.permissions }}</p>
                 </div>
-                <p v-if="form.errors.permissions" class="error-msg">{{ form.errors.permissions }}</p>
             </div>
 
             <!-- Actions -->
@@ -393,54 +417,59 @@ select.input {
     color: #191c1e;
 }
 
-.perm-group { margin-bottom: 16px; }
-.perm-group-title {
-    font-size: 13px;
-    font-weight: 600;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
-}
-.perm-list {
+.perm-panel { border: 1px solid #e0e3e5; border-radius: 12px; overflow: hidden; }
+.perm-panel-header {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid #f3f4f6;
+    background: #fafbfc;
+}
+.perm-count { font-size: 13px; color: #6b7280; margin: 4px 0 0; }
+.perm-bulk-actions { display: flex; gap: 8px; }
+.perm-bulk-btn {
+    font-size: 12px;
+    font-weight: 600;
+    color: #E5004C;
+    background: #fff;
+    border: 1px solid #e0e3e5;
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 6px 12px;
+    transition: all 0.15s;
+}
+.perm-bulk-btn:hover { background: #fff5f8; border-color: #E5004C; }
+
+.perm-groups { display: grid; gap: 16px; padding: 20px 24px; }
+.perm-group-card { border: 1px solid #f3f4f6; border-radius: 10px; padding: 16px; background: #fff; }
+.perm-group-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.perm-group-card-title { font-size: 13px; font-weight: 700; color: #191c1e; text-transform: uppercase; letter-spacing: 0.03em; margin: 0; }
+.perm-group-badge { font-size: 11px; font-weight: 600; color: #6b7280; background: #f3f4f6; padding: 2px 8px; border-radius: 99px; }
+.perm-chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; }
+.perm-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
     border: 1px solid #e0e3e5;
     border-radius: 8px;
-    overflow: hidden;
-}
-.perm-checkbox {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
     cursor: pointer;
     transition: all 0.15s;
-    border-bottom: 1px solid #f3f4f6;
+    background: #fff;
 }
-.perm-checkbox:last-child { border-bottom: none; }
-.perm-checkbox:hover { background: #f9fafb; }
-.perm-checkbox.perm-selected { background: #fff5f8; }
-.perm-check {
-    width: 18px;
-    height: 18px;
-    border: 2px solid #e0e3e5;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    transition: all 0.15s;
-    color: #fff;
+.perm-chip:hover { border-color: #E5004C; background: #fff5f8; }
+.perm-chip-selected { border-color: #E5004C; background: #fff5f8; box-shadow: 0 1px 2px rgba(229,0,76,0.08); }
+.perm-chip-check {
+    width: 18px; height: 18px;
+    border: 2px solid #e0e3e5; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: all 0.15s;
+    color: #fff; font-size: 12px;
 }
-.perm-checkbox.perm-selected .perm-check {
-    background: #E5004C;
-    border-color: #E5004C;
-}
-.perm-name {
-    font-size: 14px;
-    color: #191c1e;
-}
+.perm-chip-selected .perm-chip-check { background: #E5004C; border-color: #E5004C; }
+.perm-chip-name { font-size: 13px; font-weight: 500; color: #374151; }
+.perm-chip-selected .perm-chip-name { color: #E5004C; font-weight: 600; }
 
 .actions {
     display: flex;

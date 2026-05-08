@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm, Link } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -23,6 +23,8 @@ interface Learner {
     education_level_id: number | null
     photo_path: string | null
     cnib_path: string | null
+    photo_original_name: string | null
+    cnib_original_name: string | null
     emergency_contact_name: string | null
     emergency_contact_firstname: string | null
     emergency_contact_phone: string | null
@@ -60,8 +62,9 @@ const photoPreview = ref<string | null>(
     props.learner.photo_path ? `/storage/${props.learner.photo_path}` : null
 )
 const cnibName = ref<string | null>(
-    props.learner.cnib_path ? props.learner.cnib_path.split('/').pop() ?? null : null
+    props.learner.cnib_original_name ?? (props.learner.cnib_path ? props.learner.cnib_path.split('/').pop() ?? null : null)
 )
+const cnibUrl = computed(() => props.learner.cnib_path ? `/storage/${props.learner.cnib_path}` : null)
 const hasCnib = ref(!!props.learner.cnib_path)
 
 const onPhotoChange = (e: Event) => {
@@ -230,6 +233,12 @@ const submit = () => form.post(`/learners/${props.learner.id}`, {
                 <h2 class="section-title">Documents</h2>
                 <div class="field">
                     <label class="label">CNIB / Pièce d'identité</label>
+                    <div v-if="cnibUrl && !form.cnib" class="mb-sm">
+                        <a :href="cnibUrl" target="_blank" rel="noopener" class="doc-link">
+                            <span class="material-symbols-outlined" style="font-size:16px">visibility</span>
+                            Voir le document actuel
+                        </a>
+                    </div>
                     <div class="file-upload-row">
                         <label class="upload-btn" for="cnib-input">
                             <span class="material-symbols-outlined" style="font-size:18px">upload_file</span>
@@ -298,6 +307,14 @@ const submit = () => form.post(`/learners/${props.learner.id}`, {
 
 .file-upload-row { display: flex; align-items: center; gap: 12px; }
 .file-name { font-size: 13px; color: #515f74; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.doc-link {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: #1d4ed8; text-decoration: none; font-weight: 500; font-size: 13px;
+}
+.doc-link:hover { text-decoration: underline; }
+
+.mb-sm { margin-bottom: 8px; }
 
 .gender-group { display: flex; gap: 10px; margin-top: 4px; }
 .gender-option {

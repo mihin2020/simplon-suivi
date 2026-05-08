@@ -25,4 +25,12 @@ export default defineConfig({
             '@': resolve(__dirname, 'resources/js'),
         },
     },
+    server: {
+        proxy: {
+            '/storage': {
+                target: 'http://127.0.0.1:8000',
+                changeOrigin: true,
+            },
+        },
+    },
 });
