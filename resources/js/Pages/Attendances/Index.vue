@@ -140,6 +140,19 @@ function formatDateFull(d: string) {
 const recapCodeClass: Record<string, string> = {
     P: 'rc-P', AJ: 'rc-AJ', AN: 'rc-AN', RJ: 'rc-RJ', RN: 'rc-RN',
 }
+
+// ── Résumé par apprenant ─────────────────────────────────────────
+const CODE_ORDER = ['P', 'AJ', 'AN', 'RJ', 'RN']
+
+function rowSummary(row: RecapRow): { code: string; count: number }[] {
+    const counts: Record<string, number> = {}
+    Object.values(row.days).forEach(code => {
+        if (code) counts[code] = (counts[code] || 0) + 1
+    })
+    return CODE_ORDER
+        .filter(c => counts[c])
+        .map(c => ({ code: c, count: counts[c] }))
+}
 </script>
 
 <template>
@@ -327,6 +340,10 @@ const recapCodeClass: Record<string, string> = {
                                 <th v-for="d in recap.dates" :key="d" class="th-day" :title="formatDateFull(d)">
                                     {{ formatDay(d) }}
                                 </th>
+                                <th class="th-summary th-sticky-right">
+                                    <span class="material-symbols-outlined" style="font-size:13px;vertical-align:middle">summarize</span>
+                                    Résumé
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
@@ -338,6 +355,19 @@ const recapCodeClass: Record<string, string> = {
                                     </span>
                                     <span v-else class="rc-empty"></span>
                                 </td>
+                                <td class="td-summary td-sticky-right">
+                                    <span class="summary-chips">
+                                        <span
+                                            v-for="s in rowSummary(row)"
+                                            :key="s.code"
+                                            class="summary-chip rc-badge"
+                                            :class="recapCodeClass[s.code]"
+                                            :title="codes.find(c => c.value === s.code)?.label"
+                                        >
+                                            {{ s.count }}{{ s.code }}
+                                        </span>
+                                    </span>
+                                </td>
                             </tr>
                         </tbody>
                         <tfoot>
@@ -348,6 +378,7 @@ const recapCodeClass: Record<string, string> = {
                                         {{ recap.dayStats[d]?.present }}/{{ recap.dayStats[d]?.total }}
                                     </span>
                                 </td>
+                                <td class="td-summary td-sticky-right td-foot-summary"></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -628,5 +659,51 @@ const recapCodeClass: Record<string, string> = {
 .td-foot-label {
     padding: 8px 14px; font-size: 11px; font-weight: 700; color: #515f74;
     background: #f5f7f9; white-space: nowrap; border-right: 1px solid #e0e3e5;
+}
+
+/* ── Colonne Résumé (sticky droite) ── */
+.th-sticky-right, .td-sticky-right {
+    position: sticky;
+    right: 0;
+    z-index: 2;
+    background: inherit;
+}
+.th-summary {
+    padding: 10px 12px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #515f74;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    border-left: 2px solid #e0e3e5;
+    background: #f5f7f9;
+    min-width: 120px;
+}
+.td-summary {
+    padding: 6px 10px;
+    text-align: center;
+    border-left: 2px solid #f0f1f3;
+    background: #fff;
+    white-space: nowrap;
+}
+.td-foot-summary {
+    background: #f5f7f9;
+    border-left: 2px solid #e0e3e5;
+}
+.recap-tr:hover .td-sticky-right { background: #fafbfc; }
+.summary-chips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+}
+.summary-chip {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+    cursor: default;
 }
 </style>

@@ -1,8 +1,81 @@
 <script setup lang="ts">
 import { Link, usePage, router } from '@inertiajs/vue3'
 import NotificationBell from '@/Components/NotificationBell.vue'
+import { ref, watch, computed } from 'vue'
+
+// Popup flash
+const showFlash = ref(false)
+const flashType = ref<'success' | 'warning' | 'error'>('success')
+const flashMessage = ref('')
+let flashTimer: ReturnType<typeof setTimeout> | null = null
 
 const page = usePage()
+
+// ── Badge email non lu + son de notification ──────────────────────
+const unreadEmails = computed(() => (page.props as any).unread_emails_count ?? 0)
+const prevUnreadEmails = ref(unreadEmails.value)
+
+function playEmailSound() {
+    try {
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+        // Note 1 : ding aigu
+        const osc1 = ctx.createOscillator()
+        const g1   = ctx.createGain()
+        osc1.connect(g1); g1.connect(ctx.destination)
+        osc1.frequency.setValueAtTime(880, ctx.currentTime)
+        g1.gain.setValueAtTime(0.25, ctx.currentTime)
+        g1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3)
+        osc1.start(ctx.currentTime); osc1.stop(ctx.currentTime + 0.3)
+        // Note 2 : ding plus grave décalé
+        const osc2 = ctx.createOscillator()
+        const g2   = ctx.createGain()
+        osc2.connect(g2); g2.connect(ctx.destination)
+        osc2.frequency.setValueAtTime(660, ctx.currentTime + 0.18)
+        g2.gain.setValueAtTime(0.2, ctx.currentTime + 0.18)
+        g2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.55)
+        osc2.start(ctx.currentTime + 0.18); osc2.stop(ctx.currentTime + 0.55)
+    } catch { /* ignore si AudioContext indisponible */ }
+}
+
+watch(unreadEmails, (newVal, oldVal) => {
+    if (newVal > oldVal) {
+        playEmailSound()
+    }
+    prevUnreadEmails.value = newVal
+})
+
+watch(
+    () => page.props.flash,
+    (flash: any) => {
+        if (flash.success) {
+            flashType.value = 'success'
+            flashMessage.value = flash.success
+            triggerFlash()
+        } else if (flash.warning) {
+            flashType.value = 'warning'
+            flashMessage.value = flash.warning
+            triggerFlash()
+        } else if (flash.error) {
+            flashType.value = 'error'
+            flashMessage.value = flash.error
+            triggerFlash()
+        }
+    },
+    { immediate: true, deep: true }
+)
+
+function triggerFlash() {
+    showFlash.value = true
+    if (flashTimer) clearTimeout(flashTimer)
+    flashTimer = setTimeout(() => {
+        showFlash.value = false
+    }, 5000)
+}
+
+function closeFlash() {
+    showFlash.value = false
+    if (flashTimer) clearTimeout(flashTimer)
+}
 
 const userRole   = (page.props.auth as any).user?.role as string | undefined
 const isSuperAdmin = userRole === 'super_admin'
@@ -92,8 +165,15 @@ const logout = () => router.post('/deconnexion')
                 </div>
 
                 <div class="flex items-center gap-md">
-                    <NotificationBell :initial-count="($page.props.unread_notifications_count as number) ?? 0" />
-                    <div class="h-6 w-px bg-surface-container-highest mx-xs"></div>
+                                    <!-- Badge email non lu -->
+                                    <Link href="/communication/emails" class="mail-bell" title="Messagerie">
+                                        <span class="material-symbols-outlined" style="font-size:22px">mail</span>
+                                        <span v-if="unreadEmails > 0" class="mail-badge">
+                                            {{ String(unreadEmails).padStart(2, '0') }}
+                                        </span>
+                                    </Link>
+                                    <NotificationBell :initial-count="($page.props.unread_notifications_count as number) ?? 0" />
+                                    <div class="h-6 w-px bg-surface-container-highest mx-xs"></div>
                     <Link href="/profil" class="flex items-center gap-sm hover:opacity-80 transition-opacity">
                         <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-on-primary text-body-sm font-bold">
                             {{ $page.props.auth.user?.full_name?.charAt(0) ?? 'A' }}
@@ -110,30 +190,50 @@ const logout = () => router.post('/deconnexion')
                 </div>
             </header>
 
-            <!-- Flash messages -->
-            <div
-                v-if="$page.props.flash.success"
-                class="fixed top-20 right-4 z-50 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-lg px-md py-sm text-body-sm flex items-center gap-sm shadow-sm"
-            >
-                <span class="material-symbols-outlined text-emerald-600" style="font-size: 18px;">check_circle</span>
-                {{ $page.props.flash.success }}
-            </div>
-
-            <div
-                v-if="$page.props.flash.warning"
-                class="fixed top-20 right-4 z-50 bg-amber-50 border border-amber-200 text-amber-900 rounded-lg px-md py-sm text-body-sm flex items-center gap-sm shadow-sm"
-            >
-                <span class="material-symbols-outlined text-amber-700" style="font-size: 18px;">warning</span>
-                {{ $page.props.flash.warning }}
-            </div>
-
-            <div
-                v-if="$page.props.flash.error"
-                class="fixed top-20 right-4 z-50 bg-rose-50 border border-rose-200 text-rose-900 rounded-lg px-md py-sm text-body-sm flex items-center gap-sm shadow-sm"
-            >
-                <span class="material-symbols-outlined text-rose-700" style="font-size: 18px;">error</span>
-                {{ $page.props.flash.error }}
-            </div>
+            <!-- Toast notification -->
+            <Transition name="toast">
+                <div
+                    v-if="showFlash"
+                    class="toast-wrap"
+                    :class="{
+                        'toast-success': flashType === 'success',
+                        'toast-warning': flashType === 'warning',
+                        'toast-error':   flashType === 'error',
+                    }"
+                >
+                    <span
+                        class="material-symbols-outlined toast-icon"
+                        :class="{
+                            'toast-icon-success': flashType === 'success',
+                            'toast-icon-warning': flashType === 'warning',
+                            'toast-icon-error':   flashType === 'error',
+                        }"
+                    >
+                        {{ flashType === 'success' ? 'check_circle' : flashType === 'warning' ? 'warning' : 'error' }}
+                    </span>
+                    <div class="toast-body">
+                        <p class="toast-title">
+                            {{ flashType === 'success' ? 'Succès' : flashType === 'warning' ? 'Attention' : 'Erreur' }}
+                        </p>
+                        <p class="toast-msg">{{ flashMessage }}</p>
+                    </div>
+                    <button @click="closeFlash" class="toast-close">
+                        <span class="material-symbols-outlined" style="font-size:17px">close</span>
+                    </button>
+                    <!-- Barre de progression -->
+                    <div class="toast-progress-track">
+                        <div
+                            class="toast-progress-bar"
+                            :class="{
+                                'tpb-success': flashType === 'success',
+                                'tpb-warning': flashType === 'warning',
+                                'tpb-error':   flashType === 'error',
+                            }"
+                            :key="flashMessage"
+                        ></div>
+                    </div>
+                </div>
+            </Transition>
 
             <!-- Page content -->
             <main class="flex-1 overflow-y-auto mt-16 p-xl bg-background">
@@ -164,6 +264,93 @@ aside:hover .custom-scroll::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.35);
 }
 
+/* ── Toast notification ── */
+.toast-wrap {
+    position: fixed;
+    top: 76px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px 18px 16px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.07);
+    min-width: 280px;
+    max-width: 360px;
+    background: #fff;
+    border-left: 4px solid transparent;
+    overflow: hidden;
+}
+.toast-success { border-left-color: #22c55e; }
+.toast-warning { border-left-color: #f59e0b; }
+.toast-error   { border-left-color: #ef4444; }
+
+.toast-icon { font-size: 22px; margin-top: 1px; flex-shrink: 0; }
+.toast-icon-success { color: #22c55e; }
+.toast-icon-warning { color: #f59e0b; }
+.toast-icon-error   { color: #ef4444; }
+
+.toast-body { flex: 1; min-width: 0; }
+.toast-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #191c1e;
+    line-height: 1.3;
+    margin-bottom: 2px;
+}
+.toast-msg {
+    font-size: 12px;
+    color: #515f74;
+    line-height: 1.4;
+    word-break: break-word;
+}
+.toast-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: transparent;
+    color: #9aaabb;
+    cursor: pointer;
+    border-radius: 4px;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+    padding: 0;
+}
+.toast-close:hover { background: #f5f7f9; color: #515f74; }
+
+/* Barre de progression */
+.toast-progress-track {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: rgba(0,0,0,0.05);
+}
+.toast-progress-bar {
+    height: 100%;
+    width: 100%;
+    animation: toast-shrink 5s linear forwards;
+    transform-origin: left;
+}
+.tpb-success { background: #22c55e; }
+.tpb-warning { background: #f59e0b; }
+.tpb-error   { background: #ef4444; }
+@keyframes toast-shrink {
+    from { width: 100%; }
+    to   { width: 0%; }
+}
+
+/* Animation slide depuis la droite */
+.toast-enter-active { transition: all 0.3s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.toast-leave-active { transition: all 0.2s ease-in; }
+.toast-enter-from   { opacity: 0; transform: translateX(110%); }
+.toast-leave-to     { opacity: 0; transform: translateX(110%); }
+
 .nav-link {
     display: flex;
     align-items: center;
@@ -187,5 +374,38 @@ aside:hover .custom-scroll::-webkit-scrollbar-thumb {
 .nav-inactive:hover {
     color: #ffffff;
     background: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Icône mail avec badge ── */
+.mail-bell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    color: #515f74;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+.mail-bell:hover { background: rgba(0,0,0,0.05); }
+.mail-badge {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    background: #E5004C;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 800;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 99px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    line-height: 1;
+    border: 2px solid #fff;
 }
 </style>

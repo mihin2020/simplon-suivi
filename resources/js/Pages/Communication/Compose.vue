@@ -152,6 +152,19 @@ function removeFile(index: number) {
             </div>
         </form>
     </div>
+
+    <!-- Popup loading envoi -->
+    <Transition name="loading-fade">
+        <div v-if="sending" class="loading-overlay">
+            <div class="loading-card">
+                <div class="spinner-ring">
+                    <div></div><div></div><div></div><div></div>
+                </div>
+                <p class="loading-title">Envoi en cours...</p>
+                <p class="loading-sub">Vos emails sont en cours d'envoi.<br>Vous serez redirigé automatiquement.</p>
+            </div>
+        </div>
+    </Transition>
 </template>
 
 <style scoped>
@@ -377,4 +390,71 @@ function removeFile(index: number) {
     background: #e0e3e5;
     color: #191c1e;
 }
+
+/* Loading overlay */
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.loading-card {
+    background: #fff;
+    border-radius: 20px;
+    padding: 40px 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+    min-width: 280px;
+    text-align: center;
+}
+.loading-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #191c1e;
+    margin: 0;
+}
+.loading-sub {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0;
+    line-height: 1.6;
+}
+/* Spinner CSS */
+.spinner-ring {
+    display: inline-block;
+    position: relative;
+    width: 56px;
+    height: 56px;
+}
+.spinner-ring div {
+    box-sizing: border-box;
+    display: block;
+    position: absolute;
+    width: 44px;
+    height: 44px;
+    margin: 6px;
+    border: 5px solid transparent;
+    border-top-color: #E5004C;
+    border-radius: 50%;
+    animation: spinner-ring 1s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+}
+.spinner-ring div:nth-child(1) { animation-delay: -0.3s; }
+.spinner-ring div:nth-child(2) { animation-delay: -0.2s; }
+.spinner-ring div:nth-child(3) { animation-delay: -0.1s; }
+@keyframes spinner-ring {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+/* Transition */
+.loading-fade-enter-active,
+.loading-fade-leave-active { transition: opacity 0.25s ease; }
+.loading-fade-enter-from,
+.loading-fade-leave-to { opacity: 0; }
 </style>
