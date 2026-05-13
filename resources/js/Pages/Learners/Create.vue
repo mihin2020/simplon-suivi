@@ -27,6 +27,10 @@ const form = useForm({
     emergency_contact_name:      '',
     emergency_contact_firstname: '',
     emergency_contact_phone:     '',
+    address:                     '',
+    location:                    '',
+    profile:                     '',
+    study_field:                 '',
     photo:                       null as File | null,
     cnib:                        null as File | null,
 })
@@ -164,22 +168,26 @@ const submit = () => form.post('/learners', {
                 </div>
             </div>
 
-            <!-- Contact d'urgence -->
+            <!-- Informations complémentaires -->
             <div class="card space-y-lg">
-                <h2 class="section-title">Contact d'urgence</h2>
+                <h2 class="section-title">Informations complémentaires</h2>
+                <div class="field">
+                    <label class="label">Adresse</label>
+                    <textarea v-model="form.address" rows="2" class="input" placeholder="Ex : Rue 123, Quartier XYZ"></textarea>
+                </div>
                 <div class="grid grid-cols-2 gap-md">
                     <div class="field">
-                        <label class="label">Nom de famille</label>
-                        <input v-model="form.emergency_contact_name" type="text" class="input" />
+                        <label class="label">Localisation</label>
+                        <input v-model="form.location" type="text" class="input" placeholder="Ex : Ouagadougou, Burkina Faso" />
                     </div>
                     <div class="field">
-                        <label class="label">Prénom</label>
-                        <input v-model="form.emergency_contact_firstname" type="text" class="input" />
+                        <label class="label">Profil</label>
+                        <input v-model="form.profile" type="text" class="input" placeholder="Ex : Développeur web junior" />
                     </div>
                 </div>
                 <div class="field">
-                    <label class="label">Téléphone</label>
-                    <input v-model="form.emergency_contact_phone" type="tel" class="input" placeholder="+226 XX XX XX XX" />
+                    <label class="label">Domaine d'études</label>
+                    <input v-model="form.study_field" type="text" class="input" placeholder="Ex : Informatique, Gestion, Marketing..." />
                 </div>
             </div>
 
@@ -198,6 +206,25 @@ const submit = () => form.post('/learners', {
                     <input id="cnib-input" type="file" accept=".pdf,image/jpeg,image/png" class="hidden" @change="onCnibChange" />
                     <p class="text-body-sm text-secondary">PDF, JPEG ou PNG · 5 Mo max · Optionnel</p>
                     <p v-if="form.errors.cnib" class="error-msg">{{ form.errors.cnib }}</p>
+                </div>
+            </div>
+
+            <!-- Contact d'urgence -->
+            <div class="card space-y-lg">
+                <h2 class="section-title">Contact d'urgence</h2>
+                <div class="grid grid-cols-2 gap-md">
+                    <div class="field">
+                        <label class="label">Nom de famille</label>
+                        <input v-model="form.emergency_contact_name" type="text" class="input" />
+                    </div>
+                    <div class="field">
+                        <label class="label">Prénom</label>
+                        <input v-model="form.emergency_contact_firstname" type="text" class="input" />
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label">Téléphone</label>
+                    <input v-model="form.emergency_contact_phone" type="tel" class="input" placeholder="+226 XX XX XX XX" />
                 </div>
             </div>
 

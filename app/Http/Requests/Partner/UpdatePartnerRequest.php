@@ -16,6 +16,12 @@ class UpdatePartnerRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp,svg', 'max:2048'],
+            'contact_first_name' => ['nullable', 'string', 'max:255'],
+            'contact_last_name' => ['nullable', 'string', 'max:255'],
+            'contact_email' => ['nullable', 'email', 'max:255'],
+            'contact_phone' => ['nullable', 'string', 'max:50'],
+            'contact_profile' => ['nullable', 'string', 'max:255'],
+            'contact_position' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

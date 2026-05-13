@@ -225,4 +225,25 @@ function fmtDate(d: string | null) {
     background: #e8f5e9;
     color: #2e7d32;
 }
+
+/* ══ Responsive Sent ══════════════════════════════════════ */
+@media (max-width: 767px) {
+    /* Header */
+    .flex.items-center.justify-between { flex-wrap: wrap; gap: 10px; }
+    .btn-primary { font-size: 12px; padding: 7px 12px; }
+    /* Tabs scrollables */
+    .flex.items-center.gap-sm.border-b {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        flex-wrap: nowrap;
+    }
+    .tab-active, .tab-inactive { white-space: nowrap; padding: 8px 12px; font-size: 13px; }
+    /* Liste emails */
+    .px-lg { padding-left: 12px !important; padding-right: 12px !important; }
+    .py-md  { padding-top: 10px !important; padding-bottom: 10px !important; }
+    /* Bouton supprimer : toujours visible sur touch */
+    .delete-btn { opacity: 1 !important; }
+    .group-hover\:opacity-100 { opacity: 1 !important; }
+}
 </style>

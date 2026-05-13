@@ -140,6 +140,59 @@ class StatisticsController extends Controller
     }
 
     /**
+     * API: Retourne les apprenants d'une formation avec filtres optionnels.
+     */
+    public function learners(\Illuminate\Http\Request $request, Formation $formation): \Illuminate\Http\JsonResponse
+    {
+        $query = $formation->learners();
+
+        // Filtre par genre
+        if ($request->has('gender')) {
+            $query->where('gender', $request->input('gender'));
+        }
+
+        // Filtre par statut de formation
+        if ($request->has('status')) {
+            $query->wherePivot('status', $request->input('status'));
+        }
+
+        // Filtre par statut d'insertion
+        if ($request->has('insertion_status')) {
+            $insertionStatus = $request->input('insertion_status');
+            $latestMap = $this->latestInsertionRecordsByLearner();
+            $learnerIds = collect($latestMap)
+                ->filter(fn ($status) => $status === $insertionStatus)
+                ->keys()
+                ->all();
+            $query->whereIn('learners.id', $learnerIds);
+        }
+
+        $learners = $query
+            ->with('educationLevel')
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get(['learners.id', 'first_name', 'last_name', 'email', 'gender', 'education_level_id'])
+            ->map(fn ($l) => [
+                'id' => $l->id,
+                'first_name' => $l->first_name,
+                'last_name' => $l->last_name,
+                'email' => $l->email,
+                'gender' => $l->gender?->value,
+                'education_level' => $l->educationLevel?->name,
+                'status' => $l->pivot->status,
+            ]);
+
+        return response()->json([
+            'formation' => [
+                'id' => $formation->id,
+                'name' => $formation->name,
+            ],
+            'count' => $learners->count(),
+            'learners' => $learners,
+        ]);
+    }
+
+    /**
      * Retourne un tableau associatif [learner_id => dernier_status_insertion].
      */
     private function latestInsertionRecordsByLearner(): array

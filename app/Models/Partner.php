@@ -15,6 +15,12 @@ class Partner extends Model
     protected $fillable = [
         'name',
         'logo_path',
+        'contact_first_name',
+        'contact_last_name',
+        'contact_email',
+        'contact_phone',
+        'contact_profile',
+        'contact_position',
     ];
 
     public function projects(): BelongsToMany

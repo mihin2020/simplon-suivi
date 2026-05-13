@@ -706,4 +706,68 @@ function rowSummary(row: RecapRow): { code: string; count: number }[] {
     border-radius: 4px;
     cursor: default;
 }
+
+/* ══ Responsive Attendances ══════════════════════════════ */
+
+/* ── Mobile (<768px) ── */
+@media (max-width: 767px) {
+    /* Page container : padding latéral */
+    .att-page { gap: 10px; padding: 0 2px; }
+
+    /* Header : titre + boutons PDF en colonne */
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 14px 16px;
+    }
+    .page-header > div:last-child {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        width: 100%;
+    }
+    .btn-outline { flex: 1; justify-content: center; font-size: 12px; padding: 6px 10px; }
+
+    /* Onglets : texte réduit */
+    .tabs-bar { padding: 3px; gap: 3px; }
+    .tab-btn  { padding: 7px 10px; font-size: 12px; gap: 4px; }
+    .tab-btn .material-symbols-outlined { font-size: 15px !important; }
+
+    /* Navigation date */
+    .date-nav { padding: 10px 12px; gap: 8px; }
+    .date-picker { font-size: 13px; padding: 6px 10px; }
+    .date-label  { font-size: 11px; }
+
+    /* Ligne apprenant : réduire les boutons de code */
+    .learner-row { padding: 8px 10px; gap: 8px; }
+    .code-btn    { padding: 4px 7px; font-size: 11px; border-radius: 4px; }
+    .l-name      { font-size: 13px; }
+    .l-num       { font-size: 10px; }
+
+    /* Progress bar */
+    .progress-wrap { padding: 12px 14px; gap: 6px; }
+    .progress-rate { font-size: 20px; }
+    .progress-stats { gap: 8px; }
+    .ps { font-size: 11px; }
+
+    /* Légende */
+    .legend-bar { gap: 6px 12px; padding: 8px 12px; font-size: 11px; }
+
+    /* Récapitulatif : sticky columns + scroll */
+    .recap-scroll { border-radius: 8px; }
+    .th-name, .td-name { min-width: 120px !important; padding: 8px 8px !important; font-size: 11px; }
+    .th-day, .td-day   { min-width: 36px !important; padding: 4px 2px !important; }
+    .rc-badge          { padding: 2px 4px; font-size: 10px; }
+    .th-summary        { min-width: 90px !important; padding: 8px 6px !important; font-size: 10px; }
+    .td-summary        { padding: 4px 6px !important; }
+    .summary-chip      { padding: 1px 4px; font-size: 10px; }
+}
+
+/* ── Tablet (768px–1023px) ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .code-btn { padding: 5px 9px; font-size: 11px; }
+    .learner-row { padding: 9px 14px; }
+    .th-name, .td-name { min-width: 140px !important; }
+}
 </style>

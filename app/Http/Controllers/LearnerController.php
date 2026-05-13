@@ -60,7 +60,7 @@ class LearnerController extends Controller
         $this->authorize('create', Learner::class);
 
         return Inertia::render('Learners/Create', [
-            'educationLevels' => EducationLevel::orderBy('order')->get(),
+            'educationLevels' => EducationLevel::orderBy('created_at')->get(),
         ]);
     }
 
@@ -98,7 +98,13 @@ class LearnerController extends Controller
         $insertionRecords = $learner->insertionRecords()
             ->with('recorder:id,first_name,last_name')
             ->orderBy('status_changed_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($record) {
+                return array_merge($record->toArray(), [
+                    'status_label' => $record->status->label(),
+                    'status_color' => $record->status->color(),
+                ]);
+            });
 
         $latestInsertion = $insertionRecords->first();
 
@@ -122,7 +128,7 @@ class LearnerController extends Controller
 
         return Inertia::render('Learners/Edit', [
             'learner'         => $learner,
-            'educationLevels' => EducationLevel::orderBy('order')->get(),
+            'educationLevels' => EducationLevel::orderBy('created_at')->get(),
         ]);
     }
 

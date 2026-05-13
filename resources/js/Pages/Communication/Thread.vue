@@ -368,4 +368,34 @@ function archive(email: any) {
     box-sizing: border-box;
 }
 .fwd-input:focus { border-color: #E5004C; }
+
+/* ══ Responsive Thread ════════════════════════════════════ */
+@media (max-width: 767px) {
+    .thread-page { gap: 10px; }
+
+    /* Header thread */
+    .thread-header { padding: 12px 14px; gap: 10px; }
+    .thread-subject { font-size: 15px; }
+    .back-btn { width: 32px; height: 32px; }
+
+    /* Messages */
+    .conversation { padding: 14px; gap: 10px; }
+    .msg-wrap { max-width: 96%; }
+    .msg-bubble { padding: 10px 13px; font-size: 12px; }
+    .msg-avatar { width: 26px; height: 26px; font-size: 11px; }
+    .msg-sender { font-size: 11px; }
+    .msg-date   { font-size: 10px; }
+
+    /* Actions */
+    .thread-actions { flex-wrap: wrap; gap: 6px; }
+    .action-btn { padding: 7px 12px; font-size: 12px; flex: 1; justify-content: center; }
+
+    /* Reply box */
+    .reply-box { padding: 12px 14px; gap: 8px; }
+    .fwd-input  { font-size: 13px; padding: 7px 10px; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+    .thread-page { max-width: 100%; }
+    .msg-bubble { font-size: 13px; }
+}
 </style>

@@ -74,10 +74,32 @@ const statusLabels: Record<string, string> = {
     archived: 'Archivée',
 }
 
-const withdrawLearner = (learner: Learner) => {
-    if (confirm(`Retirer ${learner.first_name} ${learner.last_name} de cette formation ?`)) {
-        router.delete(`/formations/${props.formation.id}/learners/${learner.id}`)
-    }
+// Modal retrait apprenant
+const showWithdrawModal = ref(false)
+const withdrawLearnerData = ref<Learner | null>(null)
+const withdrawNotes = ref('')
+
+const openWithdrawModal = (learner: Learner) => {
+    withdrawLearnerData.value = learner
+    withdrawNotes.value = ''
+    showWithdrawModal.value = true
+}
+
+const closeWithdrawModal = () => {
+    showWithdrawModal.value = false
+    withdrawLearnerData.value = null
+    withdrawNotes.value = ''
+}
+
+const confirmWithdraw = () => {
+    if (!withdrawLearnerData.value) return
+    router.delete(`/formations/${props.formation.id}/learners/${withdrawLearnerData.value.id}`, {
+        data: { notes: withdrawNotes.value },
+        preserveState: true,
+        onSuccess: () => {
+            closeWithdrawModal()
+        },
+    })
 }
 
 // Modal abandon apprenant
@@ -404,7 +426,7 @@ const filteredInactiveLearners = computed(() => {
                                             <button @click="openAbandonModal(learner)" class="icon-btn warning" title="Marquer comme abandonné">
                                                 <span class="material-symbols-outlined" style="font-size:18px">logout</span>
                                             </button>
-                                            <button @click="withdrawLearner(learner)" class="icon-btn danger" title="Retirer de la formation">
+                                            <button @click="openWithdrawModal(learner)" class="icon-btn danger" title="Retirer de la formation">
                                                 <span class="material-symbols-outlined" style="font-size:18px">person_remove</span>
                                             </button>
                                         </div>
@@ -595,6 +617,42 @@ const filteredInactiveLearners = computed(() => {
                     >
                         Assigner
                         <span v-if="selectedTrainerIds.length > 0" class="btn-count">{{ selectedTrainerIds.length }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Retrait -->
+        <div v-if="showWithdrawModal" class="modal-overlay" @click.self="closeWithdrawModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div>
+                        <h3 class="modal-title">Retirer de la formation</h3>
+                        <p class="modal-subtitle" v-if="withdrawLearnerData">
+                            {{ withdrawLearnerData.first_name }} {{ withdrawLearnerData.last_name }}
+                        </p>
+                    </div>
+                    <button @click="closeWithdrawModal" class="modal-close">
+                        <span class="material-symbols-outlined" style="font-size:20px">close</span>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label class="form-label">Motif / Notes (optionnel)</label>
+                        <textarea
+                            v-model="withdrawNotes"
+                            rows="3"
+                            class="form-textarea"
+                            placeholder="Raison du retrait, date effective, etc."
+                        ></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-actions">
+                    <button @click="closeWithdrawModal" class="btn-secondary">Annuler</button>
+                    <button @click="confirmWithdraw" class="btn-primary btn-danger">
+                        Confirmer le retrait
                     </button>
                 </div>
             </div>

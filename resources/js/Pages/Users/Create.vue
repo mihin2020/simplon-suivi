@@ -380,8 +380,8 @@ select.input {
     transition: all 0.15s;
     background: #fff;
 }
-.perm-chip:hover { border-color: #E5004C; background: #fff5f8; }
-.perm-chip-selected { border-color: #E5004C; background: #fff5f8; box-shadow: 0 1px 2px rgba(229,0,76,0.08); }
+.perm-chip:hover { border-color: #16a34a; background: #f0fdf4; }
+.perm-chip-selected { border-color: #16a34a; background: #f0fdf4; box-shadow: 0 1px 2px rgba(22,163,74,0.08); }
 .perm-chip-check {
     width: 18px; height: 18px;
     border: 2px solid #e0e3e5; border-radius: 50%;
@@ -389,9 +389,9 @@ select.input {
     flex-shrink: 0; transition: all 0.15s;
     color: #fff; font-size: 12px;
 }
-.perm-chip-selected .perm-chip-check { background: #E5004C; border-color: #E5004C; }
+.perm-chip-selected .perm-chip-check { background: #16a34a; border-color: #16a34a; }
 .perm-chip-name { font-size: 13px; font-weight: 500; color: #374151; }
-.perm-chip-selected .perm-chip-name { color: #E5004C; font-weight: 600; }
+.perm-chip-selected .perm-chip-name { color: #16a34a; font-weight: 600; }
 
 .actions {
     display: flex;

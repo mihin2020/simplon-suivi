@@ -6,8 +6,12 @@ import AdminLayout from '@/Layouts/AdminLayout.vue'
 defineOptions({ layout: AdminLayout })
 
 interface Profile { id: string; name: string }
+interface EducationLevel { id: string; name: string }
 
-const props = defineProps<{ trainerProfiles: Profile[] }>()
+const props = defineProps<{
+    trainerProfiles: Profile[]
+    educationLevels: EducationLevel[]
+}>()
 
 const createForm = useForm({ name: '' })
 const editingId  = ref<string | null>(null)
@@ -31,6 +35,46 @@ const destroy = (p: Profile) => {
     if (confirm(`Supprimer le profil « ${p.name} » ?`)) {
         router.delete(`/trainer-profiles/${p.id}`)
     }
+}
+
+// ── Education Levels ──
+const eduCreateForm = useForm({ name: '' })
+const eduEditingId = ref<string | null>(null)
+const eduEditForm = useForm({ name: '' })
+const showEduErrorModal = ref(false)
+const eduErrorMessage = ref('')
+
+const startEduEdit = (e: EducationLevel) => {
+    eduEditingId.value = e.id
+    eduEditForm.name = e.name
+}
+const cancelEduEdit = () => {
+    eduEditingId.value = null
+    eduEditForm.reset()
+}
+const submitEduCreate = () => {
+    eduCreateForm.post('/education-levels', { onSuccess: () => eduCreateForm.reset() })
+}
+const submitEduEdit = (id: string) => {
+    eduEditForm.put(`/education-levels/${id}`, { onSuccess: () => cancelEduEdit() })
+}
+const destroyEdu = (e: EducationLevel) => {
+    if (confirm(`Supprimer le niveau d'études « ${e.name} » ?`)) {
+        router.delete(`/education-levels/${e.id}`, {
+            preserveState: true,
+            preserveScroll: true,
+            onError: (errors) => {
+                if (errors.message) {
+                    eduErrorMessage.value = errors.message
+                    showEduErrorModal.value = true
+                }
+            }
+        })
+    }
+}
+const closeEduErrorModal = () => {
+    showEduErrorModal.value = false
+    eduErrorMessage.value = ''
 }
 </script>
 
@@ -111,8 +155,88 @@ const destroy = (p: Profile) => {
             </div>
         </div>
 
-        <!-- ── Placeholder pour futures sections ── -->
-        <!-- Exemple : Catégories de partenaires, Statuts personnalisés, etc. -->
+        <!-- ── Section : Niveaux d'études ── -->
+        <div class="config-section">
+            <div class="config-section-header">
+                <div class="flex items-center gap-sm">
+                    <span class="section-icon material-symbols-outlined">school</span>
+                    <div>
+                        <h2 class="config-section-title">Niveaux d'études</h2>
+                        <p class="config-section-sub">Niveaux d'études disponibles pour les apprenants.</p>
+                    </div>
+                </div>
+                <span class="count-pill">{{ educationLevels.length }}</span>
+            </div>
+
+            <div class="config-section-body">
+                <!-- Formulaire ajout -->
+                <form @submit.prevent="submitEduCreate" class="add-form">
+                    <input
+                        v-model="eduCreateForm.name"
+                        type="text"
+                        class="input"
+                        :class="{ 'input-error': eduCreateForm.errors.name }"
+                        placeholder="Ex : Bac+2, Bac+3, Master..."
+                    />
+                    <button type="submit" class="btn-add" :disabled="eduCreateForm.processing">
+                        <span class="material-symbols-outlined" style="font-size:18px">add</span>
+                        Ajouter
+                    </button>
+                </form>
+                <p v-if="eduCreateForm.errors.name" class="error-msg">{{ eduCreateForm.errors.name }}</p>
+
+                <!-- Liste -->
+                <div v-if="educationLevels.length === 0" class="empty-state">
+                    <span class="material-symbols-outlined" style="font-size:32px;color:#ddd">school</span>
+                    <p class="text-body-sm text-secondary mt-xs">Aucun niveau d'études. Ajoutez-en un ci-dessus.</p>
+                </div>
+
+                <ul v-else class="item-list">
+                    <li v-for="e in educationLevels" :key="e.id" class="item-row">
+                        <form v-if="eduEditingId === e.id" @submit.prevent="submitEduEdit(e.id)" class="flex gap-sm flex-1">
+                            <input v-model="eduEditForm.name" type="text" class="input flex-1"
+                                :class="{ 'input-error': eduEditForm.errors.name }" />
+                            <button type="submit" class="btn-icon-ok">
+                                <span class="material-symbols-outlined" style="font-size:18px">check</span>
+                            </button>
+                            <button type="button" class="btn-icon-cancel" @click="cancelEduEdit">
+                                <span class="material-symbols-outlined" style="font-size:18px">close</span>
+                            </button>
+                        </form>
+                        <template v-else>
+                            <div class="flex items-center gap-sm flex-1">
+                                <span class="material-symbols-outlined" style="font-size:16px;color:#adb5bd">label</span>
+                                <span class="item-name">{{ e.name }}</span>
+                            </div>
+                            <div class="flex gap-xs">
+                                <button class="icon-btn" title="Modifier" @click="startEduEdit(e)">
+                                    <span class="material-symbols-outlined" style="font-size:17px">edit</span>
+                                </button>
+                                <button class="icon-btn danger" title="Supprimer" @click="destroyEdu(e)">
+                                    <span class="material-symbols-outlined" style="font-size:17px">delete</span>
+                                </button>
+                            </div>
+                        </template>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Modal d'erreur pour suppression impossible -->
+        <div v-if="showEduErrorModal" class="modal-overlay" @click="closeEduErrorModal">
+            <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                    <span class="material-symbols-outlined modal-icon">error</span>
+                    <h3 class="modal-title">Suppression impossible</h3>
+                </div>
+                <div class="modal-body">
+                    <p class="modal-text">{{ eduErrorMessage }}</p>
+                </div>
+                <div class="modal-footer">
+                    <button @click="closeEduErrorModal" class="btn-close">Fermer</button>
+                </div>
+            </div>
+        </div>
 
     </div>
 </template>
@@ -199,7 +323,7 @@ const destroy = (p: Profile) => {
     align-items: center;
     gap: 4px;
     padding: 9px 16px;
-    background: #1F3A4D;
+    background: #E5004C;
     color: #fff;
     border: none;
     border-radius: 8px;
@@ -209,7 +333,7 @@ const destroy = (p: Profile) => {
     white-space: nowrap;
     transition: background 0.15s;
 }
-.btn-add:hover:not(:disabled) { background: #17303f; }
+.btn-add:hover:not(:disabled) { background: #c40042; }
 .btn-add:disabled { opacity: 0.6; cursor: not-allowed; }
 
 /* List */
@@ -270,4 +394,65 @@ const destroy = (p: Profile) => {
 .gap-xs { gap: 4px; }
 .gap-sm { gap: 8px; }
 .mt-xs  { margin-top: 4px; }
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal-content {
+    background: #fff;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 400px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+.modal-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 20px 24px;
+    border-bottom: 1px solid #f0f1f3;
+}
+.modal-icon {
+    font-size: 24px;
+    color: #dc2626;
+}
+.modal-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #191c1e;
+    margin: 0;
+}
+.modal-body {
+    padding: 20px 24px;
+}
+.modal-text {
+    font-size: 14px;
+    color: #515f74;
+    margin: 0;
+    line-height: 1.5;
+}
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px 24px 20px;
+}
+.btn-close {
+    padding: 8px 16px;
+    background: #1F3A4D;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-close:hover { background: #17303f; }
 </style>

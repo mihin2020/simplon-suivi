@@ -85,9 +85,9 @@ onUnmounted(() => {
     <Head title="Messagerie" />
 
     <div class="max-w-5xl mx-auto space-y-xl">
-        <div class="flex items-center justify-between">
+        <div class="msg-page-header">
             <h1 class="text-h1 font-bold text-on-surface">Messagerie</h1>
-            <div class="flex items-center gap-sm">
+            <div class="msg-actions">
                 <button @click="sync(false)" :disabled="syncing" class="btn-secondary" :class="{ 'opacity-60': syncing }">
                     <span class="material-symbols-outlined" style="font-size:18px" :class="{ 'spin-icon': syncing }">sync</span>
                     {{ syncing ? 'En cours…' : 'Actualiser' }}
@@ -103,7 +103,7 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div class="flex items-center gap-sm border-b border-surface-container-highest pb-sm">
+        <div class="tabs-scroll-bar">
             <Link href="/communication/emails" :class="filter === 'inbox' ? 'tab-active' : 'tab-inactive'" class="tab-link">
                 Boîte de réception
                 <span v-if="unreadCount > 0" class="tab-badge tab-badge-unread">{{ unreadCount }}</span>
@@ -340,4 +340,52 @@ onUnmounted(() => {
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin-icon { animation: spin 0.9s linear infinite; display: inline-block; }
+
+/* ══ Responsive Communication/Index ══════════════════════ */
+.msg-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.msg-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* Tabs scrollables */
+.tabs-scroll-bar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-bottom: 1px solid #e0e3e5;
+    padding-bottom: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+}
+.tabs-scroll-bar::-webkit-scrollbar { display: none; }
+
+@media (max-width: 767px) {
+    /* Header */
+    .msg-page-header { gap: 8px; }
+    .msg-actions { width: 100%; justify-content: flex-end; }
+    .btn-primary, .btn-secondary { font-size: 12px; padding: 7px 12px; }
+    /* Tabs */
+    .tab-active, .tab-inactive { padding: 8px 12px; font-size: 13px; white-space: nowrap; }
+    /* Thread row */
+    .px-lg { padding-left: 12px !important; padding-right: 12px !important; }
+    .py-md  { padding-top: 10px !important; padding-bottom: 10px !important; }
+    /* Actions sélection */
+    [class*="items-center"][class*="gap-sm"] { flex-wrap: wrap; }
+    /* Pagination */
+    .pag-btn, .pag-num { width: 32px; height: 32px; font-size: 12px; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+    .tab-active, .tab-inactive { padding: 8px 12px; font-size: 13px; }
+    .btn-secondary { font-size: 12px; }
+}
 </style>

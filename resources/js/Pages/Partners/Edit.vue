@@ -9,6 +9,12 @@ interface Partner {
     id: string
     name: string
     logo_path: string | null
+    contact_first_name: string | null
+    contact_last_name: string | null
+    contact_email: string | null
+    contact_phone: string | null
+    contact_profile: string | null
+    contact_position: string | null
 }
 
 const props = defineProps<{ partner: Partner }>()
@@ -16,6 +22,12 @@ const props = defineProps<{ partner: Partner }>()
 const form = useForm({
     name: props.partner.name,
     logo: null as File | null,
+    contact_first_name: props.partner.contact_first_name ?? '',
+    contact_last_name: props.partner.contact_last_name ?? '',
+    contact_email: props.partner.contact_email ?? '',
+    contact_phone: props.partner.contact_phone ?? '',
+    contact_profile: props.partner.contact_profile ?? '',
+    contact_position: props.partner.contact_position ?? '',
 })
 
 const previewUrl = ref<string | null>(
@@ -156,6 +168,115 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
                             />
                         </div>
                         <p v-if="form.errors.name" class="error-msg">{{ form.errors.name }}</p>
+                    </div>
+
+                    <!-- Contact Section -->
+                    <div class="contact-section">
+                        <div class="contact-header">
+                            <span class="material-symbols-outlined contact-icon">person</span>
+                            <div>
+                                <p class="contact-title">Personne de contact</p>
+                                <p class="contact-subtitle">Informations du contact source</p>
+                            </div>
+                        </div>
+
+                        <div class="contact-grid">
+                            <!-- Prénom -->
+                            <div class="field">
+                                <label class="label">Prénom</label>
+                                <div class="input-wrap">
+                                    <span class="material-symbols-outlined input-icon">person_outline</span>
+                                    <input
+                                        v-model="form.contact_first_name"
+                                        type="text"
+                                        class="input"
+                                        :class="{ 'input-error': form.errors.contact_first_name }"
+                                        placeholder="Prénom du contact"
+                                    />
+                                </div>
+                                <p v-if="form.errors.contact_first_name" class="error-msg">{{ form.errors.contact_first_name }}</p>
+                            </div>
+
+                            <!-- Nom -->
+                            <div class="field">
+                                <label class="label">Nom</label>
+                                <div class="input-wrap">
+                                    <span class="material-symbols-outlined input-icon">person</span>
+                                    <input
+                                        v-model="form.contact_last_name"
+                                        type="text"
+                                        class="input"
+                                        :class="{ 'input-error': form.errors.contact_last_name }"
+                                        placeholder="Nom du contact"
+                                    />
+                                </div>
+                                <p v-if="form.errors.contact_last_name" class="error-msg">{{ form.errors.contact_last_name }}</p>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="field">
+                                <label class="label">Email</label>
+                                <div class="input-wrap">
+                                    <span class="material-symbols-outlined input-icon">email</span>
+                                    <input
+                                        v-model="form.contact_email"
+                                        type="email"
+                                        class="input"
+                                        :class="{ 'input-error': form.errors.contact_email }"
+                                        placeholder="email@exemple.com"
+                                    />
+                                </div>
+                                <p v-if="form.errors.contact_email" class="error-msg">{{ form.errors.contact_email }}</p>
+                            </div>
+
+                            <!-- Téléphone -->
+                            <div class="field">
+                                <label class="label">Téléphone</label>
+                                <div class="input-wrap">
+                                    <span class="material-symbols-outlined input-icon">phone</span>
+                                    <input
+                                        v-model="form.contact_phone"
+                                        type="tel"
+                                        class="input"
+                                        :class="{ 'input-error': form.errors.contact_phone }"
+                                        placeholder="+XX XX XX XX XX"
+                                    />
+                                </div>
+                                <p v-if="form.errors.contact_phone" class="error-msg">{{ form.errors.contact_phone }}</p>
+                            </div>
+
+                            <!-- Profil -->
+                            <div class="field">
+                                <label class="label">Profil</label>
+                                <div class="input-wrap">
+                                    <span class="material-symbols-outlined input-icon">badge</span>
+                                    <input
+                                        v-model="form.contact_profile"
+                                        type="text"
+                                        class="input"
+                                        :class="{ 'input-error': form.errors.contact_profile }"
+                                        placeholder="Ex : Manager, RH, DG..."
+                                    />
+                                </div>
+                                <p v-if="form.errors.contact_profile" class="error-msg">{{ form.errors.contact_profile }}</p>
+                            </div>
+
+                            <!-- Poste -->
+                            <div class="field">
+                                <label class="label">Poste</label>
+                                <div class="input-wrap">
+                                    <span class="material-symbols-outlined input-icon">work</span>
+                                    <input
+                                        v-model="form.contact_position"
+                                        type="text"
+                                        class="input"
+                                        :class="{ 'input-error': form.errors.contact_position }"
+                                        placeholder="Titre du poste"
+                                    />
+                                </div>
+                                <p v-if="form.errors.contact_position" class="error-msg">{{ form.errors.contact_position }}</p>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Aperçu de la carte -->
@@ -339,4 +460,40 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
     border-radius: 50%; animation: spin 0.7s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Contact Section ── */
+.contact-section {
+    border: 1px solid #e8edf2;
+    border-radius: 12px;
+    padding: 20px;
+    background: #fafbfc;
+}
+.contact-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e8edf2;
+}
+.contact-icon {
+    font-size: 22px;
+    color: #E5004C;
+    background: rgba(229,0,76,0.08);
+    border-radius: 8px;
+    padding: 6px;
+}
+.contact-title { font-size: 14px; font-weight: 700; color: #191c1e; }
+.contact-subtitle { font-size: 12px; color: #adb5bd; margin-top: 1px; }
+
+.contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+@media (max-width: 640px) {
+    .contact-grid {
+        grid-template-columns: 1fr;
+    }
+}
 </style>

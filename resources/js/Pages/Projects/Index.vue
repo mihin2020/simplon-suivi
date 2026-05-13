@@ -39,7 +39,7 @@ const destroy = (p: Project) => {
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->
-        <div class="flex justify-between items-end">
+        <div class="flex justify-between items-end flex-wrap gap-sm">
             <div>
                 <h1 class="text-h1 font-bold text-on-surface">Gestion des Projets</h1>
                 <p class="text-body-md text-secondary mt-xs">
@@ -205,4 +205,21 @@ const destroy = (p: Project) => {
 .page-btn:hover { background: #eceef0; }
 .page-active { background: #E5004C !important; color: #fff; }
 .page-disabled { opacity: 0.4; cursor: default; }
+
+/* ── Responsive Projects ── */
+@media (max-width: 767px) {
+    /* Header */
+    .flex.justify-between.items-end,
+    .flex.justify-between.items-center { flex-wrap: wrap; gap: 10px; }
+    /* Tableau */
+    table { font-size: 12px; }
+    th, td { padding: 8px 6px !important; white-space: normal !important; }
+    /* Actions toujours visibles sur touch */
+    .opacity-0 { opacity: 1 !important; }
+    /* Boutons */
+    .btn-primary, .btn-secondary { padding: 6px 12px; font-size: 12px; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+    th, td { padding: 10px 8px !important; font-size: 13px; }
+}
 </style>

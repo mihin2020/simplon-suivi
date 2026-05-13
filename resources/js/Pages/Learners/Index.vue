@@ -79,7 +79,7 @@ const photoUrl = (path: string | null) =>
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->
-        <div class="flex justify-between items-end">
+        <div class="flex justify-between items-end flex-wrap gap-sm">
             <div>
                 <h1 class="text-h1 font-bold text-on-surface">Annuaire des Apprenants</h1>
                 <p class="text-body-md text-secondary mt-xs">
@@ -335,4 +335,28 @@ const photoUrl = (path: string | null) =>
 .page-btn:hover { background: #eceef0; }
 .page-active { background: #E5004C !important; color: #fff; }
 .page-disabled { opacity: 0.4; cursor: default; }
+
+/* ── Responsive Learners ── */
+@media (max-width: 767px) {
+    /* Header */
+    .page-title-row,
+    [class*="justify-between"][class*="items-end"] { flex-wrap: wrap; gap: 10px; }
+    /* Filtres */
+    .filter-input, select { min-width: unset !important; width: 100%; }
+    /* Actions hover → toujours visibles sur touch */
+    @media (hover: none) {
+        [class*="group-hover:opacity-100"] { opacity: 1 !important; }
+        .opacity-0 { opacity: 1 !important; }
+    }
+    /* Tableau */
+    table { font-size: 12px; }
+    th, td { padding: 8px 6px !important; }
+    /* Pagination */
+    .pagination, [class*="justify-between"][class*="items-center"] { flex-wrap: wrap; gap: 8px; justify-content: center; }
+}
+@media (max-width: 767px) {
+    /* Rendre actions toujours visibles sur mobile (pas de hover) */
+    .group .group-hover\:opacity-100 { opacity: 1; }
+    .group .opacity-0 { opacity: 1; }
+}
 </style>

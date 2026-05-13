@@ -59,6 +59,10 @@ const optionalColumns = [
     { key: 'contact_urgence_nom', label: 'Contact urgence · Nom' },
     { key: 'contact_urgence_prenom', label: 'Contact urgence · Prénom' },
     { key: 'contact_urgence_telephone', label: 'Contact urgence · Téléphone' },
+    { key: 'adresse', label: 'Adresse' },
+    { key: 'localisation', label: 'Localisation (ville, pays)' },
+    { key: 'profil', label: 'Profil / métier visé' },
+    { key: 'domaine_etudes', label: 'Domaine d\'études' },
 ]
 </script>
 

@@ -1,9 +1,19 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import { ref } from 'vue'
 
 defineOptions({ layout: AdminLayout })
+
+interface Learner {
+    id: string
+    first_name: string
+    last_name: string
+    email: string | null
+    gender: string | null
+    education_level: string | null
+    status: string
+}
 
 interface FormationStat {
     id: string
@@ -89,6 +99,68 @@ const statusClass: Record<string, string> = {
 
 const pct = (part: number, total: number) =>
     total > 0 ? Math.round((part / total) * 100) : 0
+
+// Modal drill-down
+const showLearnersModal = ref(false)
+const modalTitle = ref('')
+const modalLearners = ref<Learner[]>([])
+const modalLoading = ref(false)
+
+const openLearnersModal = async (
+    formationId: string,
+    formationName: string,
+    filterType: 'gender' | 'status' | 'insertion',
+    filterValue: string,
+    label: string
+) => {
+    modalLoading.value = true
+    showLearnersModal.value = true
+    modalTitle.value = `${formationName} - ${label}`
+    modalLearners.value = []
+
+    const params = new URLSearchParams()
+    if (filterType === 'gender') {
+        params.append('gender', filterValue)
+    } else if (filterType === 'status') {
+        params.append('status', filterValue)
+    } else if (filterType === 'insertion') {
+        params.append('insertion_status', filterValue)
+    }
+
+    try {
+        const response = await fetch(`/api/statistics/formation/${formationId}/learners?${params}`)
+        const data = await response.json()
+        modalLearners.value = data.learners || []
+    } catch (error) {
+        console.error('Erreur lors du chargement des apprenants:', error)
+    } finally {
+        modalLoading.value = false
+    }
+}
+
+const closeLearnersModal = () => {
+    showLearnersModal.value = false
+    modalTitle.value = ''
+    modalLearners.value = []
+}
+
+const genderLabel = (g: string | null) => {
+    return { female: 'Femme', male: 'Homme' }[g ?? ''] ?? ''
+}
+
+const statusLabelLearner: Record<string, string> = {
+    in_progress: 'En cours',
+    withdrawn: 'Abandonné',
+    completed: 'Diplômé',
+    moved: 'Transféré',
+}
+
+const statusColorLearner: Record<string, string> = {
+    in_progress: 'text-green-700',
+    withdrawn: 'text-red-700',
+    completed: 'text-blue-700',
+    moved: 'text-orange-700',
+}
 </script>
 
 <template>
@@ -180,17 +252,17 @@ const pct = (part: number, total: number) =>
                                                 <span class="font-medium text-on-surface">{{ f.name }}</span>
                                             </div>
                                         </td>
-                                        <td class="px-lg py-sm text-center font-semibold">{{ f.total_learners }}</td>
-                                        <td class="px-lg py-sm text-center" style="color:#E5004C">{{ f.female_count }}</td>
-                                        <td class="px-lg py-sm text-center" style="color:#1F3A4D">{{ f.male_count }}</td>
-                                        <td class="px-lg py-sm text-center text-green-700">{{ f.in_progress_count }}</td>
-                                        <td class="px-lg py-sm text-center text-red-700">{{ f.withdrawn_count }}</td>
-                                        <td class="px-lg py-sm text-center text-blue-700">{{ f.completed_count }}</td>
-                                        <td class="px-lg py-sm text-center text-orange-700">{{ f.moved_count }}</td>
-                                        <td class="px-lg py-sm text-center text-amber-700">{{ f.searching_count }}</td>
-                                        <td class="px-lg py-sm text-center text-blue-600">{{ f.internship_count }}</td>
-                                        <td class="px-lg py-sm text-center text-green-600">{{ f.employed_count }}</td>
-                                        <td class="px-lg py-sm text-center text-gray-600">{{ f.unemployed_count }}</td>
+                                        <td class="px-lg py-sm text-center font-semibold cursor-pointer hover:underline" @click="openLearnersModal(f.id, f.name, 'gender', '', 'Tous les apprenants')">{{ f.total_learners }}</td>
+                                        <td class="px-lg py-sm text-center cursor-pointer hover:underline" style="color:#E5004C" @click="f.female_count > 0 && openLearnersModal(f.id, f.name, 'gender', 'female', 'Femmes')">{{ f.female_count }}</td>
+                                        <td class="px-lg py-sm text-center cursor-pointer hover:underline" style="color:#1F3A4D" @click="f.male_count > 0 && openLearnersModal(f.id, f.name, 'gender', 'male', 'Hommes')">{{ f.male_count }}</td>
+                                        <td class="px-lg py-sm text-center text-green-700 cursor-pointer hover:underline" @click="f.in_progress_count > 0 && openLearnersModal(f.id, f.name, 'status', 'in_progress', 'En cours')">{{ f.in_progress_count }}</td>
+                                        <td class="px-lg py-sm text-center text-red-700 cursor-pointer hover:underline" @click="f.withdrawn_count > 0 && openLearnersModal(f.id, f.name, 'status', 'withdrawn', 'Abandons')">{{ f.withdrawn_count }}</td>
+                                        <td class="px-lg py-sm text-center text-blue-700 cursor-pointer hover:underline" @click="f.completed_count > 0 && openLearnersModal(f.id, f.name, 'status', 'completed', 'Diplômés')">{{ f.completed_count }}</td>
+                                        <td class="px-lg py-sm text-center text-orange-700 cursor-pointer hover:underline" @click="f.moved_count > 0 && openLearnersModal(f.id, f.name, 'status', 'moved', 'Transférés')">{{ f.moved_count }}</td>
+                                        <td class="px-lg py-sm text-center text-amber-700 cursor-pointer hover:underline" @click="f.searching_count > 0 && openLearnersModal(f.id, f.name, 'insertion', 'searching', 'En recherche')">{{ f.searching_count }}</td>
+                                        <td class="px-lg py-sm text-center text-blue-600 cursor-pointer hover:underline" @click="f.internship_count > 0 && openLearnersModal(f.id, f.name, 'insertion', 'internship', 'En stage')">{{ f.internship_count }}</td>
+                                        <td class="px-lg py-sm text-center text-green-600 cursor-pointer hover:underline" @click="f.employed_count > 0 && openLearnersModal(f.id, f.name, 'insertion', 'employed', 'En emploi')">{{ f.employed_count }}</td>
+                                        <td class="px-lg py-sm text-center text-gray-600 cursor-pointer hover:underline" @click="f.unemployed_count > 0 && openLearnersModal(f.id, f.name, 'insertion', 'unemployed', 'Sans emploi')">{{ f.unemployed_count }}</td>
                                     </tr>
                                     <!-- Ligne totaux -->
                                     <tr class="bg-surface-container-low font-semibold text-on-surface">
@@ -209,6 +281,62 @@ const pct = (part: number, total: number) =>
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Drill-down -->
+        <div v-if="showLearnersModal" class="modal-overlay" @click.self="closeLearnersModal">
+            <div class="modal-content modal-lg">
+                <div class="modal-header">
+                    <div>
+                        <h3 class="modal-title">{{ modalTitle }}</h3>
+                        <p class="modal-subtitle">{{ modalLearners.length }} apprenant{{ modalLearners.length > 1 ? 's' : '' }}</p>
+                    </div>
+                    <button @click="closeLearnersModal" class="modal-close">
+                        <span class="material-symbols-outlined" style="font-size:20px">close</span>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+                    <div v-if="modalLoading" class="text-center py-xl">
+                        <span class="material-symbols-outlined spin" style="font-size:32px;color:#9aaabb">progress_activity</span>
+                        <p class="mt-sm text-secondary">Chargement...</p>
+                    </div>
+
+                    <div v-else-if="modalLearners.length === 0" class="text-center py-xl text-secondary">
+                        Aucun apprenant trouvé.
+                    </div>
+
+                    <div v-else class="learners-list">
+                        <div
+                            v-for="learner in modalLearners"
+                            :key="learner.id"
+                            class="learner-card"
+                        >
+                            <div class="learner-avatar">
+                                {{ learner.first_name.charAt(0) }}{{ learner.last_name.charAt(0) }}
+                            </div>
+                            <div class="learner-info">
+                                <p class="learner-name">{{ learner.last_name }} {{ learner.first_name }}</p>
+                                <p v-if="learner.email" class="learner-email">{{ learner.email }}</p>
+                                <div class="learner-meta">
+                                    <span v-if="learner.gender" :class="['badge', learner.gender === 'female' ? 'badge-female' : 'badge-male']">
+                                        {{ genderLabel(learner.gender) }}
+                                    </span>
+                                    <span v-if="learner.education_level" class="badge badge-info">
+                                        {{ learner.education_level }}
+                                    </span>
+                                    <span :class="['badge', statusColorLearner[learner.status]]">
+                                        {{ statusLabelLearner[learner.status] ?? learner.status }}
+                                    </span>
+                                </div>
+                            </div>
+                            <Link :href="`/learners/${learner.id}`" class="btn-view" title="Voir le profil">
+                                <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -285,5 +413,240 @@ const pct = (part: number, total: number) =>
 table th,
 table td {
     white-space: nowrap;
+}
+
+/* ══ Modal Drill-down ═══════════════════════════════════ */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 20px;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-content.modal-lg {
+    max-width: 700px;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.modal-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    color: #9ca3af;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.modal-close:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Learners list in modal */
+.learners-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.learner-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #f9fafb;
+}
+
+.learner-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #E5004C;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.learner-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.learner-name {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 14px;
+}
+
+.learner-email {
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+.learner-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.badge-female {
+    background: #fce7f3;
+    color: #be185d;
+}
+
+.badge-male {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-info {
+    background: #f3f4f6;
+    color: #4b5563;
+}
+
+.btn-view {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    color: #6b7280;
+    background: white;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: all 0.15s;
+    flex-shrink: 0;
+}
+
+.btn-view:hover {
+    background: #f3f4f6;
+    color: #374151;
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Utilitaires pour le drill-down */
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.hover\:underline:hover {
+    text-decoration: underline;
+}
+
+/* ══ Responsive Statistics ══════════════════════════════ */
+
+/* ── Mobile (<768px) ── */
+@media (max-width: 767px) {
+    /* Header page */
+    .page-header,
+    .flex.items-center.justify-between { flex-wrap: wrap; gap: 10px; }
+
+    /* Bouton expand projet : stat pills réduits */
+    .stat-pill { padding: 2px 6px; font-size: 10px; }
+    .flex.items-center.gap-sm.flex-shrink-0 { gap: 4px; }
+
+    /* Nom projet : laisser de la place */
+    .font-semibold.text-on-surface { font-size: 13px; }
+
+    /* Tableau */
+    table {
+        font-size: 11px;
+        min-width: 700px; /* force scroll horizontal */
+    }
+    table th, table td {
+        padding: 6px 6px !important;
+        white-space: nowrap;
+    }
+
+    /* Wrapper tableau : scroll horizontal avec indicateur visuel */
+    .overflow-x-auto {
+        position: relative;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Filtres */
+    select, .filter-select { font-size: 12px; padding: 6px 8px; }
+    .flex.items-center.gap-md { flex-wrap: wrap; gap: 8px; }
+
+    /* KPIs si présents */
+    .kpi-card { padding: 12px 14px; }
+}
+
+/* ── Tablet (768px–1023px) ── */
+@media (min-width: 768px) and (max-width: 1023px) {
+    table { font-size: 12px; }
+    table th, table td { padding: 8px 8px !important; }
+    .stat-pill { padding: 2px 8px; font-size: 11px; }
 }
 </style>

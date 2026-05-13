@@ -41,15 +41,16 @@ class InsertionRecordController extends Controller
 
         $validated = $request->validate([
             'status' => ['required', 'string', 'in:searching,internship,employed,unemployed'],
+            'status_changed_at' => ['nullable', 'date'],
             'status_notes' => ['nullable', 'string', 'max:1000'],
-            
+
             // Stage fields
             'internship_start_date' => ['nullable', 'date', 'required_if:status,internship'],
             'internship_end_date' => ['nullable', 'date', 'after_or_equal:internship_start_date'],
             'internship_company' => ['nullable', 'string', 'max:255', 'required_if:status,internship'],
             'internship_paid' => ['nullable', 'boolean'],
             'internship_contract_type' => ['nullable', 'string', 'max:255'],
-            
+
             // Employment fields
             'employment_company' => ['nullable', 'string', 'max:255', 'required_if:status,employed'],
             'employment_start_date' => ['nullable', 'date', 'required_if:status,employed'],
@@ -59,8 +60,8 @@ class InsertionRecordController extends Controller
 
         $record = new InsertionRecord([
             'learner_id' => $learner->id,
-            'status' => InsertionStatus::from($validated['status']),
-            'status_changed_at' => now(),
+            'status' => $validated['status'],
+            'status_changed_at' => $validated['status_changed_at'] ?? now(),
             'status_notes' => $validated['status_notes'] ?? null,
             
             'internship_start_date' => $validated['internship_start_date'] ?? null,
@@ -110,7 +111,7 @@ class InsertionRecordController extends Controller
         ]);
 
         $record->update([
-            'status' => InsertionStatus::from($validated['status']),
+            'status' => $validated['status'],
             'status_notes' => $validated['status_notes'] ?? null,
             
             'internship_start_date' => $validated['internship_start_date'] ?? null,

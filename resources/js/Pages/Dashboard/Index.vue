@@ -244,7 +244,7 @@ const statusClass: Record<string, string> = {
         </div>
 
         <!-- KPI formateur -->
-        <div class="grid grid-cols-3 gap-md">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-md">
             <div class="kpi-card kpi-accent">
                 <span class="kpi-icon material-symbols-outlined">school</span>
                 <div class="kpi-value">{{ trainerStats!.formations }}</div>
@@ -475,4 +475,20 @@ const statusClass: Record<string, string> = {
     white-space: nowrap;
 }
 .btn-attendance:hover { background: #c4003f; }
+
+/* ── Responsive Dashboard ── */
+@media (max-width: 767px) {
+    .kpi-card { padding: 14px 16px; }
+    .kpi-value { font-size: 24px; }
+    .page-header,
+    .section-header { flex-wrap: wrap; gap: 10px; }
+    .formation-row { flex-wrap: wrap; gap: 8px; }
+    .formation-actions { flex-wrap: wrap; gap: 6px; }
+    .btn-attendance { font-size: 11px; padding: 5px 10px; }
+    .status-badge, .learner-count { font-size: 11px; }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+    .kpi-card { padding: 16px; }
+    .kpi-value { font-size: 28px; }
+}
 </style>

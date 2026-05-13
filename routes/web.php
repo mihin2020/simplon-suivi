@@ -15,6 +15,7 @@ use App\Http\Controllers\Learner\MoveLearnerController;
 use App\Http\Controllers\Learner\WithdrawLearnerController;
 use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\ConfigurationController;
+use App\Http\Controllers\EducationLevelController;
 use App\Http\Controllers\PresenceRedirectController;
 use App\Http\Controllers\TrainerProfileController;
 use App\Http\Controllers\ReferentielController;
@@ -204,10 +205,19 @@ Route::middleware("auth")->group(function () {
         TrainerProfileController::class,
     )->except(["create", "edit", "show"]);
 
+    Route::resource(
+        "education-levels",
+        EducationLevelController::class,
+    )->except(["create", "edit", "show"]);
+
     // Statistics
     Route::get("statistics", [StatisticsController::class, "index"])->name(
         "statistics.index",
     );
+    Route::get("api/statistics/formation/{formation}/learners", [
+        StatisticsController::class,
+        "learners",
+    ])->name("api.statistics.learners");
 
     // API pour récupérer les formations d'un projet (JSON)
     Route::get("api/projects/{project}/formations", [

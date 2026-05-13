@@ -114,6 +114,10 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
             'emergency_contact_name'      => !empty($row['contact_urgence_nom']) ? trim((string) $row['contact_urgence_nom']) : null,
             'emergency_contact_firstname' => !empty($row['contact_urgence_prenom']) ? trim((string) $row['contact_urgence_prenom']) : null,
             'emergency_contact_phone'     => !empty($row['contact_urgence_telephone']) ? trim((string) $row['contact_urgence_telephone']) : null,
+            'address'                     => !empty($row['adresse']) ? trim((string) $row['adresse']) : null,
+            'location'                    => !empty($row['localisation']) ? trim((string) $row['localisation']) : null,
+            'profile'                     => !empty($row['profil']) ? trim((string) $row['profil']) : null,
+            'study_field'                 => !empty($row['domaine_etudes']) ? trim((string) $row['domaine_etudes']) : null,
         ]);
 
         $learner->save();

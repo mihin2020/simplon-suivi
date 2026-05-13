@@ -33,6 +33,10 @@ class Learner extends Model
         'emergency_contact_name',
         'emergency_contact_firstname',
         'emergency_contact_phone',
+        'address',
+        'location',
+        'profile',
+        'study_field',
     ];
 
     protected function casts(): array
