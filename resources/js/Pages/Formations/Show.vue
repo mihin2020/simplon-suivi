@@ -280,6 +280,10 @@ const filteredInactiveLearners = computed(() => {
                     <span class="material-symbols-outlined" style="font-size:18px">search</span>
                     Apprenant existant
                 </Link>
+                <Link :href="`/formations/${formation.id}/medias`" class="btn-secondary">
+                    <span class="material-symbols-outlined" style="font-size:18px">photo_library</span>
+                    Médiathèque
+                </Link>
                 <Link :href="`/formations/${formation.id}/learners/new`" class="btn-primary">
                     <span class="material-symbols-outlined" style="font-size:18px">person_add</span>
                     Créer &amp; Inscrire

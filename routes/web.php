@@ -21,6 +21,7 @@ use App\Http\Controllers\TrainerProfileController;
 use App\Http\Controllers\ReferentielController;
 use App\Http\Controllers\InsertionRecordController;
 use App\Http\Controllers\LearnerController;
+use App\Http\Controllers\MediaController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\TrainerController;
@@ -230,6 +231,57 @@ Route::middleware("auth")->group(function () {
         LearnerController::class,
         "search",
     ])->name("api.learners.search");
+
+    // ───────────────────────────────────────────
+    // MÉDIATHÈQUE (Cloudinary)
+    // ───────────────────────────────────────────
+    // Page principale médiathèque d'une formation
+    Route::get("formations/{formation}/medias", [
+        MediaController::class,
+        "index",
+    ])->name("formations.medias.index");
+
+    // Upload d'un média (Cloudinary)
+    Route::post("formations/{formation}/medias", [
+        MediaController::class,
+        "store",
+    ])->name("formations.medias.store");
+
+    // Mise à jour d'un média
+    Route::put("formations/{formation}/medias/{media}", [
+        MediaController::class,
+        "update",
+    ])->name("formations.medias.update");
+
+    // Mise à jour en masse des médias (album)
+    Route::post("formations/{formation}/medias/batch-update", [
+        MediaController::class,
+        "batchUpdate",
+    ])->name("formations.medias.batch-update");
+
+    // Suppression d'un média
+    Route::delete("formations/{formation}/medias/{media}", [
+        MediaController::class,
+        "destroy",
+    ])->name("formations.medias.destroy");
+
+    // Téléchargement d'un média
+    Route::get("formations/{formation}/medias/{media}/download", [
+        MediaController::class,
+        "download",
+    ])->name("formations.medias.download");
+
+    // Téléchargement ZIP d'un album
+    Route::get("formations/{formation}/medias/album/download", [
+        MediaController::class,
+        "downloadAlbum",
+    ])->name("formations.medias.album.download");
+
+    // Stats Cloudinary (jauge)
+    Route::get("api/cloudinary/stats", [
+        MediaController::class,
+        "cloudinaryStats",
+    ])->name("api.cloudinary.stats");
 
     // Formateurs d'une formation (assignation/désassignation)
     Route::post("formations/{formation}/trainers", [
