@@ -36,7 +36,9 @@ class Learner extends Model
         'address',
         'location',
         'profile',
+        'organization',
         'study_field',
+        'age_range_id',
     ];
 
     protected function casts(): array
@@ -55,6 +57,11 @@ class Learner extends Model
     public function educationLevel(): BelongsTo
     {
         return $this->belongsTo(EducationLevel::class);
+    }
+
+    public function ageRange(): BelongsTo
+    {
+        return $this->belongsTo(AgeRange::class);
     }
 
     public function formations(): BelongsToMany

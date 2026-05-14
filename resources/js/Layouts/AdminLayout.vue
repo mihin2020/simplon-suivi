@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, usePage, router } from '@inertiajs/vue3'
 import NotificationBell from '@/Components/NotificationBell.vue'
+import AiChatbot from '@/Components/AiChatbot.vue'
 
 const page = usePage()
 
@@ -92,6 +93,7 @@ const logout = () => router.post('/deconnexion')
                 </div>
 
                 <div class="flex items-center gap-md">
+                    <AiChatbot />
                     <NotificationBell :initial-count="($page.props.unread_notifications_count as number) ?? 0" />
                     <div class="h-6 w-px bg-surface-container-highest mx-xs"></div>
                     <Link href="/profil" class="flex items-center gap-sm hover:opacity-80 transition-opacity">

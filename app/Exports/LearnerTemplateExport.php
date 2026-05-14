@@ -30,6 +30,8 @@ class LearnerTemplateExport implements FromArray, WithHeadings, WithStyles, With
             'adresse',
             'localisation',
             'profil',
+            'organisation',
+            'tranche_age',
             'domaine_etudes',
         ];
     }
@@ -53,6 +55,8 @@ class LearnerTemplateExport implements FromArray, WithHeadings, WithStyles, With
                 'Rue 123, Quartier XYZ',
                 'Ouagadougou, Burkina Faso',
                 'Développeur web junior',
+                'Simplon',
+                '',
                 'Informatique',
             ],
         ];
@@ -76,14 +80,16 @@ class LearnerTemplateExport implements FromArray, WithHeadings, WithStyles, With
             'M' => 30, // adresse
             'N' => 25, // localisation
             'O' => 25, // profil
-            'P' => 20, // domaine_etudes
+            'P' => 22, // organisation
+            'Q' => 18, // tranche_age
+            'R' => 20, // domaine_etudes
         ];
     }
 
     public function styles(Worksheet $sheet): array
     {
         // Style de l'en-tête (ligne 1)
-        $sheet->getStyle('A1:P1')->applyFromArray([
+        $sheet->getStyle('A1:R1')->applyFromArray([
             'font' => [
                 'bold'  => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -112,7 +118,7 @@ class LearnerTemplateExport implements FromArray, WithHeadings, WithStyles, With
         ]);
 
         // Style de la ligne d'exemple (ligne 2)
-        $sheet->getStyle('A2:P2')->applyFromArray([
+        $sheet->getStyle('A2:R2')->applyFromArray([
             'font' => ['color' => ['rgb' => '515f74'], 'italic' => true],
             'fill' => [
                 'fillType'   => Fill::FILL_SOLID,
@@ -121,7 +127,7 @@ class LearnerTemplateExport implements FromArray, WithHeadings, WithStyles, With
         ]);
 
         // Bordures sur toute la zone
-        $sheet->getStyle('A1:P2')->applyFromArray([
+        $sheet->getStyle('A1:R2')->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,

@@ -58,10 +58,19 @@ interface Formation {
   project: Project
 }
 
+interface FormationLink {
+  id: string
+  title: string | null
+  url: string
+  creator?: Uploader
+  created_at: string
+}
+
 const props = defineProps<{
   formation: Formation
   medias: Media[]
   albums: string[]
+  links: FormationLink[]
   cloudinaryUsage: CloudinaryUsage
   cloudName: string
   uploadPreset: string
@@ -127,6 +136,87 @@ const currentFolderMedias = computed(() => {
 // Visualisation (lightbox)
 const showViewer = ref(false)
 const currentMediaIndex = ref(0)
+
+// Liens externes
+const showLinkModal = ref(false)
+const linkForm = ref({ title: '', url: '' })
+const isSavingLink = ref(false)
+const linkToDelete = ref<FormationLink | null>(null)
+const showLinkDeleteModal = ref(false)
+
+const openLinkModal = () => {
+  linkForm.value = { title: '', url: '' }
+  showLinkModal.value = true
+}
+
+const saveLink = async () => {
+  const url = linkForm.value.url.trim()
+  if (!url) return
+  isSavingLink.value = true
+  try {
+    const response = await fetch(`/formations/${props.formation.id}/links`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+      },
+      body: JSON.stringify({
+        title: linkForm.value.title.trim() || null,
+        url,
+      }),
+    })
+    if (response.ok) {
+      showLinkModal.value = false
+      router.reload({ only: ['links'] })
+      showToast('Lien ajouté ✓', 'success')
+    } else {
+      const data = await response.json().catch(() => ({}))
+      showToast(data.message || 'Erreur : vérifiez l\'URL', 'error')
+    }
+  } catch (e) {
+    showToast('Erreur lors de l\'ajout du lien', 'error')
+  } finally {
+    isSavingLink.value = false
+  }
+}
+
+const confirmDeleteLink = (link: FormationLink) => {
+  linkToDelete.value = link
+  showLinkDeleteModal.value = true
+}
+
+const deleteLink = async () => {
+  if (!linkToDelete.value) return
+  try {
+    const response = await fetch(`/formations/${props.formation.id}/links/${linkToDelete.value.id}`, {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+      },
+    })
+    if (response.ok) {
+      showLinkDeleteModal.value = false
+      linkToDelete.value = null
+      router.reload({ only: ['links'] })
+      showToast('Lien supprimé', 'success')
+    }
+  } catch (e) {
+    showToast('Erreur lors de la suppression', 'error')
+  }
+}
+
+const linkHostname = (url: string): string => {
+  try { return new URL(url).hostname.replace(/^www\./, '') } catch { return url }
+}
+
+const linkFavicon = (url: string): string => {
+  try {
+    const u = new URL(url)
+    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`
+  } catch { return '' }
+}
 
 // Toast notification
 const toast = ref({ show: false, message: '', type: 'success' })
@@ -533,6 +623,35 @@ const fmtDate = (date: string) => {
           <span v-else class="material-symbols-outlined">add_photo_alternate</span>
           {{ isUploading ? 'Upload...' : (isScriptLoading ? 'Chargement...' : 'Ajouter des médias') }}
         </button>
+        <button @click="openLinkModal" class="btn-secondary">
+          <span class="material-symbols-outlined">link</span>
+          Ajouter un lien
+        </button>
+      </div>
+    </div>
+
+    <!-- Liste des liens -->
+    <div v-if="links && links.length > 0" class="links-section">
+      <div class="links-header">
+        <h3 class="links-title">
+          <span class="material-symbols-outlined" style="font-size:20px">link</span>
+          Liens ({{ links.length }})
+        </h3>
+      </div>
+      <div class="links-grid">
+        <a v-for="link in links" :key="link.id" :href="link.url" target="_blank" rel="noopener noreferrer" class="link-card">
+          <div class="link-icon">
+            <img v-if="linkFavicon(link.url)" :src="linkFavicon(link.url)" alt="" @error="($event.target as HTMLImageElement).style.display='none'" />
+            <span class="material-symbols-outlined fallback-icon">public</span>
+          </div>
+          <div class="link-info">
+            <h4 class="link-title">{{ link.title || linkHostname(link.url) }}</h4>
+            <span class="link-host">{{ linkHostname(link.url) }}</span>
+          </div>
+          <button @click.prevent.stop="confirmDeleteLink(link)" class="link-delete" title="Supprimer">
+            <span class="material-symbols-outlined">delete</span>
+          </button>
+        </a>
       </div>
     </div>
 
@@ -764,6 +883,53 @@ const fmtDate = (date: string) => {
       </div>
     </div>
 
+    <!-- Modal ajout de lien -->
+    <div v-if="showLinkModal" class="modal-overlay" @click.self="showLinkModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span class="material-symbols-outlined modal-icon">link</span>
+          <h3>Ajouter un lien</h3>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label>Intitulé <span style="color:#94a3b8;font-weight:400">(optionnel)</span></label>
+            <input v-model="linkForm.title" type="text" class="form-input" placeholder="Ex : Support de cours, Drive partagé..." />
+          </div>
+          <div class="form-group">
+            <label>URL <span style="color:#E5004C">*</span></label>
+            <input v-model="linkForm.url" type="url" class="form-input" placeholder="https://..." autofocus @keydown.enter.prevent="saveLink" />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button @click="showLinkModal = false" class="btn-secondary">Annuler</button>
+          <button @click="saveLink" class="btn-primary" :disabled="isSavingLink || !linkForm.url.trim()">
+            <span v-if="isSavingLink" class="spinner" />
+            <span v-else class="material-symbols-outlined">add</span>
+            {{ isSavingLink ? 'Ajout...' : 'Ajouter' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal suppression lien -->
+    <div v-if="showLinkDeleteModal" class="modal-overlay" @click.self="showLinkDeleteModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <span class="material-symbols-outlined modal-icon warning">warning</span>
+          <h3>Supprimer le lien</h3>
+        </div>
+        <div class="modal-body">
+          <p>Supprimer <strong>{{ linkToDelete?.title || linkToDelete?.url }}</strong> ?</p>
+        </div>
+        <div class="modal-footer">
+          <button @click="showLinkDeleteModal = false" class="btn-secondary">Annuler</button>
+          <button @click="deleteLink" class="btn-danger">
+            <span class="material-symbols-outlined">delete</span> Supprimer
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Modal visualisation (lightbox) -->
     <div v-if="showViewer && currentMedia" class="viewer-overlay" @click.self="closeViewer">
       <!-- Navigation -->
@@ -798,10 +964,48 @@ const fmtDate = (date: string) => {
         </div>
       </div>
     </div>
+
+    <!-- Toast notification -->
+    <transition name="toast">
+      <div v-if="toast.show" :class="['toast', toast.type]">{{ toast.message }}</div>
+    </transition>
   </div>
 </template>
 
 <style scoped>
+/* Section liens externes */
+.links-section { margin: 20px 0 24px; }
+.links-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.links-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: #515f74; text-transform: uppercase; letter-spacing: 0.04em; }
+.links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.link-card {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px; background: #fff; border: 1px solid #e0e3e5;
+  border-radius: 10px; text-decoration: none; color: inherit;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+  position: relative; overflow: hidden;
+}
+.link-card:hover { border-color: #E5004C; box-shadow: 0 4px 12px rgba(229,0,76,0.08); transform: translateY(-1px); }
+.link-icon {
+  flex-shrink: 0; width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  background: #f8f9fa; border-radius: 8px; position: relative;
+}
+.link-icon img { width: 24px; height: 24px; border-radius: 4px; position: relative; z-index: 1; }
+.link-icon .fallback-icon { position: absolute; color: #9aaabb; font-size: 22px; }
+.link-info { flex: 1; min-width: 0; }
+.link-title { font-size: 14px; font-weight: 600; color: #191c1e; margin: 0 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.link-host { font-size: 12px; color: #9aaabb; }
+.link-delete {
+  flex-shrink: 0; background: transparent; border: none; cursor: pointer;
+  color: #9aaabb; padding: 6px; border-radius: 6px; opacity: 0;
+  transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.link-card:hover .link-delete { opacity: 1; }
+.link-delete:hover { background: #fee2e2; color: #dc2626; }
+.toast-enter-active, .toast-leave-active { transition: all 0.25s ease; }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(10px); }
+
 .container { max-width: 1280px; margin: 0 auto; padding: 24px; }
 .page-header { margin-bottom: 24px; }
 .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #9aaabb; margin-bottom: 12px; }

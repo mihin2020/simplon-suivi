@@ -62,6 +62,8 @@ const optionalColumns = [
     { key: 'adresse', label: 'Adresse' },
     { key: 'localisation', label: 'Localisation (ville, pays)' },
     { key: 'profil', label: 'Profil / métier visé' },
+    { key: 'organisation', label: 'Organisation' },
+    { key: 'tranche_age', label: 'Tranche d\'âge (auto-calculée si vide)' },
     { key: 'domaine_etudes', label: 'Domaine d\'études' },
 ]
 </script>

@@ -1,16 +1,18 @@
 <script setup lang="ts">
 import { useForm, Link } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
 
 interface EducationLevel { id: number; name: string }
+interface AgeRange { id: number; name: string; age_min: number; age_max: number }
 interface Formation { id: string; name: string; project: { id: string; name: string } }
 
 const props = defineProps<{
     formation: Formation
     educationLevels: EducationLevel[]
+    ageRanges: AgeRange[]
 }>()
 
 const form = useForm({
@@ -22,14 +24,22 @@ const form = useForm({
     birth_date:                  '',
     birth_place:                 '',
     education_level_id:          '',
+    age_range_id:                '' as number | '',
+    organization:                '',
     talent:                      '',
     emergency_contact_name:      '',
     emergency_contact_firstname: '',
     emergency_contact_phone:     '',
+    address:                     '',
+    location:                    '',
+    profile:                     '',
+    study_field:                 '',
     photo:                       null as File | null,
+    cnib:                        null as File | null,
 })
 
 const photoPreview = ref<string | null>(null)
+const cnibName = ref<string | null>(null)
 
 const onPhotoChange = (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0]
@@ -37,6 +47,31 @@ const onPhotoChange = (e: Event) => {
     form.photo = file
     photoPreview.value = URL.createObjectURL(file)
 }
+
+const onCnibChange = (e: Event) => {
+    const file = (e.target as HTMLInputElement).files?.[0]
+    if (!file) return
+    form.cnib = file
+    cnibName.value = file.name
+}
+
+// Calcul automatique de l'âge depuis la date de naissance
+const computedAge = computed<number | null>(() => {
+    if (!form.birth_date) return null
+    const birth = new Date(form.birth_date)
+    if (isNaN(birth.getTime())) return null
+    const now = new Date()
+    let age = now.getFullYear() - birth.getFullYear()
+    const m = now.getMonth() - birth.getMonth()
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--
+    return age >= 0 ? age : null
+})
+
+watch(computedAge, (age) => {
+    if (age === null) return
+    const match = props.ageRanges.find(r => age >= r.age_min && age <= r.age_max)
+    if (match) form.age_range_id = match.id
+})
 
 const submit = () => form.post(`/formations/${props.formation.id}/learners/new`, {
     forceFormData: true,
@@ -134,6 +169,19 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners/new`,
 
                 <div class="grid grid-cols-2 gap-md">
                     <div class="field">
+                        <label class="label">Tranche d'âge
+                            <span v-if="computedAge !== null" class="age-hint">({{ computedAge }} ans)</span>
+                        </label>
+                        <select v-model="form.age_range_id" class="input">
+                            <option value="">Sélectionner</option>
+                            <option v-for="r in ageRanges" :key="r.id" :value="r.id">{{ r.name }}</option>
+                        </select>
+                    </div>
+                    <div></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-md">
+                    <div class="field">
                         <label class="label">Lieu de naissance</label>
                         <input v-model="form.birth_place" type="text" class="input" />
                     </div>
@@ -165,6 +213,52 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners/new`,
                         <label class="label">Téléphone</label>
                         <input v-model="form.phone" type="tel" class="input" />
                     </div>
+                </div>
+            </div>
+
+            <!-- Informations complémentaires -->
+            <div class="card space-y-lg">
+                <h2 class="section-title">Informations complémentaires</h2>
+                <div class="field">
+                    <label class="label">Adresse</label>
+                    <textarea v-model="form.address" rows="2" class="input" placeholder="Ex : Rue 123, Quartier XYZ"></textarea>
+                </div>
+                <div class="grid grid-cols-2 gap-md">
+                    <div class="field">
+                        <label class="label">Localisation</label>
+                        <input v-model="form.location" type="text" class="input" placeholder="Ex : Ouagadougou, Burkina Faso" />
+                    </div>
+                    <div class="field">
+                        <label class="label">Profil</label>
+                        <input v-model="form.profile" type="text" class="input" placeholder="Ex : Développeur web junior" />
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-md">
+                    <div class="field">
+                        <label class="label">Organisation</label>
+                        <input v-model="form.organization" type="text" class="input" placeholder="Ex : Simplon, ONG, Entreprise..." />
+                    </div>
+                    <div class="field">
+                        <label class="label">Domaine d'études</label>
+                        <input v-model="form.study_field" type="text" class="input" placeholder="Ex : Informatique, Gestion, Marketing..." />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents -->
+            <div class="card space-y-lg">
+                <h2 class="section-title">Documents</h2>
+                <div class="field">
+                    <label class="label">CNIB / Pièce d'identité</label>
+                    <div class="flex items-center gap-md">
+                        <label class="upload-btn" for="cnib-input">
+                            <span class="material-symbols-outlined" style="font-size:16px">upload</span>
+                            Choisir un fichier
+                        </label>
+                        <input id="cnib-input" type="file" accept="application/pdf,image/jpeg,image/png" class="hidden" @change="onCnibChange" />
+                        <span v-if="cnibName" class="text-body-sm text-secondary">{{ cnibName }}</span>
+                    </div>
+                    <p class="text-body-sm text-secondary mt-xs">PDF, JPEG ou PNG · 5 Mo max · Optionnel</p>
                 </div>
             </div>
 
@@ -261,6 +355,7 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners/new`,
 .field { display: flex; flex-direction: column; gap: 6px; }
 .label { font-size: 12px; font-weight: 600; color: #191c1e; letter-spacing: 0.02em; }
 .required { color: #E5004C; }
+.age-hint { font-size: 11px; font-weight: 500; color: #16a34a; margin-left: 6px; }
 
 .input {
     padding: 10px 14px; border: 1px solid #e0e3e5; border-radius: 8px;

@@ -82,8 +82,10 @@ interface Learner {
     address: string | null
     location: string | null
     profile: string | null
+    organization: string | null
     study_field: string | null
     education_level: EducationLevel | null
+    age_range: { id: number; name: string; age_min: number; age_max: number } | null
     formations: Formation[]
 }
 
@@ -250,6 +252,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                         <div class="info-row"><dt>Date de naissance</dt><dd>{{ fmt(learner.birth_date) }}</dd></div>
                         <div class="info-row"><dt>Lieu de naissance</dt><dd>{{ learner.birth_place ?? '' }}</dd></div>
                         <div v-if="learner.education_level" class="info-row"><dt>Niveau d'études</dt><dd>{{ learner.education_level.name }}</dd></div>
+                        <div v-if="learner.age_range" class="info-row"><dt>Tranche d'âge</dt><dd>{{ learner.age_range.name }}</dd></div>
                         <div v-if="learner.talent" class="info-row"><dt>Talent</dt><dd>{{ learner.talent }}</dd></div>
                     </dl>
                 </div>
@@ -260,12 +263,13 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                         <div v-if="learner.phone" class="info-row"><dt>Téléphone</dt><dd>{{ learner.phone }}</dd></div>
                     </dl>
                 </div>
-                <div class="card" v-if="learner.address || learner.location || learner.profile || learner.study_field">
+                <div class="card" v-if="learner.address || learner.location || learner.profile || learner.organization || learner.study_field">
                     <h2 class="section-title">Informations complémentaires</h2>
                     <dl class="info-list">
                         <div v-if="learner.address" class="info-row"><dt>Adresse</dt><dd>{{ learner.address }}</dd></div>
                         <div v-if="learner.location" class="info-row"><dt>Localisation</dt><dd>{{ learner.location }}</dd></div>
                         <div v-if="learner.profile" class="info-row"><dt>Profil</dt><dd>{{ learner.profile }}</dd></div>
+                        <div v-if="learner.organization" class="info-row"><dt>Organisation</dt><dd>{{ learner.organization }}</dd></div>
                         <div v-if="learner.study_field" class="info-row"><dt>Domaine d'études</dt><dd>{{ learner.study_field }}</dd></div>
                     </dl>
                 </div>

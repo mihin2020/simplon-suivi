@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Formation;
+use App\Models\FormationLink;
 use App\Models\Media;
 use App\Services\CloudinaryService;
 use Illuminate\Http\JsonResponse;
@@ -44,10 +45,16 @@ class MediaController extends Controller
         // Calculer l'utilisation depuis la BDD locale (plus fiable que l'API Cloudinary)
         $usage = $this->getUsageFromDatabase();
 
+        $links = FormationLink::where('formation_id', $formation->id)
+            ->with('creator:id,first_name,last_name')
+            ->orderByDesc('created_at')
+            ->get();
+
         return Inertia::render('Formations/MediaLibrary', [
             'formation' => $formation->load('project:id,name'),
             'medias' => $medias,
             'albums' => $albums,
+            'links' => $links,
             'cloudinaryUsage' => $usage,
             'cloudName' => config('cloudinary.cloud_name'),
             'uploadPreset' => config('cloudinary.upload_preset', 'simplon_medias'),

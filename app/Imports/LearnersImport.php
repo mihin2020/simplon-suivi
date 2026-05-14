@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\AgeRange;
 use App\Models\EducationLevel;
 use App\Models\Learner;
 use Illuminate\Support\Str;
@@ -18,6 +19,9 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
 
     private ?string $formationId;
     private array $educationLevelMap = [];
+    /** @var array<int, AgeRange> */
+    private array $ageRanges = [];
+    private array $ageRangeMap = [];
     private int $importedCount = 0;
     private int $skippedCount = 0;
 
@@ -25,6 +29,8 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
     {
         $this->formationId = $formationId;
         $this->educationLevelMap = EducationLevel::pluck('id', 'name')->toArray();
+        $this->ageRanges = AgeRange::orderBy('age_min')->get()->all();
+        $this->ageRangeMap = AgeRange::pluck('id', 'name')->toArray();
     }
 
     public function importedCount(): int
@@ -82,6 +88,12 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
             $educationLevelId = $this->educationLevelMap[$row['niveau_etudes']] ?? null;
         }
 
+        // Tranche d'âge : par nom dans le fichier ou auto-calculé depuis date_naissance
+        $ageRangeId = null;
+        if (!empty($row['tranche_age'])) {
+            $ageRangeId = $this->ageRangeMap[trim((string) $row['tranche_age'])] ?? null;
+        }
+
         $gender = null;
         if (!empty($row['genre'])) {
             $g = strtolower(trim((string) $row['genre']));
@@ -101,6 +113,17 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
             }
         }
 
+        // Auto-calcul de la tranche d'âge si non fournie et que la date de naissance est connue
+        if ($ageRangeId === null && $birthDate !== null) {
+            $age = \Carbon\Carbon::parse($birthDate)->age;
+            foreach ($this->ageRanges as $range) {
+                if ($age >= $range->age_min && $age <= $range->age_max) {
+                    $ageRangeId = $range->id;
+                    break;
+                }
+            }
+        }
+
         $learner = new Learner([
             'first_name'                  => trim((string) $row['prenom']),
             'last_name'                   => trim((string) $row['nom']),
@@ -117,6 +140,8 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
             'address'                     => !empty($row['adresse']) ? trim((string) $row['adresse']) : null,
             'location'                    => !empty($row['localisation']) ? trim((string) $row['localisation']) : null,
             'profile'                     => !empty($row['profil']) ? trim((string) $row['profil']) : null,
+            'organization'                => !empty($row['organisation']) ? trim((string) $row['organisation']) : null,
+            'age_range_id'                => $ageRangeId,
             'study_field'                 => !empty($row['domaine_etudes']) ? trim((string) $row['domaine_etudes']) : null,
         ]);
 

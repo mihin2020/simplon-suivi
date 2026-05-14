@@ -24,6 +24,8 @@ class UpdateLearnerRequest extends FormRequest
             'birth_place'                 => ['nullable', 'string', 'max:255'],
             'gender'                      => ['nullable', Rule::enum(Gender::class)],
             'education_level_id'          => ['nullable', 'integer', 'exists:education_levels,id'],
+            'age_range_id'                => ['nullable', 'integer', 'exists:age_ranges,id'],
+            'organization'                => ['nullable', 'string', 'max:255'],
             'talent'                      => ['nullable', 'string', 'max:255'],
             'emergency_contact_name'      => ['nullable', 'string', 'max:255'],
             'emergency_contact_firstname' => ['nullable', 'string', 'max:255'],

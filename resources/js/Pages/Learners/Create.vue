@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useForm, Link } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -10,8 +10,16 @@ interface EducationLevel {
     name: string
 }
 
+interface AgeRange {
+    id: number
+    name: string
+    age_min: number
+    age_max: number
+}
+
 const props = defineProps<{
     educationLevels: EducationLevel[]
+    ageRanges: AgeRange[]
 }>()
 
 const form = useForm({
@@ -23,6 +31,8 @@ const form = useForm({
     birth_date:                  '',
     birth_place:                 '',
     education_level_id:          '',
+    age_range_id:                '' as number | '',
+    organization:                '',
     talent:                      '',
     emergency_contact_name:      '',
     emergency_contact_firstname: '',
@@ -51,6 +61,25 @@ const onCnibChange = (e: Event) => {
     form.cnib = file
     cnibName.value = file.name
 }
+
+// Calcul automatique de l'âge depuis la date de naissance
+const computedAge = computed<number | null>(() => {
+    if (!form.birth_date) return null
+    const birth = new Date(form.birth_date)
+    if (isNaN(birth.getTime())) return null
+    const now = new Date()
+    let age = now.getFullYear() - birth.getFullYear()
+    const m = now.getMonth() - birth.getMonth()
+    if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--
+    return age >= 0 ? age : null
+})
+
+// Auto-sélection de la tranche d'âge selon l'âge calculé
+watch(computedAge, (age) => {
+    if (age === null) return
+    const match = props.ageRanges.find(r => age >= r.age_min && age <= r.age_max)
+    if (match) form.age_range_id = match.id
+})
 
 const submit = () => form.post('/learners', {
     forceFormData: true,
@@ -134,6 +163,19 @@ const submit = () => form.post('/learners', {
 
                 <div class="grid grid-cols-2 gap-md">
                     <div class="field">
+                        <label class="label">Tranche d'âge
+                            <span v-if="computedAge !== null" class="age-hint">({{ computedAge }} ans)</span>
+                        </label>
+                        <select v-model="form.age_range_id" class="input">
+                            <option value="">Sélectionner</option>
+                            <option v-for="r in ageRanges" :key="r.id" :value="r.id">{{ r.name }}</option>
+                        </select>
+                    </div>
+                    <div></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-md">
+                    <div class="field">
                         <label class="label">Lieu de naissance</label>
                         <input v-model="form.birth_place" type="text" class="input" placeholder="Ex : Ouagadougou" />
                     </div>
@@ -185,9 +227,15 @@ const submit = () => form.post('/learners', {
                         <input v-model="form.profile" type="text" class="input" placeholder="Ex : Développeur web junior" />
                     </div>
                 </div>
-                <div class="field">
-                    <label class="label">Domaine d'études</label>
-                    <input v-model="form.study_field" type="text" class="input" placeholder="Ex : Informatique, Gestion, Marketing..." />
+                <div class="grid grid-cols-2 gap-md">
+                    <div class="field">
+                        <label class="label">Organisation</label>
+                        <input v-model="form.organization" type="text" class="input" placeholder="Ex : Simplon, ONG, Entreprise..." />
+                    </div>
+                    <div class="field">
+                        <label class="label">Domaine d'études</label>
+                        <input v-model="form.study_field" type="text" class="input" placeholder="Ex : Informatique, Gestion, Marketing..." />
+                    </div>
                 </div>
             </div>
 
@@ -295,6 +343,7 @@ const submit = () => form.post('/learners', {
 .field { display: flex; flex-direction: column; gap: 6px; }
 .label { font-size: 12px; font-weight: 600; color: #191c1e; letter-spacing: 0.02em; }
 .required { color: #E5004C; }
+.age-hint { font-size: 11px; font-weight: 500; color: #16a34a; margin-left: 6px; }
 
 .input {
     padding: 10px 14px; border: 1px solid #e0e3e5; border-radius: 8px;

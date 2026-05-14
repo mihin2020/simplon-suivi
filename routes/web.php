@@ -16,6 +16,7 @@ use App\Http\Controllers\Learner\WithdrawLearnerController;
 use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\ConfigurationController;
 use App\Http\Controllers\EducationLevelController;
+use App\Http\Controllers\AgeRangeController;
 use App\Http\Controllers\PresenceRedirectController;
 use App\Http\Controllers\TrainerProfileController;
 use App\Http\Controllers\ReferentielController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\TrainerController;
 use App\Http\Controllers\EmailController;
+use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
@@ -211,6 +213,11 @@ Route::middleware("auth")->group(function () {
         EducationLevelController::class,
     )->except(["create", "edit", "show"]);
 
+    Route::resource(
+        "age-ranges",
+        AgeRangeController::class,
+    )->except(["create", "edit", "show"]);
+
     // Statistics
     Route::get("statistics", [StatisticsController::class, "index"])->name(
         "statistics.index",
@@ -276,6 +283,20 @@ Route::middleware("auth")->group(function () {
         MediaController::class,
         "downloadAlbum",
     ])->name("formations.medias.album.download");
+
+    // Liens externes de la médiathèque
+    Route::post("formations/{formation}/links", [
+        \App\Http\Controllers\FormationLinkController::class,
+        "store",
+    ])->name("formations.links.store");
+    Route::put("formations/{formation}/links/{link}", [
+        \App\Http\Controllers\FormationLinkController::class,
+        "update",
+    ])->name("formations.links.update");
+    Route::delete("formations/{formation}/links/{link}", [
+        \App\Http\Controllers\FormationLinkController::class,
+        "destroy",
+    ])->name("formations.links.destroy");
 
     // Stats Cloudinary (jauge)
     Route::get("api/cloudinary/stats", [
@@ -392,4 +413,11 @@ Route::middleware("auth")->group(function () {
         NotificationController::class,
         "markAllAsRead",
     ])->name("notifications.mark-all-read");
+
+    // Assistant IA
+    Route::middleware('throttle:chatbot')->group(function () {
+        Route::post('/chatbot/message', [AiChatController::class, 'message'])->name('chatbot.message');
+        Route::get('/chatbot/status', [AiChatController::class, 'status'])->name('chatbot.status');
+    });
+    Route::post('/configuration/ai-key', [AiChatController::class, 'saveApiKey'])->name('configuration.ai-key');
 });

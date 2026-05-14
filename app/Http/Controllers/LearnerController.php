@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\LearnerStatus;
 use App\Http\Requests\Learner\StoreLearnerRequest;
 use App\Http\Requests\Learner\UpdateLearnerRequest;
+use App\Models\AgeRange;
 use App\Models\EducationLevel;
 use App\Models\Formation;
 use App\Models\Learner;
@@ -61,6 +62,7 @@ class LearnerController extends Controller
 
         return Inertia::render('Learners/Create', [
             'educationLevels' => EducationLevel::orderBy('created_at')->get(),
+            'ageRanges'       => AgeRange::orderBy('order')->orderBy('age_min')->get(),
         ]);
     }
 
@@ -92,6 +94,7 @@ class LearnerController extends Controller
 
         $learner->load([
             'educationLevel',
+            'ageRange',
             'formations.project',
         ]);
 
@@ -129,6 +132,7 @@ class LearnerController extends Controller
         return Inertia::render('Learners/Edit', [
             'learner'         => $learner,
             'educationLevels' => EducationLevel::orderBy('created_at')->get(),
+            'ageRanges'       => AgeRange::orderBy('order')->orderBy('age_min')->get(),
         ]);
     }
 
