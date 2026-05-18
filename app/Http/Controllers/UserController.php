@@ -174,6 +174,7 @@ class UserController extends Controller
             abort(403, 'Impossible de supprimer le Super Administrateur.');
         }
 
+        $user->trainer?->delete();
         $user->delete();
 
         return redirect()

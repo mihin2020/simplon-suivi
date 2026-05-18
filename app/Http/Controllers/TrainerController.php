@@ -23,6 +23,7 @@ class TrainerController extends Controller
         $this->authorize('viewAny', Trainer::class);
 
         $trainers = Trainer::with(['user', 'profile', 'formations.project'])
+            ->whereHas('user')
             ->when(request('search'), function ($q, $s) {
                 $q->whereHas('user', fn ($u) => $u->where('first_name', 'like', "%{$s}%")
                     ->orWhere('last_name', 'like', "%{$s}%")
