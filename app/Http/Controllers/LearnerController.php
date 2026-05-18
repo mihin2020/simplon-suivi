@@ -188,8 +188,12 @@ class LearnerController extends Controller
                    ->orWhere('last_name', 'like', "%{$q}%")
                    ->orWhere('email', 'like', "%{$q}%");
             }))
-            ->when($formationId, fn ($query) => $query->whereHas('formations', fn ($fq) => $fq->where('formations.id', $formationId)))
-            ->when($projectId, fn ($query) => $query->whereHas('formations', fn ($fq) => $fq->where('project_id', $projectId)))
+            ->when($formationId, fn ($query) => $query->whereHas('formations', fn ($fq) => $fq
+                ->where('formations.id', $formationId)
+                ->where('formation_learner.status', LearnerStatus::InProgress)))
+            ->when($projectId && !$formationId, fn ($query) => $query->whereHas('formations', fn ($fq) => $fq
+                ->where('project_id', $projectId)
+                ->where('formation_learner.status', LearnerStatus::InProgress)))
             ->whereNotNull('email')
             ->orderBy('last_name')
             ->limit(100)

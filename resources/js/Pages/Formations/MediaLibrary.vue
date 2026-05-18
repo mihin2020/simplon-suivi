@@ -4,6 +4,12 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import StorageGauge from '@/Components/StorageGauge.vue'
 
+// Laravel refreshes the XSRF-TOKEN cookie on every response — always up-to-date.
+const getCsrfToken = (): string => {
+  const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/)
+  return match ? decodeURIComponent(match[1]) : (document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '')
+}
+
 declare global {
   interface Window {
     cloudinary: any
@@ -159,7 +165,7 @@ const saveLink = async () => {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        'X-XSRF-TOKEN': getCsrfToken(),
       },
       body: JSON.stringify({
         title: linkForm.value.title.trim() || null,
@@ -170,6 +176,8 @@ const saveLink = async () => {
       showLinkModal.value = false
       router.reload({ only: ['links'] })
       showToast('Lien ajouté ✓', 'success')
+    } else if (response.status === 419) {
+      showToast('Session expirée — veuillez rafraîchir la page (F5)', 'error')
     } else {
       const data = await response.json().catch(() => ({}))
       showToast(data.message || 'Erreur : vérifiez l\'URL', 'error')
@@ -193,7 +201,7 @@ const deleteLink = async () => {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        'X-XSRF-TOKEN': getCsrfToken(),
       },
     })
     if (response.ok) {
@@ -361,7 +369,7 @@ const addToAlbum = async () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        'X-XSRF-TOKEN': getCsrfToken(),
       },
       body: JSON.stringify({
         media_ids: selectedMedias.value,
@@ -434,9 +442,6 @@ const saveMediaToDatabase = async (info: any) => {
     const resourceType = info.resource_type
     console.log('resource_type:', resourceType)
     
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
-    console.log('CSRF token:', csrfToken ? 'présent' : 'manquant')
-    
     const payload = {
       cloudinary_public_id: info.public_id,
       url: info.secure_url,
@@ -459,7 +464,7 @@ const saveMediaToDatabase = async (info: any) => {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': csrfToken,
+        'X-XSRF-TOKEN': getCsrfToken(),
       },
       body: JSON.stringify(payload),
     })
@@ -498,7 +503,7 @@ const deleteMedia = async () => {
       method: 'DELETE',
       headers: {
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        'X-XSRF-TOKEN': getCsrfToken(),
       },
     })
     
@@ -535,7 +540,7 @@ const updateMedia = async () => {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '',
+        'X-XSRF-TOKEN': getCsrfToken(),
       },
       body: JSON.stringify({
         title: editForm.value.title || null,

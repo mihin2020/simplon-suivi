@@ -1,33 +1,35 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted } from 'vue'
 import axios from 'axios'
+import { chatStore } from '@/stores/chatStore'
 
-interface Message {
-    role: 'user' | 'assistant'
-    content: string
-    timestamp: Date
-}
-
-const isOpen = ref(false)
 const isLoading = ref(false)
 const input = ref('')
-const messages = ref<Message[]>([])
 const messagesContainer = ref<HTMLElement | null>(null)
 const inputRef = ref<HTMLInputElement | null>(null)
 const isConfigured = ref(true)
 
+// Alias sur le store persistant
+const messages = chatStore.messages
+const isOpen = ref(chatStore.isOpen)
+
+// Synchroniser isOpen → store à chaque changement
 const toggle = () => {
     isOpen.value = !isOpen.value
+    chatStore.isOpen = isOpen.value
     if (isOpen.value) {
-        if (messages.value.length === 0) {
+        if (messages.length === 0) {
             addWelcomeMessage()
         }
-        nextTick(() => inputRef.value?.focus())
+        nextTick(() => {
+            inputRef.value?.focus()
+            scrollToBottom()
+        })
     }
 }
 
 const addWelcomeMessage = () => {
-    messages.value.push({
+    messages.push({
         role: 'assistant',
         content: 'Bonjour ! Je suis votre assistant Simplon. Je peux vous aider à naviguer dans l\'application, trouver des informations sur les apprenants, formations, projets, et bien plus encore. Comment puis-je vous aider ?',
         timestamp: new Date(),
@@ -45,15 +47,14 @@ const send = async () => {
     const text = input.value.trim()
     if (!text || isLoading.value) return
 
-    messages.value.push({ role: 'user', content: text, timestamp: new Date() })
+    messages.push({ role: 'user', content: text, timestamp: new Date() })
     input.value = ''
     isLoading.value = true
     await scrollToBottom()
 
     // Build history (last 10 exchanges, excluding welcome)
-    const history = messages.value
+    const history = messages
         .slice(0, -1)
-        .filter(m => m.content !== messages.value[0]?.content || messages.value.length <= 1)
         .slice(-10)
         .map(m => ({ role: m.role, content: m.content }))
 
@@ -63,7 +64,7 @@ const send = async () => {
             history,
         })
 
-        messages.value.push({
+        messages.push({
             role: 'assistant',
             content: response.data.reply,
             timestamp: new Date(),
@@ -73,7 +74,7 @@ const send = async () => {
             ? 'Vous envoyez trop de messages. Veuillez patienter une minute.'
             : 'Une erreur est survenue. Veuillez réessayer.'
 
-        messages.value.push({ role: 'assistant', content: msg, timestamp: new Date() })
+        messages.push({ role: 'assistant', content: msg, timestamp: new Date() })
     } finally {
         isLoading.value = false
         await scrollToBottom()
@@ -89,7 +90,7 @@ const handleKeydown = (e: KeyboardEvent) => {
 }
 
 const clearChat = () => {
-    messages.value = []
+    messages.splice(0, messages.length)
     addWelcomeMessage()
 }
 
@@ -175,6 +176,15 @@ const renderInline = (text: string): string =>
         .replace(/\*([^*]+)\*/g, '<em>$1</em>')
 
 onMounted(async () => {
+    // Restaurer l'état ouvert/fermé depuis le store
+    isOpen.value = chatStore.isOpen
+    if (chatStore.isOpen && messages.length === 0) {
+        addWelcomeMessage()
+    }
+    if (chatStore.isOpen) {
+        nextTick(() => scrollToBottom())
+    }
+
     try {
         const res = await axios.get('/chatbot/status')
         isConfigured.value = res.data.configured
@@ -255,7 +265,7 @@ onMounted(async () => {
                 style="scrollbar-width: thin;"
             >
                 <div
-                    v-for="(msg, i) in messages"
+                    v-for="(msg, i) in chatStore.messages"
                     :key="i"
                     class="flex"
                     :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"

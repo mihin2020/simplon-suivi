@@ -326,11 +326,13 @@ class EmailController extends Controller
         $formations = Formation::with([
             "project",
             "learners" => function ($query) {
-                $query->whereNotNull("phone");
+                $query->whereNotNull("phone")
+                      ->where("formation_learner.status", \App\Enums\LearnerStatus::InProgress);
             },
         ])
             ->whereHas("learners", function ($query) {
-                $query->whereNotNull("phone");
+                $query->whereNotNull("phone")
+                      ->where("formation_learner.status", \App\Enums\LearnerStatus::InProgress);
             })
             ->get()
             ->map(

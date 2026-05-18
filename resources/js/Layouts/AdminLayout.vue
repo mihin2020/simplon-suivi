@@ -2,6 +2,7 @@
 import { Link, usePage, router } from '@inertiajs/vue3'
 import NotificationBell from '@/Components/NotificationBell.vue'
 import AiChatbot from '@/Components/AiChatbot.vue'
+import { chatStore } from '@/stores/chatStore'
 
 const page = usePage()
 
@@ -27,7 +28,12 @@ const navItems = allNavItems.filter(item => !userRole || item.roles.includes(use
 const isActive = (prefix: string) =>
     page.component === prefix.replace('/', '/Index') || page.component.startsWith(prefix)
 
-const logout = () => router.post('/deconnexion')
+const logout = () => router.post('/deconnexion', {}, {
+    onSuccess: () => {
+        chatStore.messages.splice(0, chatStore.messages.length)
+        chatStore.isOpen = false
+    },
+})
 </script>
 
 <template>
@@ -35,11 +41,11 @@ const logout = () => router.post('/deconnexion')
         <!-- Sidebar -->
         <aside class="bg-on-secondary-fixed w-[260px] h-screen fixed left-0 top-0 flex flex-col py-md z-20">
             <!-- Logo -->
-            <div class="px-md mb-xl">
+            <div class="px-md mb-xl flex justify-center">
                 <img
                     src="/images/logo.jpeg"
                     alt="Simplon Burkina Faso"
-                    class="h-10 w-auto object-contain brightness-0 invert"
+                    class="h-10 w-auto object-contain"
                 />
             </div>
 

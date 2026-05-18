@@ -86,25 +86,48 @@ Tu as accès à toutes les données de l'application ci-dessous. Tu peux répond
 - Formate les liens en Markdown : [Texte](URL complète).
 - Pour les tableaux, utilise le format Markdown.
 
-## Navigation de l'application
-| Section | URL |
-|---|---|
-| Tableau de bord | $baseUrl/ |
-| Projets | $baseUrl/projects |
-| Apprenants | $baseUrl/learners |
-| Formateurs | $baseUrl/trainers |
-| Présences | $baseUrl/presences |
-| Partenaires | $baseUrl/partners |
-| Référentiels | $baseUrl/referentiels |
-| Statistiques | $baseUrl/statistics |
-| Communication | $baseUrl/communication/emails |
-| Configuration | $baseUrl/configuration |
+## Navigation de l'application — toutes les pages accessibles
+| Section | URL | Description |
+|---|---|---|
+| Tableau de bord | $baseUrl/ | Vue d'ensemble |
+| Projets (liste) | $baseUrl/projects | Tous les projets |
+| Formations (liste) | $baseUrl/formations | Toutes les formations |
+| Apprenants (liste) | $baseUrl/learners | Tous les apprenants |
+| Formateurs (liste) | $baseUrl/trainers | Tous les formateurs |
+| Présences (accueil) | $baseUrl/presences | Redirection selon le rôle |
+| Partenaires (liste) | $baseUrl/partners | Tous les partenaires |
+| Référentiels (liste) | $baseUrl/referentiels | Tous les référentiels |
+| Statistiques | $baseUrl/statistics | Tableau de bord statistiques |
+| Emails reçus | $baseUrl/communication/emails | Boîte de réception |
+| Emails envoyés | $baseUrl/communication/emails/sent | Emails envoyés |
+| Composer un email | $baseUrl/communication/emails/compose | Rédiger un email |
+| WhatsApp | $baseUrl/communication/whatsapp | Envoi groupé WhatsApp |
+| Notifications | $baseUrl/notifications | Toutes les notifications |
+| Utilisateurs | $baseUrl/users | Gestion des comptes |
+| Configuration | $baseUrl/configuration | Paramètres de la plateforme |
+| Mon profil | $baseUrl/profil | Profil de l'utilisateur connecté |
 
-## URLs des fiches individuelles
-- Apprenant : $baseUrl/learners/{id}
-- Formation : $baseUrl/formations/{id}
-- Projet : $baseUrl/projects/{id}
-- Formateur : $baseUrl/trainers/{id}
+## URLs des fiches individuelles — utilise TOUJOURS l'ID réel fourni dans les données
+**Apprenants**
+- Fiche apprenant : $baseUrl/learners/{id}
+- Suivi insertion/emploi d'un apprenant : $baseUrl/learners/{id}/insertion
+
+**Formations**
+- Fiche formation : $baseUrl/formations/{id}
+- Présences d'une formation : $baseUrl/formations/{id}/attendances
+- Récapitulatif présences : $baseUrl/formations/{id}/attendances/recap
+- Médiathèque d'une formation : $baseUrl/formations/{id}/medias
+
+**Projets**
+- Fiche projet : $baseUrl/projects/{id}
+
+**Formateurs**
+- Fiche formateur : $baseUrl/trainers/{id}
+
+**Communication**
+- Fil de discussion email : $baseUrl/communication/emails/thread/{threadId}
+
+> Règle : remplace toujours {id} ou {threadId} par la valeur réelle trouvée dans les données ci-dessous.
 
 ---
 
@@ -459,22 +482,71 @@ PROMPT;
     private function dumpAttendanceSummary(): string
     {
         try {
-            $total   = Attendance::count();
-            if ($total === 0) return '';
+            $baseUrl = config('app.url');
 
-            $present = Attendance::where('code', 'P')->count();
-            $aj      = Attendance::where('code', 'AJ')->count();
-            $an      = Attendance::where('code', 'AN')->count();
-            $pct     = round(($present / $total) * 100, 1);
+            // Charger toutes les présences avec formation et apprenant
+            $records = Attendance::select('formation_id', 'learner_id', 'date', 'code', 'comment')
+                ->with([
+                    'formation:id,name',
+                    'learner:id,first_name,last_name',
+                ])
+                ->orderBy('formation_id')
+                ->orderBy('date')
+                ->orderBy('learner_id')
+                ->get();
 
-            $lines = ['### Présences (résumé global)'];
-            $lines[] = "- Total enregistrements : {$total}";
-            $lines[] = "- Présents (P) : {$present} ({$pct}%)";
-            $lines[] = "- Absences justifiées (AJ) : {$aj}";
-            $lines[] = "- Absences non justifiées (AN) : {$an}";
+            if ($records->isEmpty()) return '';
 
-            return implode("\n", $lines);
-        } catch (\Exception) {
+            $total   = $records->count();
+            $present = $records->where('code', \App\Enums\AttendanceCode::Present)->count();
+            $aj      = $records->where('code', \App\Enums\AttendanceCode::AbsentJustified)->count();
+            $an      = $records->where('code', \App\Enums\AttendanceCode::AbsentNotJustified)->count();
+            $rj      = $records->where('code', \App\Enums\AttendanceCode::LateJustified)->count();
+            $rn      = $records->where('code', \App\Enums\AttendanceCode::LateNotJustified)->count();
+            $pct     = $total > 0 ? round(($present / $total) * 100, 1) : 0;
+
+            $out  = "### Présences détaillées par formation et par date\n";
+            $out .= "**Résumé global :** {$total} enregistrements | Présents : {$present} ({$pct}%) | AJ : {$aj} | AN : {$an} | RJ : {$rj} | RN : {$rn}\n\n";
+
+            // Grouper par formation
+            $byFormation = $records->groupBy('formation_id');
+
+            foreach ($byFormation as $formationId => $formationRecords) {
+                $formationName = $formationRecords->first()->formation?->name ?? 'Formation inconnue';
+                $fTotal   = $formationRecords->count();
+                $fPresent = $formationRecords->where('code', \App\Enums\AttendanceCode::Present)->count();
+                $fPct     = $fTotal > 0 ? round(($fPresent / $fTotal) * 100, 1) : 0;
+
+                $out .= "#### Formation : {$formationName} (ID : {$formationId})\n";
+                $out .= "URL présences : {$baseUrl}/formations/{$formationId}/attendances\n";
+                $out .= "Résumé : {$fTotal} entrées | Présents : {$fPresent} ({$fPct}%)\n\n";
+
+                // Grouper par date
+                $byDate = $formationRecords->groupBy(fn($r) => $r->date->format('Y-m-d'));
+
+                foreach ($byDate as $dateKey => $dateRecords) {
+                    $dateLabel  = $dateRecords->first()->date->format('d/m/Y');
+                    $dPresent   = $dateRecords->where('code', \App\Enums\AttendanceCode::Present)->count();
+                    $dTotal     = $dateRecords->count();
+                    $out .= "**{$dateLabel}** — {$dPresent}/{$dTotal} présents\n";
+                    $out .= "| Apprenant | Code | Signification | Commentaire |\n";
+                    $out .= "|---|---|---|---|\n";
+
+                    foreach ($dateRecords as $r) {
+                        $learnerName = $r->learner
+                            ? "{$r->learner->first_name} {$r->learner->last_name}"
+                            : "Inconnu (ID:{$r->learner_id})";
+                        $code        = $r->code instanceof \App\Enums\AttendanceCode ? $r->code->value : (string) $r->code;
+                        $label       = $r->code instanceof \App\Enums\AttendanceCode ? $r->code->label() : $code;
+                        $comment     = $r->comment ?? '—';
+                        $out .= "| {$learnerName} | {$code} | {$label} | {$comment} |\n";
+                    }
+                    $out .= "\n";
+                }
+            }
+
+            return $out;
+        } catch (\Exception $e) {
             return '';
         }
     }
