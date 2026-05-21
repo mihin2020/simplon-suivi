@@ -4,7 +4,9 @@ namespace App\Imports;
 
 use App\Models\AgeRange;
 use App\Models\EducationLevel;
+use App\Models\LastDiploma;
 use App\Models\Learner;
+use App\Models\Vulnerability;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -22,6 +24,8 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
     /** @var array<int, AgeRange> */
     private array $ageRanges = [];
     private array $ageRangeMap = [];
+    private array $vulnerabilityMap = [];
+    private array $lastDiplomaMap = [];
     private int $importedCount = 0;
     private int $skippedCount = 0;
 
@@ -31,6 +35,8 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
         $this->educationLevelMap = EducationLevel::pluck('id', 'name')->toArray();
         $this->ageRanges = AgeRange::orderBy('age_min')->get()->all();
         $this->ageRangeMap = AgeRange::pluck('id', 'name')->toArray();
+        $this->vulnerabilityMap = Vulnerability::pluck('id', 'name')->toArray();
+        $this->lastDiplomaMap = LastDiploma::pluck('id', 'name')->toArray();
     }
 
     public function importedCount(): int
@@ -65,6 +71,10 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
             'date_de_naissance' => 'date_naissance',
             'niveau_d_etudes' => 'niveau_etudes',
             'niveauetudes' => 'niveau_etudes',
+            'situation_matrimoniale' => 'situation_matrimoniale',
+            'nombre_enfants' => 'nombre_enfants',
+            'vulnerabilite' => 'vulnerabilite',
+            'dernier_diplome' => 'dernier_diplome',
         ];
 
         foreach ($aliases as $from => $to) {
@@ -143,6 +153,11 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
             'organization'                => !empty($row['organisation']) ? trim((string) $row['organisation']) : null,
             'age_range_id'                => $ageRangeId,
             'study_field'                 => !empty($row['domaine_etudes']) ? trim((string) $row['domaine_etudes']) : null,
+            'cnib_number'                 => !empty($row['cnib_number']) ? trim((string) $row['cnib_number']) : null,
+            'marital_status'              => $this->parseMaritalStatus($row['situation_matrimoniale'] ?? null),
+            'children_count'              => !empty($row['nombre_enfants']) ? (int) $row['nombre_enfants'] : 0,
+            'vulnerability_id'            => !empty($row['vulnerabilite']) ? ($this->vulnerabilityMap[trim((string) $row['vulnerabilite'])] ?? null) : null,
+            'last_diploma_id'             => !empty($row['dernier_diplome']) ? ($this->lastDiplomaMap[trim((string) $row['dernier_diplome'])] ?? null) : null,
         ]);
 
         $learner->save();
@@ -156,6 +171,19 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
 
         $this->importedCount++;
         return null;
+    }
+
+    private function parseMaritalStatus(?string $value): ?string
+    {
+        if (empty($value)) return null;
+        $v = strtolower(trim($value));
+        return match (true) {
+            in_array($v, ['celibataire', 'célibataire', 'single']) => 'single',
+            in_array($v, ['marie', 'marié', 'mariee', 'mariée', 'married']) => 'married',
+            in_array($v, ['divorce', 'divorcé', 'divorcee', 'divorcée', 'divorced']) => 'divorced',
+            in_array($v, ['veuf', 'veuve', 'widowed']) => 'widowed',
+            default => null,
+        };
     }
 
     public function batchSize(): int

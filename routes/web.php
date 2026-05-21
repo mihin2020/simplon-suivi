@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FormationController;
 use App\Http\Controllers\Learner\EnrollLearnerController;
 use App\Http\Controllers\Learner\ImportLearnerController;
@@ -17,7 +18,9 @@ use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\ConfigurationController;
 use App\Http\Controllers\EducationLevelController;
 use App\Http\Controllers\AgeRangeController;
+use App\Http\Controllers\LastDiplomaController;
 use App\Http\Controllers\PresenceRedirectController;
+use App\Http\Controllers\VulnerabilityController;
 use App\Http\Controllers\TrainerProfileController;
 use App\Http\Controllers\ReferentielController;
 use App\Http\Controllers\InsertionRecordController;
@@ -30,6 +33,10 @@ use App\Http\Controllers\EmailController;
 use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\Campus\CampusFormationController;
+use App\Http\Controllers\Campus\CohortController;
+use App\Http\Controllers\Campus\PaymentController;
+use App\Http\Controllers\Campus\CampusFinanceController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes (invités uniquement)
@@ -94,6 +101,38 @@ Route::middleware("auth")->group(function () {
         UserController::class,
         "toggleActive",
     ])->name("users.toggle-active");
+
+    // ── Campus Workforce ────────────────────────────────────────────────────
+    Route::prefix('campus')->name('campus.')->group(function () {
+        // Catalogue de formations
+        Route::resource('formations', CampusFormationController::class)
+            ->names('formations')
+            ->parameters(['formations' => 'campusFormation']);
+
+        // Cohortes — routes statiques AVANT le resource pour éviter que {cohort} capture ces segments
+        Route::get('cohorts/create', [CohortController::class, 'create'])->name('cohorts.create');
+        Route::get('cohorts/import/template', [CohortController::class, 'downloadImportTemplate'])->name('cohorts.import.template');
+        Route::resource('cohorts', CohortController::class)
+            ->except(['create'])
+            ->names('cohorts');
+        Route::post('cohorts/{cohort}/enroll', [CohortController::class, 'enrollLearners'])->name('cohorts.enroll');
+        Route::post('cohorts/{cohort}/learners', [CohortController::class, 'storeLearner'])->name('cohorts.learners.store');
+        Route::post('cohorts/{cohort}/import', [CohortController::class, 'importLearners'])->name('cohorts.import');
+        Route::post('cohorts/{cohort}/learners/{learner}', [CohortController::class, 'updateLearner'])->name('cohorts.learners.update');
+        Route::delete('cohorts/{cohort}/learners/{learner}', [CohortController::class, 'removeLearner'])->name('cohorts.learners.remove');
+        Route::delete('cohorts/{cohort}/learners', [CohortController::class, 'removeLearners'])->name('cohorts.learners.remove-bulk');
+        Route::patch('cohorts/{cohort}/close', [CohortController::class, 'close'])->name('cohorts.close');
+
+        // Finance — tableau de bord global
+        Route::get('finance', [CampusFinanceController::class, 'index'])->name('finance.index');
+
+        // Paiements par cohorte
+        Route::get('cohorts/{cohort}/payments', [PaymentController::class, 'index'])->name('payments.index');
+        Route::post('cohorts/{cohort}/payments/schedule', [PaymentController::class, 'generateSchedule'])->name('payments.schedule');
+        Route::post('cohorts/{cohort}/payments', [PaymentController::class, 'store'])->name('payments.store');
+        Route::patch('payments/{payment}/mark-paid', [PaymentController::class, 'markPaid'])->name('payments.mark-paid');
+        Route::delete('payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
+    });
 
     // Projects
     Route::resource("projects", ProjectController::class);
@@ -192,6 +231,10 @@ Route::middleware("auth")->group(function () {
         TrainerController::class,
         "unassignFormation",
     ])->name("trainers.unassign-formation");
+    Route::post("trainers/{trainer}/resend-invitation", [
+        TrainerController::class,
+        "resendInvitation",
+    ])->name("trainers.resend-invitation");
     // Présences — redirection selon le rôle
     Route::get("presences", PresenceRedirectController::class)->name(
         "presences",
@@ -216,6 +259,16 @@ Route::middleware("auth")->group(function () {
     Route::resource(
         "age-ranges",
         AgeRangeController::class,
+    )->except(["create", "edit", "show"]);
+
+    Route::resource(
+        "vulnerabilities",
+        VulnerabilityController::class,
+    )->except(["create", "edit", "show"]);
+
+    Route::resource(
+        "last-diplomas",
+        LastDiplomaController::class,
     )->except(["create", "edit", "show"]);
 
     // Statistics
@@ -340,6 +393,28 @@ Route::middleware("auth")->group(function () {
         "pdfRecap",
     ])->name("attendances.pdf-recap");
 
+    // Expenses (Finance - dépenses par formation)
+    Route::get("formations/{formation}/expenses", [
+        ExpenseController::class,
+        "index",
+    ])->name("formations.expenses.index");
+    Route::post("formations/{formation}/expenses", [
+        ExpenseController::class,
+        "store",
+    ])->name("formations.expenses.store");
+    Route::put("expenses/{expense}", [
+        ExpenseController::class,
+        "update",
+    ])->name("expenses.update");
+    Route::delete("expenses/{expense}", [
+        ExpenseController::class,
+        "destroy",
+    ])->name("expenses.destroy");
+    Route::delete("expense-attachments/{attachment}", [
+        ExpenseController::class,
+        "destroyAttachment",
+    ])->name("expense-attachments.destroy");
+
     // Communication - Emails & WhatsApp
     Route::prefix("communication")->group(function () {
         Route::get("/emails", [EmailController::class, "index"])->name(
@@ -386,6 +461,10 @@ Route::middleware("auth")->group(function () {
             EmailController::class,
             "destroy",
         ])->name("emails.destroy");
+        Route::get("/emails/attachments/{attachment}/download", [
+            EmailController::class,
+            "downloadAttachment",
+        ])->name("emails.attachments.download");
         // WhatsApp
         Route::get("/whatsapp", [EmailController::class, "whatsapp"])->name(
             "whatsapp.index",
@@ -420,4 +499,6 @@ Route::middleware("auth")->group(function () {
         Route::get('/chatbot/status', [AiChatController::class, 'status'])->name('chatbot.status');
     });
     Route::post('/configuration/ai-key', [AiChatController::class, 'saveApiKey'])->name('configuration.ai-key');
+    Route::post('/configuration/whatsapp', [ConfigurationController::class, 'saveWhatsAppConfig'])->name('configuration.whatsapp');
+    Route::post('/configuration/whatsapp-meta', [ConfigurationController::class, 'saveMetaWhatsAppConfig'])->name('configuration.whatsapp-meta');
 });

@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\FormationStatus;
+use App\Enums\LearnerStatus;
 use App\Enums\ProjectStatus;
 use App\Http\Requests\Project\StoreProjectRequest;
 use App\Http\Requests\Project\UpdateProjectRequest;
+use App\Models\Formation;
 use App\Models\Partner;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -80,7 +84,10 @@ class ProjectController extends Controller
         $project->load('partners:id,name');
 
         return Inertia::render('Projects/Edit', [
-            'project'  => $project,
+            'project'  => array_merge($project->toArray(), [
+                'started_at' => $project->started_at?->format('Y-m-d'),
+                'ended_at'   => $project->ended_at?->format('Y-m-d'),
+            ]),
             'statuses' => collect(ProjectStatus::cases())->map(fn ($s) => [
                 'value' => $s->value,
                 'label' => $s->label(),
@@ -94,9 +101,100 @@ class ProjectController extends Controller
         $data = $request->validated();
         $partnerIds = $data['partner_ids'] ?? [];
         unset($data['partner_ids']);
+        $oldStatus = $project->status;
+
+        // Si le projet devient terminé
+        if (isset($data['status']) && $data['status'] === ProjectStatus::Completed->value && $oldStatus !== ProjectStatus::Completed->value) {
+            $data['ended_at'] = now();
+
+            DB::transaction(function () use ($project) {
+                // 1. Terminer automatiquement toutes les formations du projet
+                $project->formations()
+                    ->where('status', '!=', FormationStatus::Completed->value)
+                    ->update([
+                        'status' => FormationStatus::Completed->value,
+                        'ended_at' => now(),
+                    ]);
+
+                // 2. Archiver automatiquement les formations terminées
+                $project->formations()
+                    ->where('status', FormationStatus::Completed->value)
+                    ->update([
+                        'status' => FormationStatus::Archived->value,
+                    ]);
+
+                // 3. Marquer tous les apprenants "en cours" comme "terminés" (diplômés)
+                Formation::where('project_id', $project->id)
+                    ->each(function ($formation) {
+                        $formation->activeLearners()->updateExistingPivot(
+                            $formation->activeLearners()->pluck('learners.id'),
+                            [
+                                'status' => LearnerStatus::Completed->value,
+                                'completed_at' => now(),
+                            ]
+                        );
+                    });
+            });
+        }
+
+        // Si le projet devient archivé
+        if (isset($data['status']) && $data['status'] === ProjectStatus::Archived->value && $oldStatus !== ProjectStatus::Archived->value) {
+            $data['ended_at'] = now();
+
+            DB::transaction(function () use ($project) {
+                // 1. Terminer automatiquement toutes les formations du projet
+                $project->formations()
+                    ->where('status', '!=', FormationStatus::Completed->value)
+                    ->update([
+                        'status' => FormationStatus::Completed->value,
+                        'ended_at' => now(),
+                    ]);
+
+                // 2. Archiver automatiquement toutes les formations
+                $project->formations()
+                    ->where('status', FormationStatus::Completed->value)
+                    ->update([
+                        'status' => FormationStatus::Archived->value,
+                    ]);
+
+                // 3. Marquer tous les apprenants "en cours" comme "terminés" (diplômés)
+                Formation::where('project_id', $project->id)
+                    ->each(function ($formation) {
+                        $formation->activeLearners()->updateExistingPivot(
+                            $formation->activeLearners()->pluck('learners.id'),
+                            [
+                                'status' => LearnerStatus::Completed->value,
+                                'completed_at' => now(),
+                            ]
+                        );
+                    });
+            });
+        }
 
         $project->update($data);
         $project->partners()->sync($partnerIds);
+
+        // Générer un message avec le bilan si le projet vient d'être terminé
+        if (isset($data['status']) && $data['status'] === ProjectStatus::Completed->value && $oldStatus !== ProjectStatus::Completed->value) {
+            // Calculer les statistiques
+            $totalLearners = $project->formations()->withCount('learners')->get()->sum('learners_count');
+            $completedLearners = $project->formations()->with(['learners' => fn($q) => $q->wherePivot('status', LearnerStatus::Completed->value)])->get()->sum(fn($f) => $f->learners->count());
+
+            return redirect()
+                ->route('projects.show', $project)
+                ->with('success', "Projet terminé avec succès. Bilan : {$completedLearners}/{$totalLearners} apprenants diplômés.");
+        }
+
+        // Générer un message avec le bilan si le projet vient d'être archivé
+        if (isset($data['status']) && $data['status'] === ProjectStatus::Archived->value && $oldStatus !== ProjectStatus::Archived->value) {
+            // Calculer les statistiques
+            $totalLearners = $project->formations()->withCount('learners')->get()->sum('learners_count');
+            $completedLearners = $project->formations()->with(['learners' => fn($q) => $q->wherePivot('status', LearnerStatus::Completed->value)])->get()->sum(fn($f) => $f->learners->count());
+
+            return redirect()
+                ->route('projects.show', $project)
+                ->with('success', "Projet archivé avec succès. Bilan : {$completedLearners}/{$totalLearners} apprenants diplômés.");
+        }
 
         return redirect()
             ->route('projects.show', $project)

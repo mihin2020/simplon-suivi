@@ -26,7 +26,6 @@ interface FormationStat {
     withdrawn_count: number
     completed_count: number
     moved_count: number
-    searching_count: number
     internship_count: number
     employed_count: number
     unemployed_count: number
@@ -44,7 +43,6 @@ interface ProjectStat {
         withdrawn_count: number
         completed_count: number
         moved_count: number
-        searching_count: number
         internship_count: number
         employed_count: number
         unemployed_count: number
@@ -64,7 +62,6 @@ interface GlobalStats {
         }
     }
     insertion: {
-        searching: number
         internship: number
         employed: number
         unemployed: number
@@ -238,7 +235,6 @@ const statusColorLearner: Record<string, string> = {
                                         <th class="px-lg py-sm font-semibold text-center text-red-700">Abandons</th>
                                         <th class="px-lg py-sm font-semibold text-center text-blue-700">Diplômés</th>
                                         <th class="px-lg py-sm font-semibold text-center text-orange-700">Transférés</th>
-                                        <th class="px-lg py-sm font-semibold text-center text-amber-700">Recherche</th>
                                         <th class="px-lg py-sm font-semibold text-center text-blue-600">Stage</th>
                                         <th class="px-lg py-sm font-semibold text-center text-green-600">Emploi</th>
                                         <th class="px-lg py-sm font-semibold text-center text-gray-600">Sans emploi</th>
@@ -259,7 +255,6 @@ const statusColorLearner: Record<string, string> = {
                                         <td class="px-lg py-sm text-center text-red-700 cursor-pointer hover:underline" @click="f.withdrawn_count > 0 && openLearnersModal(f.id, f.name, 'status', 'withdrawn', 'Abandons')">{{ f.withdrawn_count }}</td>
                                         <td class="px-lg py-sm text-center text-blue-700 cursor-pointer hover:underline" @click="f.completed_count > 0 && openLearnersModal(f.id, f.name, 'status', 'completed', 'Diplômés')">{{ f.completed_count }}</td>
                                         <td class="px-lg py-sm text-center text-orange-700 cursor-pointer hover:underline" @click="f.moved_count > 0 && openLearnersModal(f.id, f.name, 'status', 'moved', 'Transférés')">{{ f.moved_count }}</td>
-                                        <td class="px-lg py-sm text-center text-amber-700 cursor-pointer hover:underline" @click="f.searching_count > 0 && openLearnersModal(f.id, f.name, 'insertion', 'searching', 'En recherche')">{{ f.searching_count }}</td>
                                         <td class="px-lg py-sm text-center text-blue-600 cursor-pointer hover:underline" @click="f.internship_count > 0 && openLearnersModal(f.id, f.name, 'insertion', 'internship', 'En stage')">{{ f.internship_count }}</td>
                                         <td class="px-lg py-sm text-center text-green-600 cursor-pointer hover:underline" @click="f.employed_count > 0 && openLearnersModal(f.id, f.name, 'insertion', 'employed', 'En emploi')">{{ f.employed_count }}</td>
                                         <td class="px-lg py-sm text-center text-gray-600 cursor-pointer hover:underline" @click="f.unemployed_count > 0 && openLearnersModal(f.id, f.name, 'insertion', 'unemployed', 'Sans emploi')">{{ f.unemployed_count }}</td>
@@ -274,7 +269,6 @@ const statusColorLearner: Record<string, string> = {
                                         <td class="px-lg py-sm text-center text-red-700">{{ project.totals.withdrawn_count }}</td>
                                         <td class="px-lg py-sm text-center text-blue-700">{{ project.totals.completed_count }}</td>
                                         <td class="px-lg py-sm text-center text-orange-700">{{ project.totals.moved_count }}</td>
-                                        <td class="px-lg py-sm text-center text-amber-700">{{ project.totals.searching_count }}</td>
                                         <td class="px-lg py-sm text-center text-blue-600">{{ project.totals.internship_count }}</td>
                                         <td class="px-lg py-sm text-center text-green-600">{{ project.totals.employed_count }}</td>
                                         <td class="px-lg py-sm text-center text-gray-600">{{ project.totals.unemployed_count }}</td>

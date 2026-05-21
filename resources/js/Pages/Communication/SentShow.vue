@@ -14,7 +14,7 @@ const props = defineProps<{
         sent_at: string | null
         from_name: string
         from_email: string
-        attachments?: { id: string; filename: string; path: string; size: number }[]
+        attachments?: { id: string; filename: string; path: string; size: number; mime_type?: string }[]
     }
 }>()
 
@@ -28,90 +28,120 @@ function fmtDate(d: string | null) {
 
 function fmtSize(bytes: number) {
     if (bytes < 1024) return bytes + ' o'
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' Ko'
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' Ko'
     return (bytes / (1024 * 1024)).toFixed(1) + ' Mo'
+}
+
+function fileIcon(mime: string | null | undefined): string {
+    if (!mime) return 'attach_file'
+    if (mime.startsWith('image/'))       return 'image'
+    if (mime === 'application/pdf')      return 'picture_as_pdf'
+    if (mime.includes('word'))           return 'description'
+    if (mime.includes('excel') || mime.includes('sheet')) return 'table_chart'
+    if (mime.includes('zip'))            return 'folder_zip'
+    return 'attach_file'
+}
+
+function fileColor(mime: string | null | undefined): string {
+    if (!mime) return '#515f74'
+    if (mime.startsWith('image/'))       return '#7c3aed'
+    if (mime === 'application/pdf')      return '#dc2626'
+    if (mime.includes('word'))           return '#1d4ed8'
+    if (mime.includes('excel') || mime.includes('sheet')) return '#15803d'
+    if (mime.includes('zip'))            return '#b45309'
+    return '#515f74'
+}
+
+function downloadUrl(id: string) {
+    return `/communication/emails/attachments/${id}/download`
 }
 </script>
 
 <template>
     <Head :title="email.subject" />
 
-    <div class="max-w-4xl mx-auto space-y-xl">
+    <div class="sent-show-page">
 
-        <!-- Header -->
-        <div class="flex items-center gap-md">
+        <!-- ── Header ── -->
+        <div class="show-header">
             <Link href="/communication/emails/sent" class="back-btn" title="Retour aux envoyés">
-                <span class="material-symbols-outlined">arrow_back</span>
+                <span class="material-symbols-outlined" style="font-size:20px">arrow_back</span>
             </Link>
-            <div>
-                <h1 class="text-h1 font-bold text-on-surface">{{ email.subject }}</h1>
-                <p class="text-body-sm text-secondary mt-1">Email envoyé</p>
+            <div class="show-header-info">
+                <h1 class="show-subject">{{ email.subject || '(Sans sujet)' }}</h1>
+                <div class="show-meta-row">
+                    <span class="show-meta-badge">
+                        <span class="material-symbols-outlined" style="font-size:13px">send</span>
+                        Email envoyé
+                    </span>
+                    <span class="show-meta-date">{{ fmtDate(email.sent_at) }}</span>
+                </div>
             </div>
         </div>
 
-        <!-- Carte email -->
-        <div class="bg-surface border border-surface-container-highest rounded-2xl shadow-sm overflow-hidden">
+        <!-- ── Card email ── -->
+        <div class="email-card">
 
-            <!-- En-tête de l'email -->
-            <div class="px-xl pt-xl pb-md border-b border-surface-container-highest">
-                <div class="flex items-start justify-between gap-md">
-                    <div class="flex items-center gap-md">
-                        <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary font-bold text-body-md flex-shrink-0">
-                            {{ email.from_name?.charAt(0) ?? 'S' }}
-                        </div>
-                        <div>
-                            <p class="font-semibold text-on-surface text-body-md">{{ email.from_name }}</p>
-                            <p class="text-body-sm text-secondary">{{ email.from_email }}</p>
-                        </div>
+            <!-- En-tête expéditeur -->
+            <div class="email-card-head">
+                <div class="sender-row">
+                    <div class="sender-avatar">{{ (email.from_name || email.from_email || 'S')[0].toUpperCase() }}</div>
+                    <div class="sender-info">
+                        <span class="sender-name">{{ email.from_name || email.from_email }}</span>
+                        <span class="sender-email">{{ email.from_email }}</span>
                     </div>
-                    <span class="text-body-sm text-secondary whitespace-nowrap flex-shrink-0">
-                        {{ fmtDate(email.sent_at) }}
-                    </span>
                 </div>
 
                 <!-- Destinataires -->
-                <div class="mt-md space-y-xs pl-14">
-                    <div class="flex gap-sm text-body-sm">
-                        <span class="text-secondary font-medium w-6">À :</span>
-                        <span class="text-on-surface">
-                            {{ email.to.map(t => t.name ? `${t.name} <${t.email}>` : t.email).join(', ') }}
-                        </span>
+                <div class="recipients-block">
+                    <div class="recipient-row">
+                        <span class="recip-label">À :</span>
+                        <div class="recip-chips">
+                            <span v-for="t in email.to" :key="t.email" class="recip-chip">
+                                {{ t.name || t.email }}
+                            </span>
+                        </div>
                     </div>
-                    <div v-if="email.cc && email.cc.length" class="flex gap-sm text-body-sm">
-                        <span class="text-secondary font-medium w-6">Cc :</span>
-                        <span class="text-on-surface">
-                            {{ email.cc.map(t => t.name ? `${t.name} <${t.email}>` : t.email).join(', ') }}
-                        </span>
+                    <div v-if="email.cc && email.cc.length" class="recipient-row">
+                        <span class="recip-label">Cc :</span>
+                        <div class="recip-chips">
+                            <span v-for="t in email.cc" :key="t.email" class="recip-chip recip-chip-cc">
+                                {{ t.name || t.email }}
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Corps de l'email -->
-            <div class="px-xl py-lg">
-                <div
-                    class="email-body prose max-w-none text-on-surface"
-                    v-html="email.body_html"
-                />
+            <!-- Corps -->
+            <div class="email-card-body">
+                <div class="email-body" v-html="email.body_html || '<em style=\'color:#9aaabb\'>(Corps vide)</em>'" />
             </div>
 
             <!-- Pièces jointes -->
-            <div v-if="email.attachments && email.attachments.length" class="px-xl pb-xl pt-md border-t border-surface-container-highest">
-                <p class="text-body-sm font-semibold text-secondary mb-sm flex items-center gap-xs">
-                    <span class="material-symbols-outlined" style="font-size:16px">attach_file</span>
-                    {{ email.attachments.length }} pièce(s) jointe(s)
-                </p>
-                <div class="flex flex-wrap gap-sm">
-                    <div
+            <div v-if="email.attachments?.length" class="email-card-attachments">
+                <div class="attach-header">
+                    <span class="material-symbols-outlined" style="font-size:14px">attach_file</span>
+                    {{ email.attachments.length }} pièce{{ email.attachments.length > 1 ? 's' : '' }} jointe{{ email.attachments.length > 1 ? 's' : '' }}
+                </div>
+                <div class="attach-grid">
+                    <a
                         v-for="att in email.attachments"
                         :key="att.id"
-                        class="flex items-center gap-sm px-md py-sm bg-surface-container-low border border-surface-container-highest rounded-lg"
+                        :href="downloadUrl(att.id)"
+                        download
+                        class="attach-card"
+                        :title="`Télécharger ${att.filename}`"
                     >
-                        <span class="material-symbols-outlined text-secondary" style="font-size:20px">description</span>
-                        <div>
-                            <p class="text-body-sm font-medium text-on-surface leading-none">{{ att.filename }}</p>
-                            <p class="text-body-sm text-secondary mt-0.5">{{ fmtSize(att.size) }}</p>
+                        <span class="attach-icon material-symbols-outlined" :style="{ color: fileColor(att.mime_type) }">
+                            {{ fileIcon(att.mime_type) }}
+                        </span>
+                        <div class="attach-info">
+                            <span class="attach-name">{{ att.filename }}</span>
+                            <span class="attach-size">{{ fmtSize(att.size) }}</span>
                         </div>
-                    </div>
+                        <span class="attach-dl material-symbols-outlined">download</span>
+                    </a>
                 </div>
             </div>
         </div>
@@ -119,42 +149,111 @@ function fmtSize(bytes: number) {
 </template>
 
 <style scoped>
-.back-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    color: #515f74;
-    transition: all 0.15s;
-    flex-shrink: 0;
-    text-decoration: none;
+.sent-show-page { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Header ── */
+.show-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 18px; background: #fff;
+    border: 1px solid #e0e3e5; border-radius: 12px;
 }
-.back-btn:hover {
-    background: #f2f4f6;
-    color: #191c1e;
+.back-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #f5f7f9; color: #515f74; text-decoration: none; flex-shrink: 0;
+    transition: background 0.15s;
+}
+.back-btn:hover { background: #e0e3e5; color: #191c1e; }
+.show-header-info { flex: 1; min-width: 0; }
+.show-subject {
+    font-size: 16px; font-weight: 700; color: #191c1e;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 0;
+}
+.show-meta-row { display: flex; align-items: center; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+.show-meta-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; background: #f0fdf4; border-radius: 99px;
+    font-size: 11px; color: #15803d; font-weight: 600; border: 1px solid #bbf7d0;
+}
+.show-meta-date { font-size: 12px; color: #9aaabb; }
+
+/* ── Card ── */
+.email-card {
+    background: #fff; border: 1px solid #e0e3e5; border-radius: 12px;
+    overflow: hidden;
+}
+.email-card-head {
+    padding: 20px 24px 16px; border-bottom: 1px solid #f0f1f3;
+    display: flex; flex-direction: column; gap: 14px;
+}
+.sender-row { display: flex; align-items: center; gap: 12px; }
+.sender-avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    background: #E5004C; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700;
+}
+.sender-info { display: flex; flex-direction: column; gap: 1px; }
+.sender-name { font-size: 14px; font-weight: 700; color: #191c1e; }
+.sender-email { font-size: 12px; color: #9aaabb; }
+
+.recipients-block { display: flex; flex-direction: column; gap: 6px; padding-left: 52px; }
+.recipient-row { display: flex; align-items: flex-start; gap: 8px; }
+.recip-label { font-size: 12px; font-weight: 600; color: #9aaabb; width: 24px; flex-shrink: 0; padding-top: 2px; }
+.recip-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.recip-chip {
+    display: inline-flex; align-items: center;
+    padding: 2px 9px; border-radius: 99px;
+    background: #f0f4ff; border: 1px solid #c7d7ff;
+    font-size: 12px; color: #1d4ed8; font-weight: 500;
+}
+.recip-chip-cc {
+    background: #f5f7f9; border-color: #e0e3e5; color: #515f74;
 }
 
-/* Styles pour le corps de l'email rendu en HTML */
-.email-body {
-    font-size: 14px;
-    line-height: 1.7;
-    color: #191c1e;
-}
+/* ── Corps ── */
+.email-card-body { padding: 24px; }
+.email-body { font-size: 14px; line-height: 1.75; color: #191c1e; }
 .email-body :deep(p) { margin: 0 0 12px; }
-.email-body :deep(h1),
-.email-body :deep(h2),
-.email-body :deep(h3) { font-weight: 700; margin: 16px 0 8px; }
-.email-body :deep(ul),
-.email-body :deep(ol) { padding-left: 20px; margin: 8px 0; }
+.email-body :deep(p:last-child) { margin-bottom: 0; }
 .email-body :deep(a) { color: #E5004C; text-decoration: underline; }
 .email-body :deep(strong) { font-weight: 700; }
 .email-body :deep(em) { font-style: italic; }
+.email-body :deep(ul), .email-body :deep(ol) { padding-left: 20px; margin: 8px 0; }
 .email-body :deep(blockquote) {
-    border-left: 3px solid #e0e3e5;
-    padding-left: 12px;
-    color: #515f74;
-    margin: 8px 0;
+    border-left: 3px solid #e0e3e5; padding-left: 12px; color: #515f74; margin: 8px 0;
+}
+.email-body :deep(img) { max-width: 100%; border-radius: 6px; }
+
+/* ── Pièces jointes ── */
+.email-card-attachments { padding: 16px 24px 20px; border-top: 1px solid #f0f1f3; }
+.attach-header {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 11px; color: #9aaabb; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 10px;
+}
+.attach-grid { display: flex; flex-direction: column; gap: 6px; }
+.attach-card {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px;
+    background: #f8f9fb; border: 1px solid #e8eaec;
+    text-decoration: none; cursor: pointer; transition: all 0.15s;
+}
+.attach-card:hover { background: #f0f2f5; border-color: #c7cdd4; }
+.attach-card:hover .attach-dl { opacity: 1; color: #E5004C; }
+.attach-icon { font-size: 22px; flex-shrink: 0; }
+.attach-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.attach-name { font-size: 13px; font-weight: 600; color: #191c1e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.attach-size { font-size: 11px; color: #9aaabb; }
+.attach-dl { font-size: 18px; color: #c7cdd4; opacity: 0; transition: all 0.15s; flex-shrink: 0; }
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+    .show-header { padding: 12px 14px; }
+    .show-subject { font-size: 14px; }
+    .email-card-head { padding: 16px; }
+    .email-card-body { padding: 16px; }
+    .recipients-block { padding-left: 0; }
+    .email-card-attachments { padding: 14px 16px; }
 }
 </style>

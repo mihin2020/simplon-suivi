@@ -14,6 +14,7 @@ interface Project {
     id: string
     name: string
     description: string | null
+    budget: number | null
     started_at: string
     ended_at: string | null
     status: string
@@ -29,6 +30,7 @@ const props = defineProps<{
 const form = useForm({
     name:        props.project.name,
     description: props.project.description ?? '',
+    budget:      props.project.budget ?? null,
     started_at:  props.project.started_at,
     ended_at:    props.project.ended_at ?? '',
     status:      props.project.status,
@@ -61,6 +63,8 @@ const togglePartner = (partner: Partner) => {
 const removePartner = (id: string) => {
     form.partner_ids = form.partner_ids.filter(pid => pid !== id)
 }
+
+const closeDropdown = () => { setTimeout(() => { dropdownOpen.value = false }, 150) }
 
 const submit = () => form.put(`/projects/${props.project.id}`)
 </script>
@@ -97,6 +101,22 @@ const submit = () => form.put(`/projects/${props.project.id}`)
             <div class="field">
                 <label class="label">Description</label>
                 <textarea v-model="form.description" class="input" rows="3" />
+            </div>
+
+            <!-- Budget -->
+            <div class="field">
+                <label class="label">Budget (FCFA)</label>
+                <input
+                    :value="form.budget"
+                    @input="form.budget = ($event.target as HTMLInputElement).value === '' ? null : parseInt(($event.target as HTMLInputElement).value, 10)"
+                    type="number"
+                    class="input"
+                    :class="{ 'input-error': form.errors.budget }"
+                    placeholder="Ex : 5000000"
+                    min="0"
+                    step="1"
+                />
+                <p v-if="form.errors.budget" class="error-msg">{{ form.errors.budget }}</p>
             </div>
 
             <!-- Dates -->
@@ -156,7 +176,7 @@ const submit = () => form.put(`/projects/${props.project.id}`)
                             class="partner-search"
                             placeholder="Rechercher un partenaire..."
                             @focus="dropdownOpen = true"
-                            @blur="setTimeout(() => dropdownOpen = false, 150)"
+                            @blur="closeDropdown"
                         />
                     </div>
 

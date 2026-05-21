@@ -31,13 +31,11 @@ class StatisticsController extends Controller
 
         $insertionByStatus = collect($latestInsertionMap)->countBy();
 
-        $employedCount = $insertionByStatus->get(InsertionStatus::Employed->value, 0);
+        $employedCount   = $insertionByStatus->get(InsertionStatus::Employed->value, 0);
         $internshipCount = $insertionByStatus->get(InsertionStatus::Internship->value, 0);
-        $searchingCount = $insertionByStatus->get(InsertionStatus::Searching->value, 0);
-        $unemployedCount = $insertionByStatus->get(InsertionStatus::Unemployed->value, 0);
-        $totalWithInsertion = count($latestInsertionMap);
-        $insertionRate = $totalWithInsertion > 0
-            ? round((($employedCount + $internshipCount) / $totalWithInsertion) * 100, 1)
+        $unemployedCount = $totalLearners - $employedCount - $internshipCount;
+        $insertionRate   = $totalLearners > 0
+            ? round((($employedCount + $internshipCount) / $totalLearners) * 100, 1)
             : 0;
 
         // ========== STATS PAR PROJET / FORMATION ==========
@@ -60,21 +58,17 @@ class StatisticsController extends Controller
             $formationStats = $project->formations->map(function ($formation) use ($latestInsertionMap) {
                 $learnerIds = $formation->learners->pluck('id')->all();
 
-                $insertionCounts = [
-                    'searching' => 0,
-                    'internship' => 0,
-                    'employed' => 0,
-                    'unemployed' => 0,
-                ];
+                $internshipCount = 0;
+                $employedCount   = 0;
 
                 foreach ($learnerIds as $lid) {
-                    if (isset($latestInsertionMap[$lid])) {
-                        $status = $latestInsertionMap[$lid];
-                        if (isset($insertionCounts[$status])) {
-                            $insertionCounts[$status]++;
-                        }
-                    }
+                    $status = $latestInsertionMap[$lid] ?? null;
+                    if ($status === InsertionStatus::Internship->value) $internshipCount++;
+                    if ($status === InsertionStatus::Employed->value)   $employedCount++;
                 }
+
+                // "Sans emploi" = tout apprenant qui n'est ni en stage ni en emploi
+                $unemployedCount = $formation->total_learners - $internshipCount - $employedCount;
 
                 return [
                     'id' => $formation->id,
@@ -87,10 +81,9 @@ class StatisticsController extends Controller
                     'withdrawn_count' => $formation->withdrawn_count,
                     'completed_count' => $formation->completed_count,
                     'moved_count' => $formation->moved_count,
-                    'searching_count' => $insertionCounts['searching'],
-                    'internship_count' => $insertionCounts['internship'],
-                    'employed_count' => $insertionCounts['employed'],
-                    'unemployed_count' => $insertionCounts['unemployed'],
+                    'internship_count' => $internshipCount,
+                    'employed_count' => $employedCount,
+                    'unemployed_count' => $unemployedCount,
                 ];
             });
 
@@ -106,7 +99,6 @@ class StatisticsController extends Controller
                     'withdrawn_count' => $formationStats->sum('withdrawn_count'),
                     'completed_count' => $formationStats->sum('completed_count'),
                     'moved_count' => $formationStats->sum('moved_count'),
-                    'searching_count' => $formationStats->sum('searching_count'),
                     'internship_count' => $formationStats->sum('internship_count'),
                     'employed_count' => $formationStats->sum('employed_count'),
                     'unemployed_count' => $formationStats->sum('unemployed_count'),
@@ -128,7 +120,6 @@ class StatisticsController extends Controller
                     ],
                 ],
                 'insertion' => [
-                    'searching' => $searchingCount,
                     'internship' => $internshipCount,
                     'employed' => $employedCount,
                     'unemployed' => $unemployedCount,
@@ -160,11 +151,21 @@ class StatisticsController extends Controller
         if ($request->has('insertion_status')) {
             $insertionStatus = $request->input('insertion_status');
             $latestMap = $this->latestInsertionRecordsByLearner();
-            $learnerIds = collect($latestMap)
-                ->filter(fn ($status) => $status === $insertionStatus)
-                ->keys()
-                ->all();
-            $query->whereIn('learners.id', $learnerIds);
+
+            if ($insertionStatus === 'unemployed') {
+                // Sans emploi = ni en stage ni en emploi
+                $placedIds = collect($latestMap)
+                    ->filter(fn ($s) => in_array($s, [InsertionStatus::Internship->value, InsertionStatus::Employed->value]))
+                    ->keys()
+                    ->all();
+                $query->whereNotIn('learners.id', $placedIds);
+            } else {
+                $learnerIds = collect($latestMap)
+                    ->filter(fn ($s) => $s === $insertionStatus)
+                    ->keys()
+                    ->all();
+                $query->whereIn('learners.id', $learnerIds);
+            }
         }
 
         $learners = $query

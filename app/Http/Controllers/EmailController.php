@@ -355,8 +355,11 @@ class EmailController extends Controller
                 ],
             );
 
+        $waConfig = WhatsAppService::getConfig();
+
         return Inertia::render("Communication/WhatsApp", [
-            "formations" => $formations,
+            "formations"       => $formations,
+            "whatsappConfig"   => $waConfig,
         ]);
     }
 
@@ -371,12 +374,13 @@ class EmailController extends Controller
             "message" => "required|string|max:1600", // WhatsApp limite
         ]);
 
-        // Vérifier si Twilio est configuré
+        // Vérifier si WhatsApp est configuré
         if (!$whatsAppService->isConfigured()) {
-            return back()->with(
-                "error",
-                "Twilio non configuré. Ajoutez TWILIO_SID, TWILIO_AUTH_TOKEN et TWILIO_WHATSAPP_FROM dans le fichier .env",
-            );
+            $provider = $whatsAppService->getProvider();
+            $configMsg = $provider === 'meta'
+                ? "Meta Cloud API non configurée. Vérifiez vos paramètres WhatsApp."
+                : "Twilio non configuré. Ajoutez vos credentials dans la Configuration.";
+            return back()->with("error", $configMsg);
         }
 
         $results = $whatsAppService->sendBulk(
@@ -422,6 +426,15 @@ class EmailController extends Controller
         return Inertia::render("Communication/SentShow", [
             "email" => $email,
         ]);
+    }
+
+    public function downloadAttachment(\App\Models\EmailAttachment $attachment)
+    {
+        if (! Storage::disk('local')->exists($attachment->path)) {
+            abort(404, 'Fichier introuvable.');
+        }
+
+        return Storage::disk('local')->download($attachment->path, $attachment->filename);
     }
 
     public function destroy(Email $email)

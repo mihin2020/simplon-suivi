@@ -259,10 +259,14 @@ const filteredInactiveLearners = computed(() => {
                     </span>
                     <span v-if="formation.description" class="text-secondary">· {{ formation.description }}</span>
                 </div>
-                <div class="flex items-center gap-sm flex-shrink-0">
+                <div class="flex items-center gap-sm flex-wrap min-w-0">
                 <Link :href="`/formations/${formation.id}/attendances`" class="btn-secondary">
                     <span class="material-symbols-outlined" style="font-size:18px">fact_check</span>
                     Présences
+                </Link>
+                <Link :href="`/formations/${formation.id}/expenses`" class="btn-secondary">
+                    <span class="material-symbols-outlined" style="font-size:18px">payments</span>
+                    Finance
                 </Link>
                 <Link
                     :href="formation.referentiel ? `/referentiels/${formation.referentiel.id}` : `/formations/${formation.id}/edit`"

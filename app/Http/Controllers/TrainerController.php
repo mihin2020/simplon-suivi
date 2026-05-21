@@ -6,13 +6,17 @@ use App\Actions\InviteUser;
 use App\Enums\UserRole;
 use App\Http\Requests\Trainer\StoreTrainerRequest;
 use App\Http\Requests\Trainer\UpdateTrainerRequest;
+use App\Mail\UserInvitation;
+use App\Models\ActivationToken;
 use App\Models\Formation;
 use App\Models\Project;
 use App\Models\Trainer;
 use Illuminate\Http\Request;
 use App\Models\TrainerProfile;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -135,6 +139,41 @@ class TrainerController extends Controller
         return redirect()
             ->route('trainers.index')
             ->with('success', 'Formateur supprimé.');
+    }
+
+    /**
+     * Renvoyer l'invitation d'activation au formateur
+     */
+    public function resendInvitation(Trainer $trainer): RedirectResponse
+    {
+        $this->authorize('update', $trainer);
+
+        $user = $trainer->user;
+
+        if ($user->is_active) {
+            return back()->with('error', 'Ce formateur a déjà activé son compte.');
+        }
+
+        // Supprimer les anciens tokens d'activation
+        ActivationToken::where('user_id', $user->id)
+            ->where('type', 'activation')
+            ->delete();
+
+        // Créer un nouveau token
+        $plainToken = Str::random(64);
+        ActivationToken::create([
+            'user_id'    => $user->id,
+            'token'      => hash('sha256', $plainToken),
+            'type'       => 'activation',
+            'expires_at' => now()->addHours(72),
+        ]);
+
+        // Renvoyer l'email
+        Mail::to($user->email)->queue(
+            (new UserInvitation($user, $plainToken))->onConnection('database')
+        );
+
+        return back()->with('success', 'L\'invitation a été renvoyée avec succès.');
     }
 
     /**

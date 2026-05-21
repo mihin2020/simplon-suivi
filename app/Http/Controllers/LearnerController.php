@@ -8,8 +8,10 @@ use App\Http\Requests\Learner\UpdateLearnerRequest;
 use App\Models\AgeRange;
 use App\Models\EducationLevel;
 use App\Models\Formation;
+use App\Models\LastDiploma;
 use App\Models\Learner;
 use App\Models\Project;
+use App\Models\Vulnerability;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -63,6 +65,8 @@ class LearnerController extends Controller
         return Inertia::render('Learners/Create', [
             'educationLevels' => EducationLevel::orderBy('created_at')->get(),
             'ageRanges'       => AgeRange::orderBy('order')->orderBy('age_min')->get(),
+            'vulnerabilities' => Vulnerability::orderBy('created_at')->get(),
+            'lastDiplomas'    => LastDiploma::orderBy('created_at')->get(),
         ]);
     }
 
@@ -78,8 +82,11 @@ class LearnerController extends Controller
             $data['cnib_path'] = $request->file('cnib')->store('learners/cnib', 'public');
             $data['cnib_original_name'] = $request->file('cnib')->getClientOriginalName();
         }
-
-        unset($data['photo'], $data['cnib']);
+        if ($request->hasFile('cv')) {
+            $data['cv_path'] = $request->file('cv')->store('learners/cv', 'public');
+            $data['cv_original_name'] = $request->file('cv')->getClientOriginalName();
+        }
+        unset($data['photo'], $data['cnib'], $data['cv']);
 
         $learner = Learner::create($data);
 
@@ -95,6 +102,8 @@ class LearnerController extends Controller
         $learner->load([
             'educationLevel',
             'ageRange',
+            'vulnerability',
+            'lastDiploma',
             'formations.project',
         ]);
 
@@ -133,6 +142,8 @@ class LearnerController extends Controller
             'learner'         => $learner,
             'educationLevels' => EducationLevel::orderBy('created_at')->get(),
             'ageRanges'       => AgeRange::orderBy('order')->orderBy('age_min')->get(),
+            'vulnerabilities' => Vulnerability::orderBy('created_at')->get(),
+            'lastDiplomas'    => LastDiploma::orderBy('created_at')->get(),
         ]);
     }
 
@@ -154,8 +165,15 @@ class LearnerController extends Controller
             $data['cnib_path'] = $request->file('cnib')->store('learners/cnib', 'public');
             $data['cnib_original_name'] = $request->file('cnib')->getClientOriginalName();
         }
+        if ($request->hasFile('cv')) {
+            if ($learner->cv_path) {
+                Storage::disk('public')->delete($learner->cv_path);
+            }
+            $data['cv_path'] = $request->file('cv')->store('learners/cv', 'public');
+            $data['cv_original_name'] = $request->file('cv')->getClientOriginalName();
+        }
 
-        unset($data['photo'], $data['cnib']);
+        unset($data['photo'], $data['cnib'], $data['cv']);
 
         $learner->update($data);
 

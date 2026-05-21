@@ -172,7 +172,7 @@ const submit = () => form.post('/trainers', { forceFormData: true })
             <div class="notice">
                 <span class="material-symbols-outlined" style="font-size:18px;color:#2563eb">info</span>
                 <p class="text-body-sm" style="color:#1d4ed8">
-                    Le formateur recevra un email avec un lien d'activation valable 24h pour définir son mot de passe.
+                    Le formateur recevra un email avec un lien d'activation valable 72h pour définir son mot de passe.
                     Il n'aura accès qu'à la saisie des présences pour les formations qui lui sont assignées.
                 </p>
             </div>

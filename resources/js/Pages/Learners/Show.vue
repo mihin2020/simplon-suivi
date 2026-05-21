@@ -86,6 +86,13 @@ interface Learner {
     study_field: string | null
     education_level: EducationLevel | null
     age_range: { id: number; name: string; age_min: number; age_max: number } | null
+    cnib_number: string | null
+    marital_status: string | null
+    children_count: number | null
+    vulnerability: { id: string; name: string } | null
+    last_diploma: { id: string; name: string } | null
+    cv_path: string | null
+    cv_original_name: string | null
     formations: Formation[]
 }
 
@@ -123,18 +130,21 @@ const deleteRecord = (recordId: string) => {
 
 const editingRecord = ref<InsertionRecord | null>(null)
 
+// Convertir date ISO en YYYY-MM-DD pour input type="date"
+const toDateInput = (d: string | null) => d ? d.split('T')[0] : ''
+
 const editRecord = (record: InsertionRecord) => {
     editingRecord.value = record
     form.status = record.status
     form.status_changed_at = record.status_changed_at
     form.status_notes = record.status_notes ?? ''
-    form.internship_start_date = record.internship_start_date ?? ''
-    form.internship_end_date = record.internship_end_date ?? ''
+    form.internship_start_date = toDateInput(record.internship_start_date)
+    form.internship_end_date = toDateInput(record.internship_end_date)
     form.internship_company = record.internship_company ?? ''
     form.internship_paid = record.internship_paid ?? false
     form.internship_contract_type = record.internship_contract_type ?? ''
     form.employment_company = record.employment_company ?? ''
-    form.employment_start_date = record.employment_start_date ?? ''
+    form.employment_start_date = toDateInput(record.employment_start_date)
     form.employment_contract_type = record.employment_contract_type ?? ''
     form.employment_position = record.employment_position ?? ''
 
@@ -189,6 +199,15 @@ const showEmploymentForm = ref(false)
 const fmt = (d: string | null) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : ''
 const genderLabel = (g: string | null) => ({ male: 'Masculin', female: 'Féminin' }[g ?? ''] ?? '')
 const photoUrl = (path: string | null) => path ? `/storage/${path}` : null
+const maritalStatusLabel = (s: string | null) => {
+    const labels: Record<string, string> = {
+        single: 'Célibataire',
+        married: 'Marié(e)',
+        divorced: 'Divorcé(e)',
+        widowed: 'Veuf / Veuve'
+    }
+    return labels[s ?? ''] ?? ''
+}
 
 const enrollmentStatusLabels: Record<string, string> = {
     in_progress: 'En cours', withdrawn: 'Retiré', completed: 'Terminé', moved: 'Déplacé'
@@ -254,6 +273,11 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                         <div v-if="learner.education_level" class="info-row"><dt>Niveau d'études</dt><dd>{{ learner.education_level.name }}</dd></div>
                         <div v-if="learner.age_range" class="info-row"><dt>Tranche d'âge</dt><dd>{{ learner.age_range.name }}</dd></div>
                         <div v-if="learner.talent" class="info-row"><dt>Talent</dt><dd>{{ learner.talent }}</dd></div>
+                        <div v-if="learner.last_diploma" class="info-row"><dt>Dernier diplôme</dt><dd>{{ learner.last_diploma.name }}</dd></div>
+                        <div v-if="learner.cnib_number" class="info-row"><dt>N° CNIB</dt><dd>{{ learner.cnib_number }}</dd></div>
+                        <div v-if="learner.marital_status" class="info-row"><dt>Situation matrimoniale</dt><dd>{{ maritalStatusLabel(learner.marital_status) }}</dd></div>
+                        <div v-if="learner.children_count !== null && learner.children_count > 0" class="info-row"><dt>Nombre d'enfants</dt><dd>{{ learner.children_count }}</dd></div>
+                        <div v-if="learner.vulnerability" class="info-row"><dt>Vulnérabilité</dt><dd>{{ learner.vulnerability.name }}</dd></div>
                     </dl>
                 </div>
                 <div class="card" v-if="learner.email || learner.phone">
@@ -273,9 +297,30 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                         <div v-if="learner.study_field" class="info-row"><dt>Domaine d'études</dt><dd>{{ learner.study_field }}</dd></div>
                     </dl>
                 </div>
-                <div class="card" v-if="learner.cnib_path">
+                <div class="card" v-if="learner.cnib_path || learner.cv_path">
                     <h2 class="section-title">Documents</h2>
-                    <a :href="`/storage/${learner.cnib_path}`" target="_blank" rel="noopener" class="doc-link"><span class="material-symbols-outlined" style="font-size:16px">description</span>Voir CNIB / Pièce d'identité</a>
+                    <div class="docs-grid">
+                        <a v-if="learner.cnib_path" :href="`/storage/${learner.cnib_path}`" target="_blank" rel="noopener" class="doc-card">
+                            <div class="doc-icon doc-id">
+                                <span class="material-symbols-outlined">badge</span>
+                            </div>
+                            <div class="doc-info">
+                                <span class="doc-title">Pièce d'identité</span>
+                                <span class="doc-meta">CNIB · {{ learner.cnib_original_name || 'Document' }}</span>
+                            </div>
+                            <span class="material-symbols-outlined doc-arrow">open_in_new</span>
+                        </a>
+                        <a v-if="learner.cv_path" :href="`/storage/${learner.cv_path}`" target="_blank" rel="noopener" class="doc-card">
+                            <div class="doc-icon doc-cv">
+                                <span class="material-symbols-outlined">description</span>
+                            </div>
+                            <div class="doc-info">
+                                <span class="doc-title">Curriculum Vitae</span>
+                                <span class="doc-meta">CV · {{ learner.cv_original_name || 'Document' }}</span>
+                            </div>
+                            <span class="material-symbols-outlined doc-arrow">open_in_new</span>
+                        </a>
+                    </div>
                 </div>
                 <div class="card" v-if="learner.emergency_contact_name">
                     <h2 class="section-title">Contact d'urgence</h2>
@@ -363,7 +408,12 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                                     <span class="material-symbols-outlined label-icon">description</span>
                                     Type de contrat
                                 </label>
-                                <input type="text" v-model="form.internship_contract_type" class="form-input" placeholder="Ex: Convention de stage">
+                                <select v-model="form.internship_contract_type" class="form-input" required>
+                                    <option value="">Choisir...</option>
+                                    <option value="Contrat de stage">Contrat de stage</option>
+                                    <option value="Stage étudiant">Stage étudiant</option>
+                                    <option value="Contrat d'apprentissage">Contrat d'apprentissage</option>
+                                </select>
                             </div>
                             <div class="form-group">
                                 <label class="form-label">
@@ -614,8 +664,19 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
 .info-row { display: flex; flex-direction: column; gap: 2px; }
 .info-row dt { font-size: 11px; font-weight: 600; color: #9aaabb; text-transform: uppercase; letter-spacing: 0.04em; }
 .info-row dd { font-size: 14px; color: #191c1e; }
-.doc-link { display: inline-flex; align-items: center; gap: 4px; color: #1d4ed8; text-decoration: none; font-weight: 500; font-size: 13px; }
-.doc-link:hover { text-decoration: underline; }
+/* ===== DOCUMENTS CARDS ===== */
+.docs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.doc-card { display: flex; align-items: center; gap: 12px; padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; text-decoration: none; transition: all 0.2s; }
+.doc-card:hover { background: #f1f5f9; border-color: #cbd5e1; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+.doc-icon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; }
+.doc-id { background: #dbeafe; color: #1e40af; }
+.doc-cv { background: #dcfce7; color: #166534; }
+.doc-icon .material-symbols-outlined { font-size: 22px; }
+.doc-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.doc-title { font-size: 13px; font-weight: 600; color: #1e293b; }
+.doc-meta { font-size: 11px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.doc-arrow { color: #94a3b8; font-size: 18px; }
+.doc-card:hover .doc-arrow { color: #64748b; }
 .btn-secondary { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: transparent; color: #515f74; border-radius: 8px; font-size: 13px; font-weight: 500; border: 1px solid #e0e3e5; transition: all 0.15s; text-decoration: none; cursor: pointer; }
 .btn-secondary:hover { background: #f2f4f6; }
 .count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 6px; background: #f2f4f6; border-radius: 99px; font-size: 12px; font-weight: 600; color: #515f74; }

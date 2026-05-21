@@ -29,6 +29,13 @@ class Learner extends Model
         'photo_original_name',
         'cnib_path',
         'cnib_original_name',
+        'cnib_number',
+        'marital_status',
+        'children_count',
+        'vulnerability_id',
+        'last_diploma_id',
+        'cv_path',
+        'cv_original_name',
         'talent',
         'emergency_contact_name',
         'emergency_contact_firstname',
@@ -44,8 +51,9 @@ class Learner extends Model
     protected function casts(): array
     {
         return [
-            'birth_date' => 'date',
-            'gender'     => Gender::class,
+            'birth_date'     => 'date',
+            'gender'         => Gender::class,
+            'children_count' => 'integer',
         ];
     }
 
@@ -62,6 +70,16 @@ class Learner extends Model
     public function ageRange(): BelongsTo
     {
         return $this->belongsTo(AgeRange::class);
+    }
+
+    public function vulnerability(): BelongsTo
+    {
+        return $this->belongsTo(Vulnerability::class);
+    }
+
+    public function lastDiploma(): BelongsTo
+    {
+        return $this->belongsTo(LastDiploma::class);
     }
 
     public function formations(): BelongsToMany

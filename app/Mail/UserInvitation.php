@@ -32,7 +32,7 @@ class UserInvitation extends Mailable implements ShouldQueue
             markdown: 'emails.user-invitation',
             with: [
                 'activationUrl' => url('/activation/' . $this->plainToken),
-                'expiresIn'     => '24 heures',
+                'expiresIn'     => '72 heures',
             ],
         );
     }

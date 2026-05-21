@@ -41,4 +41,10 @@ return [
         'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
     ],
 
+    'whatsapp_meta' => [
+        'token' => env('WHATSAPP_META_TOKEN'),
+        'phone_number_id' => env('WHATSAPP_META_PHONE_ID'),
+        'business_account_id' => env('WHATSAPP_META_BUSINESS_ID'),
+    ],
+
 ];

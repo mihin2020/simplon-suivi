@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3'
+import { Link, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -39,6 +39,13 @@ const props = defineProps<{
     trainer: Trainer
 }>()
 
+const form = useForm({})
+
+const resendInvitation = () => {
+    if (!confirm('Renvoyer l\'invitation à ce formateur ?')) return
+    form.post(`/trainers/${props.trainer.id}/resend-invitation`)
+}
+
 const fmt = (d: string | null) =>
     d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
 
@@ -73,6 +80,10 @@ const statusLabels: Record<string, string> = {
                             <span v-if="trainer.profile" class="text-body-sm text-secondary">
                                 · {{ trainer.profile.name }}
                             </span>
+                            <button v-if="!trainer.user.is_active" @click="resendInvitation" class="btn-resend" :disabled="form.processing">
+                                <span class="material-symbols-outlined" style="font-size:16px">send</span>
+                                {{ form.processing ? 'Envoi...' : 'Renvoyer l\'invitation' }}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -300,4 +311,8 @@ const statusLabels: Record<string, string> = {
     text-decoration: none;
 }
 .btn-secondary:hover { background: #f2f4f6; }
+
+.btn-resend { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.btn-resend:hover { background: #bfdbfe; border-color: #60a5fa; }
+.btn-resend:disabled { opacity: 0.6; cursor: not-allowed; }
 </style>

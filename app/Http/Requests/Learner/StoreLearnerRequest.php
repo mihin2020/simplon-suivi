@@ -37,6 +37,12 @@ class StoreLearnerRequest extends FormRequest
             'study_field'                   => ['nullable', 'string', 'max:255'],
             'photo'                         => ['nullable', 'image', 'mimes:jpeg,png,webp', 'max:2048'],
             'cnib'                          => ['nullable', 'file', 'mimes:pdf,jpeg,jpg,png', 'max:5120'],
+            'cnib_number'                   => ['nullable', 'string', 'max:50', 'unique:learners,cnib_number'],
+            'marital_status'                => ['nullable', 'in:single,married,divorced,widowed'],
+            'children_count'                => ['nullable', 'integer', 'min:0', 'max:20'],
+            'vulnerability_id'              => ['nullable', 'string', 'uuid', 'exists:vulnerabilities,id'],
+            'last_diploma_id'               => ['nullable', 'string', 'uuid', 'exists:last_diplomas,id'],
+            'cv'                            => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
         ];
     }
 }

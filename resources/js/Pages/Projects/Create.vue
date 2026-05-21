@@ -18,6 +18,7 @@ const props = defineProps<{
 const form = useForm({
     name: '',
     description: '',
+    budget: null as number | null,
     started_at: '',
     ended_at: '',
     status: 'active',
@@ -50,6 +51,8 @@ const togglePartner = (partner: Partner) => {
 const removePartner = (id: string) => {
     form.partner_ids = form.partner_ids.filter(pid => pid !== id)
 }
+
+const closeDropdown = () => { setTimeout(() => { dropdownOpen.value = false }, 150) }
 
 const submit = () => form.post('/projects')
 </script>
@@ -93,6 +96,22 @@ const submit = () => form.post('/projects')
                     rows="3"
                     placeholder="Contexte et objectifs du projet..."
                 />
+            </div>
+
+            <!-- Budget -->
+            <div class="field">
+                <label class="label">Budget (FCFA)</label>
+                <input
+                    :value="form.budget"
+                    @input="form.budget = ($event.target as HTMLInputElement).value === '' ? null : parseInt(($event.target as HTMLInputElement).value, 10)"
+                    type="number"
+                    class="input"
+                    :class="{ 'input-error': form.errors.budget }"
+                    placeholder="Ex : 5000000"
+                    min="0"
+                    step="1"
+                />
+                <p v-if="form.errors.budget" class="error-msg">{{ form.errors.budget }}</p>
             </div>
 
             <!-- Dates -->
@@ -157,7 +176,7 @@ const submit = () => form.post('/projects')
                             class="partner-search"
                             placeholder="Rechercher un partenaire..."
                             @focus="dropdownOpen = true"
-                            @blur="setTimeout(() => dropdownOpen = false, 150)"
+                            @blur="closeDropdown"
                         />
                     </div>
 

@@ -16,10 +16,14 @@ interface AgeRange {
     age_min: number
     age_max: number
 }
+interface Vulnerability { id: string; name: string }
+interface LastDiploma { id: string; name: string }
 
 const props = defineProps<{
     educationLevels: EducationLevel[]
     ageRanges: AgeRange[]
+    vulnerabilities: Vulnerability[]
+    lastDiplomas: LastDiploma[]
 }>()
 
 const form = useForm({
@@ -41,12 +45,19 @@ const form = useForm({
     location:                    '',
     profile:                     '',
     study_field:                 '',
+    cnib_number:                 '',
+    marital_status:              '',
+    children_count:              0,
+    vulnerability_id:            '',
+    last_diploma_id:             '',
     photo:                       null as File | null,
     cnib:                        null as File | null,
+    cv:                          null as File | null,
 })
 
 const photoPreview = ref<string | null>(null)
 const cnibName = ref<string | null>(null)
+const cvName = ref<string | null>(null)
 
 const onPhotoChange = (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0]
@@ -60,6 +71,13 @@ const onCnibChange = (e: Event) => {
     if (!file) return
     form.cnib = file
     cnibName.value = file.name
+}
+
+const onCvChange = (e: Event) => {
+    const file = (e.target as HTMLInputElement).files?.[0]
+    if (!file) return
+    form.cv = file
+    cvName.value = file.name
 }
 
 // Calcul automatique de l'âge depuis la date de naissance
@@ -171,7 +189,30 @@ const submit = () => form.post('/learners', {
                             <option v-for="r in ageRanges" :key="r.id" :value="r.id">{{ r.name }}</option>
                         </select>
                     </div>
-                    <div></div>
+                    <div class="field">
+                        <label class="label">Situation matrimoniale</label>
+                        <select v-model="form.marital_status" class="input">
+                            <option value="">Sélectionner</option>
+                            <option value="single">Célibataire</option>
+                            <option value="married">Marié(e)</option>
+                            <option value="divorced">Divorcé(e)</option>
+                            <option value="widowed">Veuf / Veuve</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-md">
+                    <div class="field">
+                        <label class="label">Nombre d'enfants</label>
+                        <input v-model.number="form.children_count" type="number" min="0" max="20" class="input" />
+                    </div>
+                    <div class="field">
+                        <label class="label">Vulnérabilité</label>
+                        <select v-model="form.vulnerability_id" class="input">
+                            <option value="">Sélectionner</option>
+                            <option v-for="v in vulnerabilities" :key="v.id" :value="v.id">{{ v.name }}</option>
+                        </select>
+                    </div>
                 </div>
 
                 <div class="grid grid-cols-2 gap-md">
@@ -188,9 +229,18 @@ const submit = () => form.post('/learners', {
                     </div>
                 </div>
 
-                <div class="field">
-                    <label class="label">Talent / Compétences particulières</label>
-                    <input v-model="form.talent" type="text" class="input" placeholder="Ex : Développement mobile, design graphique..." />
+                <div class="grid grid-cols-2 gap-md">
+                    <div class="field">
+                        <label class="label">Talent / Compétences particulières</label>
+                        <input v-model="form.talent" type="text" class="input" placeholder="Ex : Développement mobile, design graphique..." />
+                    </div>
+                    <div class="field">
+                        <label class="label">Dernier diplôme</label>
+                        <select v-model="form.last_diploma_id" class="input">
+                            <option value="">Sélectionner</option>
+                            <option v-for="d in lastDiplomas" :key="d.id" :value="d.id">{{ d.name }}</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -243,17 +293,36 @@ const submit = () => form.post('/learners', {
             <div class="card space-y-lg">
                 <h2 class="section-title">Documents</h2>
                 <div class="field">
-                    <label class="label">CNIB / Pièce d'identité</label>
-                    <div class="file-upload-row">
-                        <label class="upload-btn" for="cnib-input">
-                            <span class="material-symbols-outlined" style="font-size:18px">upload_file</span>
-                            {{ cnibName ? 'Changer le fichier' : 'Choisir un fichier' }}
-                        </label>
-                        <span v-if="cnibName" class="file-name">{{ cnibName }}</span>
+                    <label class="label">N° CNIB / Pièce d'identité</label>
+                    <input v-model="form.cnib_number" type="text" class="input" placeholder="Ex : B0123456789" />
+                </div>
+                <div class="grid grid-cols-2 gap-md">
+                    <div class="field">
+                        <label class="label">Document CNIB / Pièce d'identité</label>
+                        <div class="file-upload-row">
+                            <label class="upload-btn" for="cnib-input">
+                                <span class="material-symbols-outlined" style="font-size:18px">upload_file</span>
+                                {{ cnibName ? 'Changer' : 'Choisir' }}
+                            </label>
+                            <span v-if="cnibName" class="file-name">{{ cnibName }}</span>
+                        </div>
+                        <input id="cnib-input" type="file" accept=".pdf,image/jpeg,image/png" class="hidden" @change="onCnibChange" />
+                        <p class="text-body-sm text-secondary">PDF, JPEG, PNG · 5 Mo max</p>
+                        <p v-if="form.errors.cnib" class="error-msg">{{ form.errors.cnib }}</p>
                     </div>
-                    <input id="cnib-input" type="file" accept=".pdf,image/jpeg,image/png" class="hidden" @change="onCnibChange" />
-                    <p class="text-body-sm text-secondary">PDF, JPEG ou PNG · 5 Mo max · Optionnel</p>
-                    <p v-if="form.errors.cnib" class="error-msg">{{ form.errors.cnib }}</p>
+                    <div class="field">
+                        <label class="label">CV</label>
+                        <div class="file-upload-row">
+                            <label class="upload-btn" for="cv-input">
+                                <span class="material-symbols-outlined" style="font-size:18px">upload_file</span>
+                                {{ cvName ? 'Changer' : 'Choisir' }}
+                            </label>
+                            <span v-if="cvName" class="file-name">{{ cvName }}</span>
+                        </div>
+                        <input id="cv-input" type="file" accept="application/pdf,.doc,.docx" class="hidden" @change="onCvChange" />
+                        <p class="text-body-sm text-secondary">PDF, DOC, DOCX · 5 Mo max</p>
+                        <p v-if="form.errors.cv" class="error-msg">{{ form.errors.cv }}</p>
+                    </div>
                 </div>
             </div>
 

@@ -49,7 +49,7 @@ class InsertionRecordController extends Controller
             'internship_end_date' => ['nullable', 'date', 'after_or_equal:internship_start_date'],
             'internship_company' => ['nullable', 'string', 'max:255', 'required_if:status,internship'],
             'internship_paid' => ['nullable', 'boolean'],
-            'internship_contract_type' => ['nullable', 'string', 'max:255'],
+            'internship_contract_type' => ['nullable', 'string', 'in:Contrat de stage,Stage étudiant,Contrat d\'apprentissage'],
 
             // Employment fields
             'employment_company' => ['nullable', 'string', 'max:255', 'required_if:status,employed'],
@@ -101,7 +101,7 @@ class InsertionRecordController extends Controller
             'internship_end_date' => ['nullable', 'date', 'after_or_equal:internship_start_date'],
             'internship_company' => ['nullable', 'string', 'max:255'],
             'internship_paid' => ['nullable', 'boolean'],
-            'internship_contract_type' => ['nullable', 'string', 'max:255'],
+            'internship_contract_type' => ['nullable', 'string', 'in:Contrat de stage,Stage étudiant,Contrat d\'apprentissage'],
             
             // Employment fields
             'employment_company' => ['nullable', 'string', 'max:255'],

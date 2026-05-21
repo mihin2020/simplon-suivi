@@ -4,13 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Enums\FormationStatus;
 use App\Enums\LearnerStatus;
+use App\Enums\ProjectStatus;
 use App\Http\Requests\Formation\StoreFormationRequest;
 use App\Http\Requests\Formation\UpdateFormationRequest;
 use App\Models\Formation;
+use App\Models\Learner;
 use App\Models\Project;
 use App\Models\Referentiel;
 use App\Models\Trainer;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -103,7 +106,25 @@ class FormationController extends Controller
 
     public function update(UpdateFormationRequest $request, Formation $formation): RedirectResponse
     {
-        $formation->update($request->validated());
+        $data = $request->validated();
+        $oldStatus = $formation->status;
+
+        // Si la formation devient terminée
+        if (isset($data['status']) && $data['status'] === FormationStatus::Completed->value && $oldStatus !== FormationStatus::Completed->value) {
+            // Mettre à jour la date de fin automatiquement
+            $data['ended_at'] = now();
+
+            // Marquer tous les apprenants "en cours" comme "terminés" (diplômés)
+            $formation->activeLearners()->updateExistingPivot(
+                $formation->activeLearners()->pluck('learners.id'),
+                [
+                    'status' => LearnerStatus::Completed->value,
+                    'completed_at' => now(),
+                ]
+            );
+        }
+
+        $formation->update($data);
 
         return redirect()
             ->route('formations.show', $formation)

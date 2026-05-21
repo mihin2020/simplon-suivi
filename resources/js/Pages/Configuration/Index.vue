@@ -8,28 +8,60 @@ defineOptions({ layout: AdminLayout })
 interface Profile { id: string; name: string }
 interface EducationLevel { id: string; name: string }
 interface AgeRange { id: number; name: string; age_min: number; age_max: number; order: number }
-
-interface AiConfig {
-    provider: string
-    model: string
-    base_url: string
+interface Vulnerability { id: string; name: string }
+interface LastDiploma { id: string; name: string }
+interface AiConfig { provider: string; model: string; base_url: string; configured: boolean }
+interface WhatsAppConfig {
+    provider: 'twilio' | 'meta'
+    twilio: { sid: string; from: string; configured: boolean }
+    meta: { token: string; phone_number_id: string; business_account_id: string; configured: boolean }
     configured: boolean
+    active_provider: 'twilio' | 'meta'
 }
 
 const props = defineProps<{
     trainerProfiles: Profile[]
     educationLevels: EducationLevel[]
     ageRanges: AgeRange[]
+    vulnerabilities: Vulnerability[]
+    lastDiplomas: LastDiploma[]
     aiConfig: AiConfig
+    whatsappConfig: WhatsAppConfig
 }>()
 
+// ── Navigation par onglets ──
+const activeTab = ref<'referentiels' | 'ia' | 'whatsapp'>('referentiels')
+
+// ── Toast ──
+const toast = ref<{ message: string; type: 'success' | 'error' } | null>(null)
+let toastTimer: ReturnType<typeof setTimeout>
+const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    clearTimeout(toastTimer)
+    toast.value = { message, type }
+    toastTimer = setTimeout(() => { toast.value = null }, 3500)
+}
+
+// ── Modale de confirmation unifiée ──
+const confirmDialog = ref<{ visible: boolean; title: string; message: string; onConfirm: () => void }>({
+    visible: false, title: '', message: '', onConfirm: () => {}
+})
+const askConfirm = (title: string, message: string, onConfirm: () => void) => {
+    confirmDialog.value = { visible: true, title, message, onConfirm }
+}
+const doConfirm = () => { confirmDialog.value.onConfirm(); confirmDialog.value.visible = false }
+
+// ── Modale d'erreur unifiée ──
+const errorDialog = ref<{ visible: boolean; message: string }>({ visible: false, message: '' })
+const showError = (message: string) => { errorDialog.value = { visible: true, message } }
+
+// ── AI Providers ──
 const AI_PROVIDERS = [
-    { key: 'claude',   name: 'Claude (Anthropic)',  placeholder: 'sk-ant-api03-...', modelPlaceholder: 'claude-opus-4-5',  hasBaseUrl: false },
-    { key: 'openai',   name: 'OpenAI (ChatGPT)',    placeholder: 'sk-...',           modelPlaceholder: 'gpt-4o-mini',      hasBaseUrl: false },
-    { key: 'deepseek', name: 'DeepSeek',            placeholder: 'sk-...',           modelPlaceholder: 'deepseek-chat',    hasBaseUrl: false },
-    { key: 'grok',     name: 'Grok (xAI)',          placeholder: 'xai-...',          modelPlaceholder: 'grok-3-mini',      hasBaseUrl: false },
-    { key: 'gemini',   name: 'Gemini (Google)',     placeholder: 'AIza...',          modelPlaceholder: 'gemini-2.0-flash', hasBaseUrl: false },
-    { key: 'custom',   name: 'Personnalisé (autre)', placeholder: 'Votre clé API',   modelPlaceholder: 'nom-du-modèle',    hasBaseUrl: true  },
+    { key: 'claude',   name: 'Claude',   sub: 'Anthropic',  placeholder: 'sk-ant-api03-...', modelPlaceholder: 'claude-opus-4-5',  hasBaseUrl: false },
+    { key: 'openai',   name: 'OpenAI',   sub: 'ChatGPT',    placeholder: 'sk-...',           modelPlaceholder: 'gpt-4o-mini',      hasBaseUrl: false },
+    { key: 'deepseek', name: 'DeepSeek', sub: 'DeepSeek',   placeholder: 'sk-...',           modelPlaceholder: 'deepseek-chat',    hasBaseUrl: false },
+    { key: 'grok',     name: 'Grok',     sub: 'xAI',        placeholder: 'xai-...',          modelPlaceholder: 'grok-3-mini',      hasBaseUrl: false },
+    { key: 'gemini',   name: 'Gemini',   sub: 'Google',     placeholder: 'AIza...',          modelPlaceholder: 'gemini-2.0-flash', hasBaseUrl: false },
+    { key: 'custom',   name: 'Custom',   sub: 'Compatible OpenAI', placeholder: 'Votre clé API', modelPlaceholder: 'nom-du-modèle', hasBaseUrl: true },
 ]
 
 // ── Assistant IA ──
@@ -40,734 +72,1254 @@ const aiKeyForm = useForm({
     ai_model:    props.aiConfig.model || '',
     ai_base_url: props.aiConfig.base_url || '',
 })
-
 const selectedProvider = computed(() => AI_PROVIDERS.find(p => p.key === aiKeyForm.ai_provider) ?? AI_PROVIDERS[0])
-
 const submitAiKey = () => {
     aiKeyForm.post('/configuration/ai-key', {
-        onSuccess: () => aiKeyForm.ai_api_key = '',
+        onSuccess: () => { aiKeyForm.ai_api_key = ''; showToast('Configuration IA mise à jour') },
     })
 }
 
+// ── WhatsApp / Twilio ──
+const showTwilioToken = ref(false)
+const waForm = useForm({
+    twilio_sid:           '',
+    twilio_token:         '',
+    twilio_whatsapp_from: props.whatsappConfig.twilio?.from || '',
+})
+const submitWaConfig = () => {
+    waForm.post('/configuration/whatsapp', {
+        onSuccess: () => { waForm.twilio_sid = ''; waForm.twilio_token = ''; showToast('Configuration Twilio enregistrée') },
+    })
+}
+
+// ── WhatsApp / Meta Cloud API ──
+const showMetaToken = ref(false)
+const waProvider = ref<'twilio' | 'meta'>(props.whatsappConfig.provider || 'twilio')
+const metaForm = useForm({
+    whatsapp_meta_token:          '',
+    whatsapp_meta_phone_id:       props.whatsappConfig.meta?.phone_number_id || '',
+    whatsapp_meta_business_id:    props.whatsappConfig.meta?.business_account_id || '',
+    whatsapp_provider:            props.whatsappConfig.provider || 'twilio',
+})
+const submitMetaConfig = () => {
+    metaForm.whatsapp_provider = waProvider.value
+    metaForm.post('/configuration/whatsapp-meta', {
+        onSuccess: () => {
+            metaForm.whatsapp_meta_token = ''
+            showToast('Configuration Meta WhatsApp enregistrée')
+        },
+    })
+}
+
+// ── Profils Formateurs ──
 const createForm = useForm({ name: '' })
 const editingId  = ref<string | null>(null)
 const editForm   = useForm({ name: '' })
 
-const startEdit = (p: Profile) => {
-    editingId.value = p.id
-    editForm.name   = p.name
-}
-const cancelEdit = () => {
-    editingId.value = null
-    editForm.reset()
-}
+const startEdit  = (p: Profile) => { editingId.value = p.id; editForm.name = p.name }
+const cancelEdit = () => { editingId.value = null; editForm.reset() }
 const submitCreate = () => {
-    createForm.post('/trainer-profiles', { onSuccess: () => createForm.reset() })
+    createForm.post('/trainer-profiles', {
+        onSuccess: () => { createForm.reset(); showToast('Profil ajouté') }
+    })
 }
 const submitEdit = (id: string) => {
-    editForm.put(`/trainer-profiles/${id}`, { onSuccess: () => cancelEdit() })
+    editForm.put(`/trainer-profiles/${id}`, {
+        onSuccess: () => { cancelEdit(); showToast('Profil modifié') }
+    })
 }
 const destroy = (p: Profile) => {
-    if (confirm(`Supprimer le profil « ${p.name} » ?`)) {
-        router.delete(`/trainer-profiles/${p.id}`)
-    }
+    askConfirm('Supprimer le profil', `Supprimer « ${p.name} » ? Cette action est irréversible.`, () => {
+        router.delete(`/trainer-profiles/${p.id}`, {
+            onSuccess: () => showToast('Profil supprimé'),
+            onError: (e) => { if (e.message) showError(e.message) }
+        })
+    })
 }
 
-// ── Education Levels ──
+// ── Niveaux d'études ──
 const eduCreateForm = useForm({ name: '' })
-const eduEditingId = ref<string | null>(null)
-const eduEditForm = useForm({ name: '' })
-const showEduErrorModal = ref(false)
-const eduErrorMessage = ref('')
+const eduEditingId  = ref<string | null>(null)
+const eduEditForm   = useForm({ name: '' })
 
-const startEduEdit = (e: EducationLevel) => {
-    eduEditingId.value = e.id
-    eduEditForm.name = e.name
-}
-const cancelEduEdit = () => {
-    eduEditingId.value = null
-    eduEditForm.reset()
-}
+const startEduEdit  = (e: EducationLevel) => { eduEditingId.value = e.id; eduEditForm.name = e.name }
+const cancelEduEdit = () => { eduEditingId.value = null; eduEditForm.reset() }
 const submitEduCreate = () => {
-    eduCreateForm.post('/education-levels', { onSuccess: () => eduCreateForm.reset() })
+    eduCreateForm.post('/education-levels', {
+        onSuccess: () => { eduCreateForm.reset(); showToast('Niveau ajouté') }
+    })
 }
 const submitEduEdit = (id: string) => {
-    eduEditForm.put(`/education-levels/${id}`, { onSuccess: () => cancelEduEdit() })
+    eduEditForm.put(`/education-levels/${id}`, {
+        onSuccess: () => { cancelEduEdit(); showToast('Niveau modifié') }
+    })
 }
 const destroyEdu = (e: EducationLevel) => {
-    if (confirm(`Supprimer le niveau d'études « ${e.name} » ?`)) {
+    askConfirm('Supprimer le niveau', `Supprimer « ${e.name} » ?`, () => {
         router.delete(`/education-levels/${e.id}`, {
-            preserveState: true,
-            preserveScroll: true,
-            onError: (errors) => {
-                if (errors.message) {
-                    eduErrorMessage.value = errors.message
-                    showEduErrorModal.value = true
-                }
-            }
+            preserveState: true, preserveScroll: true,
+            onSuccess: () => showToast('Niveau supprimé'),
+            onError: (errors) => { if (errors.message) showError(errors.message) }
         })
-    }
-}
-const closeEduErrorModal = () => {
-    showEduErrorModal.value = false
-    eduErrorMessage.value = ''
+    })
 }
 
 // ── Tranches d'âge ──
 const ageCreateForm = useForm({ age_min: 18, age_max: 25 })
-const ageEditingId = ref<number | null>(null)
-const ageEditForm = useForm({ age_min: 0, age_max: 0 })
-const showAgeErrorModal = ref(false)
-const ageErrorMessage = ref('')
+const ageEditingId  = ref<number | null>(null)
+const ageEditForm   = useForm({ age_min: 0, age_max: 0 })
 
-const startAgeEdit = (a: AgeRange) => {
-    ageEditingId.value = a.id
-    ageEditForm.age_min = a.age_min
-    ageEditForm.age_max = a.age_max
-}
-const cancelAgeEdit = () => {
-    ageEditingId.value = null
-    ageEditForm.reset()
-}
+const startAgeEdit  = (a: AgeRange) => { ageEditingId.value = a.id; ageEditForm.age_min = a.age_min; ageEditForm.age_max = a.age_max }
+const cancelAgeEdit = () => { ageEditingId.value = null; ageEditForm.reset() }
 const submitAgeCreate = () => {
-    ageCreateForm.post('/age-ranges', { onSuccess: () => ageCreateForm.reset() })
+    ageCreateForm.post('/age-ranges', {
+        onSuccess: () => { ageCreateForm.reset(); showToast('Tranche ajoutée') }
+    })
 }
 const submitAgeEdit = (id: number) => {
-    ageEditForm.put(`/age-ranges/${id}`, { onSuccess: () => cancelAgeEdit() })
+    ageEditForm.put(`/age-ranges/${id}`, {
+        onSuccess: () => { cancelAgeEdit(); showToast('Tranche modifiée') }
+    })
 }
 const destroyAge = (a: AgeRange) => {
-    if (confirm(`Supprimer la tranche d'âge « ${a.name} » ?`)) {
+    askConfirm('Supprimer la tranche', `Supprimer « ${a.name} » ?`, () => {
         router.delete(`/age-ranges/${a.id}`, {
-            preserveState: true,
-            preserveScroll: true,
-            onError: (errors) => {
-                if (errors.message) {
-                    ageErrorMessage.value = errors.message
-                    showAgeErrorModal.value = true
-                }
-            }
+            preserveState: true, preserveScroll: true,
+            onSuccess: () => showToast('Tranche supprimée'),
+            onError: (errors) => { if (errors.message) showError(errors.message) }
         })
-    }
+    })
 }
-const closeAgeErrorModal = () => {
-    showAgeErrorModal.value = false
-    ageErrorMessage.value = ''
+
+// ── Vulnérabilités ──
+const vulnCreateForm = useForm({ name: '' })
+const vulnEditingId  = ref<string | null>(null)
+const vulnEditForm   = useForm({ name: '' })
+
+const startVulnEdit  = (v: Vulnerability) => { vulnEditingId.value = v.id; vulnEditForm.name = v.name }
+const cancelVulnEdit = () => { vulnEditingId.value = null; vulnEditForm.reset() }
+const submitVulnCreate = () => {
+    vulnCreateForm.post('/vulnerabilities', {
+        onSuccess: () => { vulnCreateForm.reset(); showToast('Vulnérabilité ajoutée') }
+    })
+}
+const submitVulnEdit = (id: string) => {
+    vulnEditForm.put(`/vulnerabilities/${id}`, {
+        onSuccess: () => { cancelVulnEdit(); showToast('Vulnérabilité modifiée') }
+    })
+}
+const destroyVuln = (v: Vulnerability) => {
+    askConfirm('Supprimer la vulnérabilité', `Supprimer « ${v.name} » ?`, () => {
+        router.delete(`/vulnerabilities/${v.id}`, {
+            preserveState: true, preserveScroll: true,
+            onSuccess: () => showToast('Vulnérabilité supprimée'),
+            onError: (errors) => { if (errors.message) showError(errors.message) }
+        })
+    })
+}
+
+// ── Diplômes ──
+const diplCreateForm = useForm({ name: '' })
+const diplEditingId  = ref<string | null>(null)
+const diplEditForm   = useForm({ name: '' })
+
+const startDiplEdit  = (d: LastDiploma) => { diplEditingId.value = d.id; diplEditForm.name = d.name }
+const cancelDiplEdit = () => { diplEditingId.value = null; diplEditForm.reset() }
+const submitDiplCreate = () => {
+    diplCreateForm.post('/last-diplomas', {
+        onSuccess: () => { diplCreateForm.reset(); showToast('Diplôme ajouté') }
+    })
+}
+const submitDiplEdit = (id: string) => {
+    diplEditForm.put(`/last-diplomas/${id}`, {
+        onSuccess: () => { cancelDiplEdit(); showToast('Diplôme modifié') }
+    })
+}
+const destroyDipl = (d: LastDiploma) => {
+    askConfirm('Supprimer le diplôme', `Supprimer « ${d.name} » ?`, () => {
+        router.delete(`/last-diplomas/${d.id}`, {
+            preserveState: true, preserveScroll: true,
+            onSuccess: () => showToast('Diplôme supprimé'),
+            onError: (errors) => { if (errors.message) showError(errors.message) }
+        })
+    })
 }
 </script>
 
 <template>
-    <div class="max-w-4xl mx-auto space-y-xl">
+    <div class="cfg-page">
 
-        <!-- En-tête -->
-        <div>
-            <h1 class="text-h1 font-bold text-on-surface">Configuration</h1>
-            <p class="text-body-md text-secondary mt-xs">Paramètres globaux de l'application.</p>
-        </div>
-
-        <!-- ── Section : Profils Formateurs ── -->
-        <div class="config-section">
-            <div class="config-section-header">
-                <div class="flex items-center gap-sm">
-                    <span class="section-icon material-symbols-outlined">person_badge</span>
-                    <div>
-                        <h2 class="config-section-title">Profils Formateurs</h2>
-                        <p class="config-section-sub">Types de formateurs disponibles lors de l'invitation.</p>
-                    </div>
+        <!-- ── Toast ── -->
+        <Teleport to="body">
+            <Transition name="toast">
+                <div v-if="toast" class="toast" :class="toast.type === 'error' ? 'toast-error' : 'toast-success'">
+                    <span class="material-symbols-outlined" style="font-size:19px">
+                        {{ toast.type === 'error' ? 'error' : 'check_circle' }}
+                    </span>
+                    {{ toast.message }}
                 </div>
-                <span class="count-pill">{{ trainerProfiles.length }}</span>
+            </Transition>
+        </Teleport>
+
+        <!-- ── Page header ── -->
+        <div class="cfg-header">
+            <div class="cfg-header-icon">
+                <span class="material-symbols-outlined">settings</span>
             </div>
-
-            <div class="config-section-body">
-                <!-- Formulaire ajout -->
-                <form @submit.prevent="submitCreate" class="add-form">
-                    <input
-                        v-model="createForm.name"
-                        type="text"
-                        class="input"
-                        :class="{ 'input-error': createForm.errors.name }"
-                        placeholder="Ex : Formateur principal, Vacataire..."
-                        autofocus
-                    />
-                    <button type="submit" class="btn-add" :disabled="createForm.processing">
-                        <span class="material-symbols-outlined" style="font-size:18px">add</span>
-                        Ajouter
-                    </button>
-                </form>
-                <p v-if="createForm.errors.name" class="error-msg">{{ createForm.errors.name }}</p>
-
-                <!-- Liste -->
-                <div v-if="trainerProfiles.length === 0" class="empty-state">
-                    <span class="material-symbols-outlined" style="font-size:32px;color:#ddd">person_badge</span>
-                    <p class="text-body-sm text-secondary mt-xs">Aucun profil. Ajoutez-en un ci-dessus.</p>
-                </div>
-
-                <ul v-else class="item-list">
-                    <li v-for="p in trainerProfiles" :key="p.id" class="item-row">
-                        <form v-if="editingId === p.id" @submit.prevent="submitEdit(p.id)" class="flex gap-sm flex-1">
-                            <input v-model="editForm.name" type="text" class="input flex-1"
-                                :class="{ 'input-error': editForm.errors.name }" />
-                            <button type="submit" class="btn-icon-ok">
-                                <span class="material-symbols-outlined" style="font-size:18px">check</span>
-                            </button>
-                            <button type="button" class="btn-icon-cancel" @click="cancelEdit">
-                                <span class="material-symbols-outlined" style="font-size:18px">close</span>
-                            </button>
-                        </form>
-                        <template v-else>
-                            <div class="flex items-center gap-sm flex-1">
-                                <span class="material-symbols-outlined" style="font-size:16px;color:#adb5bd">label</span>
-                                <span class="item-name">{{ p.name }}</span>
-                            </div>
-                            <div class="flex gap-xs">
-                                <button class="icon-btn" title="Modifier" @click="startEdit(p)">
-                                    <span class="material-symbols-outlined" style="font-size:17px">edit</span>
-                                </button>
-                                <button class="icon-btn danger" title="Supprimer" @click="destroy(p)">
-                                    <span class="material-symbols-outlined" style="font-size:17px">delete</span>
-                                </button>
-                            </div>
-                        </template>
-                    </li>
-                </ul>
+            <div>
+                <h1 class="cfg-title">Configuration</h1>
+                <p class="cfg-subtitle">Paramètres globaux et données métier de l'application</p>
             </div>
         </div>
 
-        <!-- ── Section : Niveaux d'études ── -->
-        <div class="config-section">
-            <div class="config-section-header">
-                <div class="flex items-center gap-sm">
-                    <span class="section-icon material-symbols-outlined">school</span>
-                    <div>
-                        <h2 class="config-section-title">Niveaux d'études</h2>
-                        <p class="config-section-sub">Niveaux d'études disponibles pour les apprenants.</p>
-                    </div>
-                </div>
-                <span class="count-pill">{{ educationLevels.length }}</span>
-            </div>
-
-            <div class="config-section-body">
-                <!-- Formulaire ajout -->
-                <form @submit.prevent="submitEduCreate" class="add-form">
-                    <input
-                        v-model="eduCreateForm.name"
-                        type="text"
-                        class="input"
-                        :class="{ 'input-error': eduCreateForm.errors.name }"
-                        placeholder="Ex : Bac+2, Bac+3, Master..."
-                    />
-                    <button type="submit" class="btn-add" :disabled="eduCreateForm.processing">
-                        <span class="material-symbols-outlined" style="font-size:18px">add</span>
-                        Ajouter
-                    </button>
-                </form>
-                <p v-if="eduCreateForm.errors.name" class="error-msg">{{ eduCreateForm.errors.name }}</p>
-
-                <!-- Liste -->
-                <div v-if="educationLevels.length === 0" class="empty-state">
-                    <span class="material-symbols-outlined" style="font-size:32px;color:#ddd">school</span>
-                    <p class="text-body-sm text-secondary mt-xs">Aucun niveau d'études. Ajoutez-en un ci-dessus.</p>
-                </div>
-
-                <ul v-else class="item-list">
-                    <li v-for="e in educationLevels" :key="e.id" class="item-row">
-                        <form v-if="eduEditingId === e.id" @submit.prevent="submitEduEdit(e.id)" class="flex gap-sm flex-1">
-                            <input v-model="eduEditForm.name" type="text" class="input flex-1"
-                                :class="{ 'input-error': eduEditForm.errors.name }" />
-                            <button type="submit" class="btn-icon-ok">
-                                <span class="material-symbols-outlined" style="font-size:18px">check</span>
-                            </button>
-                            <button type="button" class="btn-icon-cancel" @click="cancelEduEdit">
-                                <span class="material-symbols-outlined" style="font-size:18px">close</span>
-                            </button>
-                        </form>
-                        <template v-else>
-                            <div class="flex items-center gap-sm flex-1">
-                                <span class="material-symbols-outlined" style="font-size:16px;color:#adb5bd">label</span>
-                                <span class="item-name">{{ e.name }}</span>
-                            </div>
-                            <div class="flex gap-xs">
-                                <button class="icon-btn" title="Modifier" @click="startEduEdit(e)">
-                                    <span class="material-symbols-outlined" style="font-size:17px">edit</span>
-                                </button>
-                                <button class="icon-btn danger" title="Supprimer" @click="destroyEdu(e)">
-                                    <span class="material-symbols-outlined" style="font-size:17px">delete</span>
-                                </button>
-                            </div>
-                        </template>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- ── Section : Tranches d'âge ── -->
-        <div class="config-section">
-            <div class="config-section-header">
-                <div class="flex items-center gap-sm">
-                    <span class="section-icon material-symbols-outlined">elderly</span>
-                    <div>
-                        <h2 class="config-section-title">Tranches d'âge</h2>
-                        <p class="config-section-sub">Catégories d'âge calculées automatiquement à partir de la date de naissance.</p>
-                    </div>
-                </div>
-                <span class="count-pill">{{ ageRanges.length }}</span>
-            </div>
-
-            <div class="config-section-body">
-                <!-- Formulaire ajout -->
-                <form @submit.prevent="submitAgeCreate" class="add-form" style="flex-wrap:wrap; gap:8px;">
-                    <input
-                        v-model.number="ageCreateForm.age_min"
-                        type="number"
-                        min="0" max="150"
-                        class="input"
-                        :class="{ 'input-error': ageCreateForm.errors.age_min }"
-                        placeholder="Âge min"
-                        style="flex:1; min-width:110px;"
-                    />
-                    <input
-                        v-model.number="ageCreateForm.age_max"
-                        type="number"
-                        min="0" max="150"
-                        class="input"
-                        :class="{ 'input-error': ageCreateForm.errors.age_max }"
-                        placeholder="Âge max"
-                        style="flex:1; min-width:110px;"
-                    />
-                    <button type="submit" class="btn-add" :disabled="ageCreateForm.processing">
-                        <span class="material-symbols-outlined" style="font-size:18px">add</span>
-                        Ajouter
-                    </button>
-                </form>
-                <p v-if="ageCreateForm.errors.age_min" class="error-msg">{{ ageCreateForm.errors.age_min }}</p>
-                <p v-if="ageCreateForm.errors.age_max" class="error-msg">{{ ageCreateForm.errors.age_max }}</p>
-
-                <!-- Liste -->
-                <div v-if="ageRanges.length === 0" class="empty-state">
-                    <span class="material-symbols-outlined" style="font-size:32px;color:#ddd">elderly</span>
-                    <p class="text-body-sm text-secondary mt-xs">Aucune tranche d'âge. Ajoutez-en une ci-dessus.</p>
-                </div>
-
-                <ul v-else class="item-list">
-                    <li v-for="a in ageRanges" :key="a.id" class="item-row">
-                        <form v-if="ageEditingId === a.id" @submit.prevent="submitAgeEdit(a.id)" class="flex gap-sm flex-1" style="flex-wrap:wrap;">
-                            <input v-model.number="ageEditForm.age_min" type="number" min="0" max="150" class="input"
-                                style="flex:1; min-width:100px;" placeholder="Âge min"
-                                :class="{ 'input-error': ageEditForm.errors.age_min }" />
-                            <input v-model.number="ageEditForm.age_max" type="number" min="0" max="150" class="input"
-                                style="flex:1; min-width:100px;" placeholder="Âge max"
-                                :class="{ 'input-error': ageEditForm.errors.age_max }" />
-                            <button type="submit" class="btn-icon-ok">
-                                <span class="material-symbols-outlined" style="font-size:18px">check</span>
-                            </button>
-                            <button type="button" class="btn-icon-cancel" @click="cancelAgeEdit">
-                                <span class="material-symbols-outlined" style="font-size:18px">close</span>
-                            </button>
-                        </form>
-                        <template v-else>
-                            <div class="flex items-center gap-sm flex-1">
-                                <span class="material-symbols-outlined" style="font-size:16px;color:#adb5bd">elderly</span>
-                                <span class="item-name">{{ a.age_max >= 150 ? `${a.age_min} ans et +` : `${a.age_min} - ${a.age_max} ans` }}</span>
-                            </div>
-                            <div class="flex gap-xs">
-                                <button class="icon-btn" title="Modifier" @click="startAgeEdit(a)">
-                                    <span class="material-symbols-outlined" style="font-size:17px">edit</span>
-                                </button>
-                                <button class="icon-btn danger" title="Supprimer" @click="destroyAge(a)">
-                                    <span class="material-symbols-outlined" style="font-size:17px">delete</span>
-                                </button>
-                            </div>
-                        </template>
-                    </li>
-                </ul>
-            </div>
-        </div>
-
-        <!-- Modal d'erreur Tranches d'âge -->
-        <div v-if="showAgeErrorModal" class="modal-overlay" @click.self="closeAgeErrorModal">
-            <div class="modal-box">
-                <div class="modal-icon-warning">
-                    <span class="material-symbols-outlined" style="font-size:32px">warning</span>
-                </div>
-                <h3 class="modal-title">Suppression impossible</h3>
-                <p class="modal-message">{{ ageErrorMessage }}</p>
-                <button class="modal-btn" @click="closeAgeErrorModal">OK</button>
-            </div>
-        </div>
-
-        <!-- ── Section : Assistant IA ── -->
-        <div class="config-section">
-            <div class="config-section-header">
-                <div class="flex items-center gap-sm">
-                    <span class="section-icon material-symbols-outlined">smart_toy</span>
-                    <div>
-                        <h2 class="config-section-title">Assistant IA</h2>
-                        <p class="config-section-sub">Connectez n'importe quel provider IA pour activer le chatbot.</p>
-                    </div>
-                </div>
-                <span
-                    class="count-pill"
-                    :style="aiConfig.configured ? 'background:#dcfce7;color:#166534' : 'background:#fef9c3;color:#713f12'"
-                >
-                    {{ aiConfig.configured ? 'Configuré' : 'Non configuré' }}
+        <!-- ── Onglets ── -->
+        <div class="tabs-bar">
+            <button class="tab-btn" :class="{ 'tab-active': activeTab === 'referentiels' }" @click="activeTab = 'referentiels'">
+                <span class="material-symbols-outlined tab-icon">tune</span>
+                Données métier
+            </button>
+            <button class="tab-btn" :class="{ 'tab-active': activeTab === 'ia' }" @click="activeTab = 'ia'">
+                <span class="material-symbols-outlined tab-icon">smart_toy</span>
+                Assistant IA
+                <span class="tab-badge" :class="aiConfig.configured ? 'badge-ok' : 'badge-warn'">
+                    {{ aiConfig.configured ? 'Actif' : 'Inactif' }}
                 </span>
+            </button>
+            <button class="tab-btn" :class="{ 'tab-active': activeTab === 'whatsapp' }" @click="activeTab = 'whatsapp'">
+                <span class="material-symbols-outlined tab-icon">chat</span>
+                WhatsApp
+                <span class="tab-badge" :class="whatsappConfig.configured ? 'badge-ok' : 'badge-warn'">
+                    {{ whatsappConfig.configured ? 'Actif' : 'Inactif' }}
+                </span>
+            </button>
+        </div>
+
+        <!-- ══════════ ONGLET DONNÉES MÉTIER ══════════ -->
+        <div v-if="activeTab === 'referentiels'" class="cfg-grid">
+
+            <!-- Profils Formateurs -->
+            <div class="cfg-card">
+                <div class="cfg-card-head">
+                    <div class="cfg-card-icon" style="background:#fff0f4;color:#E5004C">
+                        <span class="material-symbols-outlined">person_badge</span>
+                    </div>
+                    <div class="cfg-card-info">
+                        <h2 class="cfg-card-title">Profils Formateurs</h2>
+                        <p class="cfg-card-sub">Types disponibles lors de l'invitation d'un formateur.</p>
+                    </div>
+                    <span class="count-pill">{{ trainerProfiles.length }}</span>
+                </div>
+                <div class="cfg-card-body">
+                    <form @submit.prevent="submitCreate" class="add-row">
+                        <input v-model="createForm.name" type="text" class="add-input" :class="{ 'input-error': createForm.errors.name }" placeholder="Ex : Formateur principal, Vacataire..." />
+                        <button type="submit" class="add-btn" :disabled="createForm.processing || !createForm.name.trim()">
+                            <span class="material-symbols-outlined" style="font-size:17px">add</span> Ajouter
+                        </button>
+                    </form>
+                    <p v-if="createForm.errors.name" class="err">{{ createForm.errors.name }}</p>
+                    <div v-if="trainerProfiles.length === 0" class="empty-inline">
+                        <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
+                        <span>Aucun profil — ajoutez-en un ci-dessus.</span>
+                    </div>
+                    <ul v-else class="ref-list">
+                        <li v-for="p in trainerProfiles" :key="p.id" class="ref-item">
+                            <form v-if="editingId === p.id" @submit.prevent="submitEdit(p.id)" class="edit-row">
+                                <input v-model="editForm.name" type="text" class="add-input" :class="{ 'input-error': editForm.errors.name }" autofocus />
+                                <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
+                                <button type="button" class="btn-cancel" @click="cancelEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
+                            </form>
+                            <template v-else>
+                                <span class="ref-dot"></span>
+                                <span class="ref-name">{{ p.name }}</span>
+                                <div class="ref-actions">
+                                    <button class="ref-btn" title="Modifier" @click="startEdit(p)"><span class="material-symbols-outlined" style="font-size:16px">edit</span></button>
+                                    <button class="ref-btn danger" title="Supprimer" @click="destroy(p)"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+                                </div>
+                            </template>
+                        </li>
+                    </ul>
+                </div>
             </div>
 
-            <div class="config-section-body">
+            <!-- Niveaux d'études -->
+            <div class="cfg-card">
+                <div class="cfg-card-head">
+                    <div class="cfg-card-icon" style="background:#dbeafe;color:#1d4ed8">
+                        <span class="material-symbols-outlined">school</span>
+                    </div>
+                    <div class="cfg-card-info">
+                        <h2 class="cfg-card-title">Niveaux d'études</h2>
+                        <p class="cfg-card-sub">Niveaux d'études disponibles pour les apprenants.</p>
+                    </div>
+                    <span class="count-pill">{{ educationLevels.length }}</span>
+                </div>
+                <div class="cfg-card-body">
+                    <form @submit.prevent="submitEduCreate" class="add-row">
+                        <input v-model="eduCreateForm.name" type="text" class="add-input" :class="{ 'input-error': eduCreateForm.errors.name }" placeholder="Ex : Bac+2, Bac+3, Master..." />
+                        <button type="submit" class="add-btn" :disabled="eduCreateForm.processing || !eduCreateForm.name.trim()">
+                            <span class="material-symbols-outlined" style="font-size:17px">add</span> Ajouter
+                        </button>
+                    </form>
+                    <p v-if="eduCreateForm.errors.name" class="err">{{ eduCreateForm.errors.name }}</p>
+                    <div v-if="educationLevels.length === 0" class="empty-inline">
+                        <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
+                        <span>Aucun niveau — ajoutez-en un ci-dessus.</span>
+                    </div>
+                    <ul v-else class="ref-list">
+                        <li v-for="e in educationLevels" :key="e.id" class="ref-item">
+                            <form v-if="eduEditingId === e.id" @submit.prevent="submitEduEdit(e.id)" class="edit-row">
+                                <input v-model="eduEditForm.name" type="text" class="add-input" :class="{ 'input-error': eduEditForm.errors.name }" autofocus />
+                                <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
+                                <button type="button" class="btn-cancel" @click="cancelEduEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
+                            </form>
+                            <template v-else>
+                                <span class="ref-dot"></span>
+                                <span class="ref-name">{{ e.name }}</span>
+                                <div class="ref-actions">
+                                    <button class="ref-btn" title="Modifier" @click="startEduEdit(e)"><span class="material-symbols-outlined" style="font-size:16px">edit</span></button>
+                                    <button class="ref-btn danger" title="Supprimer" @click="destroyEdu(e)"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+                                </div>
+                            </template>
+                        </li>
+                    </ul>
+                </div>
+            </div>
 
-                <!-- Statut -->
-                <div class="flex items-center gap-sm mb-md p-sm rounded-lg" :class="aiConfig.configured ? 'bg-green-50' : 'bg-amber-50'">
-                    <span class="w-2 h-2 rounded-full shrink-0" :class="aiConfig.configured ? 'bg-green-500' : 'bg-amber-400'"></span>
-                    <p class="text-body-sm" :class="aiConfig.configured ? 'text-green-800' : 'text-amber-800'">
+            <!-- Tranches d'âge -->
+            <div class="cfg-card">
+                <div class="cfg-card-head">
+                    <div class="cfg-card-icon" style="background:#fef3c7;color:#b45309">
+                        <span class="material-symbols-outlined">people</span>
+                    </div>
+                    <div class="cfg-card-info">
+                        <h2 class="cfg-card-title">Tranches d'âge</h2>
+                        <p class="cfg-card-sub">Catégories calculées depuis la date de naissance.</p>
+                    </div>
+                    <span class="count-pill">{{ ageRanges.length }}</span>
+                </div>
+                <div class="cfg-card-body">
+                    <form @submit.prevent="submitAgeCreate" class="add-row add-row-age">
+                        <div class="age-inputs">
+                            <div class="age-field">
+                                <label class="age-lbl">Min</label>
+                                <input v-model.number="ageCreateForm.age_min" type="number" min="0" max="150" class="add-input age-num" :class="{ 'input-error': ageCreateForm.errors.age_min }" placeholder="18" />
+                            </div>
+                            <span class="age-sep">–</span>
+                            <div class="age-field">
+                                <label class="age-lbl">Max</label>
+                                <input v-model.number="ageCreateForm.age_max" type="number" min="0" max="150" class="add-input age-num" :class="{ 'input-error': ageCreateForm.errors.age_max }" placeholder="25" />
+                            </div>
+                            <span class="age-unit">ans</span>
+                        </div>
+                        <button type="submit" class="add-btn" :disabled="ageCreateForm.processing">
+                            <span class="material-symbols-outlined" style="font-size:17px">add</span> Ajouter
+                        </button>
+                    </form>
+                    <p v-if="ageCreateForm.errors.age_min" class="err">{{ ageCreateForm.errors.age_min }}</p>
+                    <p v-if="ageCreateForm.errors.age_max" class="err">{{ ageCreateForm.errors.age_max }}</p>
+                    <div v-if="ageRanges.length === 0" class="empty-inline">
+                        <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
+                        <span>Aucune tranche — ajoutez-en une ci-dessus.</span>
+                    </div>
+                    <ul v-else class="ref-list">
+                        <li v-for="a in ageRanges" :key="a.id" class="ref-item">
+                            <form v-if="ageEditingId === a.id" @submit.prevent="submitAgeEdit(a.id)" class="edit-row edit-row-age">
+                                <input v-model.number="ageEditForm.age_min" type="number" min="0" max="150" class="add-input age-num" placeholder="Min" :class="{ 'input-error': ageEditForm.errors.age_min }" autofocus />
+                                <span class="age-sep">–</span>
+                                <input v-model.number="ageEditForm.age_max" type="number" min="0" max="150" class="add-input age-num" placeholder="Max" :class="{ 'input-error': ageEditForm.errors.age_max }" />
+                                <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
+                                <button type="button" class="btn-cancel" @click="cancelAgeEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
+                            </form>
+                            <template v-else>
+                                <span class="age-chip">{{ a.age_max >= 150 ? `${a.age_min}+` : `${a.age_min}–${a.age_max}` }}</span>
+                                <span class="ref-name">{{ a.age_max >= 150 ? `${a.age_min} ans et plus` : `${a.age_min} à ${a.age_max} ans` }}</span>
+                                <div class="ref-actions">
+                                    <button class="ref-btn" title="Modifier" @click="startAgeEdit(a)"><span class="material-symbols-outlined" style="font-size:16px">edit</span></button>
+                                    <button class="ref-btn danger" title="Supprimer" @click="destroyAge(a)"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+                                </div>
+                            </template>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Vulnérabilités -->
+            <div class="cfg-card">
+                <div class="cfg-card-head">
+                    <div class="cfg-card-icon" style="background:#ffdad6;color:#ba1a1a">
+                        <span class="material-symbols-outlined">health_and_safety</span>
+                    </div>
+                    <div class="cfg-card-info">
+                        <h2 class="cfg-card-title">Vulnérabilités</h2>
+                        <p class="cfg-card-sub">Types de vulnérabilités pour les apprenants (PDI, etc.).</p>
+                    </div>
+                    <span class="count-pill">{{ vulnerabilities.length }}</span>
+                </div>
+                <div class="cfg-card-body">
+                    <form @submit.prevent="submitVulnCreate" class="add-row">
+                        <input v-model="vulnCreateForm.name" type="text" class="add-input" :class="{ 'input-error': vulnCreateForm.errors.name }" placeholder="Ex : PDI, Réfugié, Handicap..." />
+                        <button type="submit" class="add-btn" :disabled="vulnCreateForm.processing || !vulnCreateForm.name.trim()">
+                            <span class="material-symbols-outlined" style="font-size:17px">add</span> Ajouter
+                        </button>
+                    </form>
+                    <p v-if="vulnCreateForm.errors.name" class="err">{{ vulnCreateForm.errors.name }}</p>
+                    <div v-if="vulnerabilities.length === 0" class="empty-inline">
+                        <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
+                        <span>Aucune vulnérabilité — ajoutez-en une ci-dessus.</span>
+                    </div>
+                    <ul v-else class="ref-list">
+                        <li v-for="v in vulnerabilities" :key="v.id" class="ref-item">
+                            <form v-if="vulnEditingId === v.id" @submit.prevent="submitVulnEdit(v.id)" class="edit-row">
+                                <input v-model="vulnEditForm.name" type="text" class="add-input" :class="{ 'input-error': vulnEditForm.errors.name }" autofocus />
+                                <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
+                                <button type="button" class="btn-cancel" @click="cancelVulnEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
+                            </form>
+                            <template v-else>
+                                <span class="ref-dot"></span>
+                                <span class="ref-name">{{ v.name }}</span>
+                                <div class="ref-actions">
+                                    <button class="ref-btn" title="Modifier" @click="startVulnEdit(v)"><span class="material-symbols-outlined" style="font-size:16px">edit</span></button>
+                                    <button class="ref-btn danger" title="Supprimer" @click="destroyVuln(v)"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+                                </div>
+                            </template>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Derniers diplômes -->
+            <div class="cfg-card">
+                <div class="cfg-card-head">
+                    <div class="cfg-card-icon" style="background:#d1fae5;color:#065f46">
+                        <span class="material-symbols-outlined">workspace_premium</span>
+                    </div>
+                    <div class="cfg-card-info">
+                        <h2 class="cfg-card-title">Derniers diplômes</h2>
+                        <p class="cfg-card-sub">Diplômes obtenus par les apprenants avant la formation.</p>
+                    </div>
+                    <span class="count-pill">{{ lastDiplomas.length }}</span>
+                </div>
+                <div class="cfg-card-body">
+                    <form @submit.prevent="submitDiplCreate" class="add-row">
+                        <input v-model="diplCreateForm.name" type="text" class="add-input" :class="{ 'input-error': diplCreateForm.errors.name }" placeholder="Ex : Bac, BTS, Licence, Master..." />
+                        <button type="submit" class="add-btn" :disabled="diplCreateForm.processing || !diplCreateForm.name.trim()">
+                            <span class="material-symbols-outlined" style="font-size:17px">add</span> Ajouter
+                        </button>
+                    </form>
+                    <p v-if="diplCreateForm.errors.name" class="err">{{ diplCreateForm.errors.name }}</p>
+                    <div v-if="lastDiplomas.length === 0" class="empty-inline">
+                        <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
+                        <span>Aucun diplôme — ajoutez-en un ci-dessus.</span>
+                    </div>
+                    <ul v-else class="ref-list">
+                        <li v-for="d in lastDiplomas" :key="d.id" class="ref-item">
+                            <form v-if="diplEditingId === d.id" @submit.prevent="submitDiplEdit(d.id)" class="edit-row">
+                                <input v-model="diplEditForm.name" type="text" class="add-input" :class="{ 'input-error': diplEditForm.errors.name }" autofocus />
+                                <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
+                                <button type="button" class="btn-cancel" @click="cancelDiplEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
+                            </form>
+                            <template v-else>
+                                <span class="ref-dot"></span>
+                                <span class="ref-name">{{ d.name }}</span>
+                                <div class="ref-actions">
+                                    <button class="ref-btn" title="Modifier" @click="startDiplEdit(d)"><span class="material-symbols-outlined" style="font-size:16px">edit</span></button>
+                                    <button class="ref-btn danger" title="Supprimer" @click="destroyDipl(d)"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+                                </div>
+                            </template>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ══════════ ONGLET IA ══════════ -->
+        <div v-if="activeTab === 'ia'" class="ia-layout">
+
+            <!-- Statut global -->
+            <div class="ia-status-banner" :class="aiConfig.configured ? 'ia-ok' : 'ia-warn'">
+                <div class="ia-status-dot" :class="aiConfig.configured ? 'dot-ok' : 'dot-warn'"></div>
+                <div>
+                    <p class="ia-status-title">
+                        {{ aiConfig.configured ? 'Assistant IA opérationnel' : 'Assistant IA non configuré' }}
+                    </p>
+                    <p class="ia-status-sub">
                         {{ aiConfig.configured
-                            ? `Clé API enregistrée — Provider actif : ${selectedProvider.name}`
-                            : 'Aucune clé API. Sélectionnez un provider et saisissez votre clé.'
-                        }}
+                            ? `Provider actif : ${selectedProvider.name} (${selectedProvider.sub})`
+                            : 'Sélectionnez un provider et saisissez votre clé API pour activer le chatbot.' }}
                     </p>
                 </div>
+            </div>
 
-                <form @submit.prevent="submitAiKey" class="flex flex-col gap-sm">
-
-                    <!-- Sélecteur provider -->
-                    <div class="grid grid-cols-3 gap-xs">
+            <div class="ia-cols">
+                <!-- Sélecteur provider -->
+                <div class="ia-col-left">
+                    <h3 class="ia-section-title">Choisir un provider</h3>
+                    <p class="ia-col-hint">Un seul provider actif à la fois. Enregistrer une nouvelle clé remplace la précédente.</p>
+                    <div class="provider-grid">
                         <button
                             v-for="p in AI_PROVIDERS"
                             :key="p.key"
                             type="button"
+                            class="provider-card"
+                            :class="[
+                                aiKeyForm.ai_provider === p.key ? 'provider-card-selected' : 'provider-card-inactive',
+                                aiConfig.configured && aiConfig.provider === p.key ? 'provider-card-live' : ''
+                            ]"
                             @click="aiKeyForm.ai_provider = p.key"
-                            class="provider-btn"
-                            :class="aiKeyForm.ai_provider === p.key ? 'provider-btn-active' : 'provider-btn-inactive'"
                         >
-                            {{ p.name }}
+                            <div class="provider-card-top">
+                                <span class="provider-name">{{ p.name }}</span>
+                                <span v-if="aiConfig.configured && aiConfig.provider === p.key" class="provider-live-badge">
+                                    <span class="provider-live-dot"></span> Actif
+                                </span>
+                            </div>
+                            <span class="provider-sub">{{ p.sub }}</span>
+                            <span v-if="aiKeyForm.ai_provider === p.key && !(aiConfig.configured && aiConfig.provider === p.key)" class="provider-check material-symbols-outlined">check_circle</span>
                         </button>
                     </div>
-                    <p v-if="aiKeyForm.errors.ai_provider" class="error-msg">{{ aiKeyForm.errors.ai_provider }}</p>
+                </div>
 
-                    <!-- Clé API -->
-                    <div>
-                        <label class="label">Clé API</label>
-                        <div class="relative">
-                            <input
-                                v-model="aiKeyForm.ai_api_key"
-                                :type="showApiKey ? 'text' : 'password'"
-                                class="input w-full pr-10"
-                                :class="{ 'input-error': aiKeyForm.errors.ai_api_key }"
-                                :placeholder="selectedProvider.placeholder"
-                            />
-                            <button
-                                type="button"
-                                class="absolute right-sm top-1/2 -translate-y-1/2 text-secondary hover:text-on-surface"
-                                @click="showApiKey = !showApiKey"
-                            >
-                                <span class="material-symbols-outlined" style="font-size:18px">
-                                    {{ showApiKey ? 'visibility_off' : 'visibility' }}
-                                </span>
+                <!-- Formulaire clé -->
+                <div class="ia-col-right">
+                    <h3 class="ia-section-title">Paramètres de connexion</h3>
+                    <form @submit.prevent="submitAiKey" class="ia-form">
+
+                        <div class="ia-field">
+                            <label class="ia-label">Clé API <span class="req">*</span></label>
+                            <div class="key-wrap">
+                                <input
+                                    v-model="aiKeyForm.ai_api_key"
+                                    :type="showApiKey ? 'text' : 'password'"
+                                    class="ia-input"
+                                    :class="{ 'input-error': aiKeyForm.errors.ai_api_key }"
+                                    :placeholder="selectedProvider.placeholder"
+                                />
+                                <button type="button" class="eye-btn" @click="showApiKey = !showApiKey" :title="showApiKey ? 'Masquer' : 'Afficher'">
+                                    <span class="material-symbols-outlined" style="font-size:18px">{{ showApiKey ? 'visibility_off' : 'visibility' }}</span>
+                                </button>
+                            </div>
+                            <p v-if="aiKeyForm.errors.ai_api_key" class="err">{{ aiKeyForm.errors.ai_api_key }}</p>
+                            <p class="ia-hint"><span class="material-symbols-outlined" style="font-size:12px">lock</span> Chiffrée en base, jamais exposée côté client.</p>
+                        </div>
+
+                        <div class="ia-field">
+                            <label class="ia-label">Modèle <span class="ia-optional">optionnel</span></label>
+                            <input v-model="aiKeyForm.ai_model" type="text" class="ia-input" :placeholder="selectedProvider.modelPlaceholder" />
+                            <p class="ia-hint">Laissez vide pour utiliser le modèle par défaut du provider.</p>
+                        </div>
+
+                        <div v-if="selectedProvider.hasBaseUrl" class="ia-field">
+                            <label class="ia-label">URL de base de l'API</label>
+                            <input v-model="aiKeyForm.ai_base_url" type="url" class="ia-input" :class="{ 'input-error': aiKeyForm.errors.ai_base_url }" placeholder="https://api.mon-provider.com/v1/chat/completions" />
+                            <p v-if="aiKeyForm.errors.ai_base_url" class="err">{{ aiKeyForm.errors.ai_base_url }}</p>
+                            <p class="ia-hint">Compatible OpenAI (DeepSeek local, Ollama, LM Studio…)</p>
+                        </div>
+
+                        <div class="ia-footer">
+                            <button type="submit" class="ia-save-btn" :disabled="aiKeyForm.processing || !aiKeyForm.ai_api_key">
+                                <span v-if="aiKeyForm.processing" class="spin-sm"></span>
+                                <span v-else class="material-symbols-outlined" style="font-size:17px">save</span>
+                                {{ aiKeyForm.processing ? 'Enregistrement...' : (aiConfig.configured ? 'Mettre à jour' : 'Enregistrer la configuration') }}
                             </button>
                         </div>
-                        <p v-if="aiKeyForm.errors.ai_api_key" class="error-msg">{{ aiKeyForm.errors.ai_api_key }}</p>
-                    </div>
-
-                    <!-- Modèle (optionnel) -->
-                    <div>
-                        <label class="label">Modèle <span class="text-secondary font-normal">(optionnel — laissez vide pour le défaut)</span></label>
-                        <input
-                            v-model="aiKeyForm.ai_model"
-                            type="text"
-                            class="input w-full"
-                            :placeholder="selectedProvider.modelPlaceholder"
-                        />
-                    </div>
-
-                    <!-- URL de base (custom uniquement) -->
-                    <div v-if="selectedProvider.hasBaseUrl">
-                        <label class="label">URL de base de l'API</label>
-                        <input
-                            v-model="aiKeyForm.ai_base_url"
-                            type="url"
-                            class="input w-full"
-                            :class="{ 'input-error': aiKeyForm.errors.ai_base_url }"
-                            placeholder="https://api.mon-provider.com/v1/chat/completions"
-                        />
-                        <p v-if="aiKeyForm.errors.ai_base_url" class="error-msg">{{ aiKeyForm.errors.ai_base_url }}</p>
-                        <p class="text-[11px] text-secondary mt-xs">Compatible avec tout provider au format OpenAI (DeepSeek local, Ollama, etc.)</p>
-                    </div>
-
-                    <div class="flex items-center justify-between pt-xs">
-                        <p class="text-[11px] text-secondary">
-                            La clé est chiffrée en base et jamais exposée.
-                        </p>
-                        <button type="submit" class="btn-add" :disabled="aiKeyForm.processing || !aiKeyForm.ai_api_key">
-                            <span class="material-symbols-outlined" style="font-size:18px">save</span>
-                            {{ aiConfig.configured ? 'Mettre à jour' : 'Enregistrer' }}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Modal d'erreur pour suppression impossible -->
-        <div v-if="showEduErrorModal" class="modal-overlay" @click="closeEduErrorModal">
-            <div class="modal-content" @click.stop>
-                <div class="modal-header">
-                    <span class="material-symbols-outlined modal-icon">error</span>
-                    <h3 class="modal-title">Suppression impossible</h3>
-                </div>
-                <div class="modal-body">
-                    <p class="modal-text">{{ eduErrorMessage }}</p>
-                </div>
-                <div class="modal-footer">
-                    <button @click="closeEduErrorModal" class="btn-close">Fermer</button>
+                    </form>
                 </div>
             </div>
         </div>
+
+        <!-- ══════════ ONGLET WHATSAPP ══════════ -->
+        <div v-if="activeTab === 'whatsapp'" class="ia-layout">
+
+            <!-- Statut -->
+            <div class="ia-status-banner" :class="whatsappConfig.configured ? 'ia-ok' : 'ia-warn'">
+                <div class="ia-status-dot" :class="whatsappConfig.configured ? 'dot-ok' : 'dot-warn'"></div>
+                <div>
+                    <p class="ia-status-title">
+                        <span v-if="whatsappConfig.configured">
+                            WhatsApp opérationnel via {{ whatsappConfig.active_provider === 'meta' ? 'Meta Cloud API' : 'Twilio' }}
+                        </span>
+                        <span v-else>WhatsApp non configuré</span>
+                    </p>
+                    <p class="ia-status-sub">
+                        <span v-if="whatsappConfig.configured && whatsappConfig.active_provider === 'twilio'">
+                            Numéro expéditeur : {{ whatsappConfig.twilio?.from }}
+                        </span>
+                        <span v-else-if="whatsappConfig.configured && whatsappConfig.active_provider === 'meta'">
+                            Phone ID : {{ whatsappConfig.meta?.phone_number_id }}
+                        </span>
+                        <span v-else>
+                            Choisissez un provider (Twilio ou Meta Cloud API) et configurez vos credentials.
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Sélection du Provider -->
+            <div class="provider-selector">
+                <label class="ia-label" style="margin-bottom: 10px; display: block;">Provider WhatsApp</label>
+                <div class="provider-grid-2">
+                    <label class="provider-card-big" :class="{ 'provider-card-selected': waProvider === 'twilio', 'provider-card-inactive': waProvider !== 'twilio' }">
+                        <input type="radio" v-model="waProvider" value="twilio" class="sr-only">
+                        <div class="provider-card-top">
+                            <div>
+                                <div class="provider-name">Twilio</div>
+                                <div class="provider-sub">API simple, sandbox gratuit</div>
+                            </div>
+                            <span v-if="waProvider === 'twilio'" class="provider-check material-symbols-outlined">check_circle</span>
+                        </div>
+                        <div v-if="whatsappConfig.twilio?.configured" class="provider-live-badge">
+                            <span class="provider-live-dot"></span>
+                            Configuré
+                        </div>
+                    </label>
+
+                    <label class="provider-card-big" :class="{ 'provider-card-selected': waProvider === 'meta', 'provider-card-inactive': waProvider !== 'meta' }">
+                        <input type="radio" v-model="waProvider" value="meta" class="sr-only">
+                        <div class="provider-card-top">
+                            <div>
+                                <div class="provider-name">Meta Cloud API</div>
+                                <div class="provider-sub">API directe, moins cher</div>
+                            </div>
+                            <span v-if="waProvider === 'meta'" class="provider-check material-symbols-outlined">check_circle</span>
+                        </div>
+                        <div v-if="whatsappConfig.meta?.configured" class="provider-live-badge">
+                            <span class="provider-live-dot"></span>
+                            Configuré
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="ia-cols">
+                <!-- Info / aide -->
+                <div class="ia-col-left">
+                    <h3 class="ia-section-title">Comment ça marche ?</h3>
+
+                    <!-- Aide Twilio -->
+                    <div v-if="waProvider === 'twilio'">
+                        <p class="ia-col-hint">L'envoi automatique via <strong>Twilio</strong> nécessite :</p>
+                        <div class="wa-steps">
+                            <div class="wa-step">
+                                <div class="wa-step-num">1</div>
+                                <div>Créez un compte sur <a href="https://www.twilio.com" target="_blank" class="wa-link">twilio.com</a></div>
+                            </div>
+                            <div class="wa-step">
+                                <div class="wa-step-num">2</div>
+                                <div>Activez le <strong>Sandbox WhatsApp</strong> ou un numéro approuvé</div>
+                            </div>
+                            <div class="wa-step">
+                                <div class="wa-step-num">3</div>
+                                <div>Copiez votre <strong>Account SID</strong> et <strong>Auth Token</strong></div>
+                            </div>
+                            <div class="wa-step">
+                                <div class="wa-step-num">4</div>
+                                <div>Le numéro expéditeur : <code>whatsapp:+14155238886</code></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aide Meta -->
+                    <div v-else>
+                        <p class="ia-col-hint">L'API <strong>Meta Cloud</strong> nécessite :</p>
+                        <div class="wa-steps">
+                            <div class="wa-step">
+                                <div class="wa-step-num">1</div>
+                                <div>Créez un compte sur <a href="https://developers.facebook.com" target="_blank" class="wa-link">developers.facebook.com</a></div>
+                            </div>
+                            <div class="wa-step">
+                                <div class="wa-step-num">2</div>
+                                <div>Créez une app WhatsApp Business</div>
+                            </div>
+                            <div class="wa-step">
+                                <div class="wa-step-num">3</div>
+                                <div>Ajoutez un numéro de téléphone dans <strong>API Setup</strong></div>
+                            </div>
+                            <div class="wa-step">
+                                <div class="wa-step-num">4</div>
+                                <div>Copiez le <strong>Token d'accès</strong> et le <strong>Phone Number ID</strong></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="wa-info-box">
+                        <span class="material-symbols-outlined" style="font-size:15px;color:#1d4ed8">info</span>
+                        <p>Sans configuration, vous pouvez utiliser les <strong>liens wa.me</strong> (mode manuel gratuit).</p>
+                    </div>
+                </div>
+
+                <!-- Formulaire Twilio -->
+                <div v-if="waProvider === 'twilio'" class="ia-col-right">
+                    <h3 class="ia-section-title">Credentials Twilio</h3>
+                    <form @submit.prevent="submitWaConfig" class="ia-form">
+
+                        <div class="ia-field">
+                            <label class="ia-label">Account SID <span class="req">*</span></label>
+                            <input
+                                v-model="waForm.twilio_sid"
+                                type="text"
+                                class="ia-input"
+                                :class="{ 'input-error': waForm.errors.twilio_sid }"
+                                placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                autocomplete="off"
+                            />
+                            <p v-if="waForm.errors.twilio_sid" class="err">{{ waForm.errors.twilio_sid }}</p>
+                            <p class="ia-hint"><span class="material-symbols-outlined" style="font-size:12px">lock</span> Chiffré en base de données.</p>
+                        </div>
+
+                        <div class="ia-field">
+                            <label class="ia-label">Auth Token <span class="req">*</span></label>
+                            <div class="key-wrap">
+                                <input
+                                    v-model="waForm.twilio_token"
+                                    :type="showTwilioToken ? 'text' : 'password'"
+                                    class="ia-input"
+                                    :class="{ 'input-error': waForm.errors.twilio_token }"
+                                    placeholder="Votre Auth Token Twilio"
+                                    autocomplete="new-password"
+                                />
+                                <button type="button" class="eye-btn" @click="showTwilioToken = !showTwilioToken">
+                                    <span class="material-symbols-outlined" style="font-size:18px">{{ showTwilioToken ? 'visibility_off' : 'visibility' }}</span>
+                                </button>
+                            </div>
+                            <p v-if="waForm.errors.twilio_token" class="err">{{ waForm.errors.twilio_token }}</p>
+                            <p class="ia-hint"><span class="material-symbols-outlined" style="font-size:12px">lock</span> Chiffré en base de données.</p>
+                        </div>
+
+                        <div class="ia-field">
+                            <label class="ia-label">Numéro expéditeur WhatsApp <span class="req">*</span></label>
+                            <input
+                                v-model="waForm.twilio_whatsapp_from"
+                                type="text"
+                                class="ia-input"
+                                :class="{ 'input-error': waForm.errors.twilio_whatsapp_from }"
+                                placeholder="whatsapp:+14155238886"
+                            />
+                            <p v-if="waForm.errors.twilio_whatsapp_from" class="err">{{ waForm.errors.twilio_whatsapp_from }}</p>
+                            <p class="ia-hint">Format : <code>whatsapp:+[code pays][numéro]</code></p>
+                        </div>
+
+                        <div class="ia-footer">
+                            <button type="submit" class="ia-save-btn" :disabled="waForm.processing || !waForm.twilio_sid || !waForm.twilio_token || !waForm.twilio_whatsapp_from">
+                                <span v-if="waForm.processing" class="spin-sm"></span>
+                                <span v-else class="material-symbols-outlined" style="font-size:17px">save</span>
+                                {{ waForm.processing ? 'Enregistrement...' : (whatsappConfig.twilio?.configured ? 'Mettre à jour' : 'Enregistrer') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Formulaire Meta -->
+                <div v-else class="ia-col-right">
+                    <h3 class="ia-section-title">Credentials Meta Cloud API</h3>
+                    <form @submit.prevent="submitMetaConfig" class="ia-form">
+
+                        <div class="ia-field">
+                            <label class="ia-label">Token d'accès (Access Token) <span class="req">*</span></label>
+                            <div class="key-wrap">
+                                <input
+                                    v-model="metaForm.whatsapp_meta_token"
+                                    :type="showMetaToken ? 'text' : 'password'"
+                                    class="ia-input"
+                                    :class="{ 'input-error': metaForm.errors.whatsapp_meta_token }"
+                                    placeholder="EAAXXXXXXXXXXXX..."
+                                    autocomplete="off"
+                                />
+                                <button type="button" class="eye-btn" @click="showMetaToken = !showMetaToken">
+                                    <span class="material-symbols-outlined" style="font-size:18px">{{ showMetaToken ? 'visibility_off' : 'visibility' }}</span>
+                                </button>
+                            </div>
+                            <p v-if="metaForm.errors.whatsapp_meta_token" class="err">{{ metaForm.errors.whatsapp_meta_token }}</p>
+                            <p class="ia-hint"><span class="material-symbols-outlined" style="font-size:12px">lock</span> Chiffré en base de données.</p>
+                        </div>
+
+                        <div class="ia-field">
+                            <label class="ia-label">Phone Number ID <span class="req">*</span></label>
+                            <input
+                                v-model="metaForm.whatsapp_meta_phone_id"
+                                type="text"
+                                class="ia-input"
+                                :class="{ 'input-error': metaForm.errors.whatsapp_meta_phone_id }"
+                                placeholder="123456789012345"
+                            />
+                            <p v-if="metaForm.errors.whatsapp_meta_phone_id" class="err">{{ metaForm.errors.whatsapp_meta_phone_id }}</p>
+                            <p class="ia-hint">Trouvé dans la console Meta → API Setup</p>
+                        </div>
+
+                        <div class="ia-field">
+                            <label class="ia-label">Business Account ID <span class="ia-optional">(optionnel)</span></label>
+                            <input
+                                v-model="metaForm.whatsapp_meta_business_id"
+                                type="text"
+                                class="ia-input"
+                                :class="{ 'input-error': metaForm.errors.whatsapp_meta_business_id }"
+                                placeholder="123456789012345"
+                            />
+                            <p v-if="metaForm.errors.whatsapp_meta_business_id" class="err">{{ metaForm.errors.whatsapp_meta_business_id }}</p>
+                            <p class="ia-hint">Requis uniquement pour les templates</p>
+                        </div>
+
+                        <div class="ia-footer">
+                            <button type="submit" class="ia-save-btn" :disabled="metaForm.processing || !metaForm.whatsapp_meta_token || !metaForm.whatsapp_meta_phone_id">
+                                <span v-if="metaForm.processing" class="spin-sm"></span>
+                                <span v-else class="material-symbols-outlined" style="font-size:17px">save</span>
+                                {{ metaForm.processing ? 'Enregistrement...' : (whatsappConfig.meta?.configured ? 'Mettre à jour' : 'Enregistrer') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── Modale de confirmation ── -->
+        <Teleport to="body">
+            <Transition name="modal">
+                <div v-if="confirmDialog.visible" class="modal-overlay" @click.self="confirmDialog.visible = false">
+                    <div class="modal-box">
+                        <div class="modal-box-head">
+                            <div class="modal-warn-icon"><span class="material-symbols-outlined" style="font-size:20px">warning</span></div>
+                            <h3 class="modal-box-title">{{ confirmDialog.title }}</h3>
+                        </div>
+                        <p class="modal-box-msg">{{ confirmDialog.message }}</p>
+                        <div class="modal-box-foot">
+                            <button class="modal-cancel" @click="confirmDialog.visible = false">Annuler</button>
+                            <button class="modal-delete" @click="doConfirm">
+                                <span class="material-symbols-outlined" style="font-size:16px">delete</span> Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
+
+        <!-- ── Modale d'erreur ── -->
+        <Teleport to="body">
+            <Transition name="modal">
+                <div v-if="errorDialog.visible" class="modal-overlay" @click.self="errorDialog.visible = false">
+                    <div class="modal-box">
+                        <div class="modal-box-head">
+                            <div class="modal-err-icon"><span class="material-symbols-outlined" style="font-size:20px">error</span></div>
+                            <h3 class="modal-box-title">Suppression impossible</h3>
+                        </div>
+                        <p class="modal-box-msg">{{ errorDialog.message }}</p>
+                        <div class="modal-box-foot">
+                            <button class="modal-ok" @click="errorDialog.visible = false">Compris</button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
 
     </div>
 </template>
 
 <style scoped>
-/* Section card */
-.config-section {
-    background: #fff;
-    border: 1px solid #e0e3e5;
-    border-radius: 12px;
-    overflow: hidden;
+/* ── Page layout ─────────────────────────────────────────────────────────── */
+.cfg-page { max-width: 1100px; margin: 0 auto; }
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+.cfg-header {
+    display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
+}
+.cfg-header-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff;
+}
+.cfg-header-icon .material-symbols-outlined { font-size: 24px; }
+.cfg-title    { font-size: 22px; font-weight: 700; color: #191c1e; line-height: 1.2; }
+.cfg-subtitle { font-size: 13px; color: #515f74; margin-top: 2px; }
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+.tabs-bar {
+    display: flex; gap: 4px; padding: 4px;
+    background: #f2f4f6; border-radius: 10px;
+    margin-bottom: 24px; width: fit-content;
+}
+.tab-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 18px; border-radius: 7px;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: none; background: transparent; color: #515f74;
+    transition: all 0.15s;
+}
+.tab-btn:hover:not(.tab-active) { background: #e8eaec; color: #191c1e; }
+.tab-active { background: #fff; color: #191c1e; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+.tab-icon { font-size: 17px; }
+.tab-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 5px;
+    background: #e0e3e5; color: #515f74;
+    border-radius: 99px; font-size: 11px; font-weight: 700;
+}
+.tab-active .tab-count { background: #fff0f4; color: #E5004C; }
+.tab-badge {
+    display: inline-flex; padding: 2px 8px; border-radius: 99px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+}
+.badge-ok   { background: #d1fae5; color: #065f46; }
+.badge-warn { background: #fef3c7; color: #b45309; }
+
+/* ── Referentiels grid ───────────────────────────────────────────────────── */
+.cfg-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 16px;
 }
 
-.config-section-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px 24px;
-    border-bottom: 1px solid #f3f4f6;
+/* ── Card ────────────────────────────────────────────────────────────────── */
+.cfg-card {
+    background: #fff; border-radius: 12px;
+    border: 1px solid #e0e3e5; overflow: hidden;
+    transition: box-shadow 0.15s;
+}
+.cfg-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+
+.cfg-card-head {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px; border-bottom: 1px solid #f2f4f6;
     background: #fafbfc;
 }
-
-.section-icon {
-    font-size: 22px;
-    color: #1F3A4D;
+.cfg-card-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
 }
-
-.config-section-title {
-    font-size: 15px;
-    font-weight: 700;
-    color: #191c1e;
-}
-
-.config-section-sub {
-    font-size: 12px;
-    color: #9aaabb;
-    margin-top: 2px;
-}
+.cfg-card-icon .material-symbols-outlined { font-size: 20px; }
+.cfg-card-info { flex: 1; min-width: 0; }
+.cfg-card-title { font-size: 14px; font-weight: 700; color: #191c1e; }
+.cfg-card-sub   { font-size: 12px; color: #515f74; margin-top: 1px; }
 
 .count-pill {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 24px;
-    height: 24px;
-    padding: 0 8px;
-    background: #eceef0;
-    border-radius: 99px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #515f74;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 22px; height: 22px; padding: 0 7px;
+    background: #eceef0; border-radius: 99px;
+    font-size: 11px; font-weight: 700; color: #515f74; flex-shrink: 0;
 }
 
-.config-section-body {
-    padding: 20px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
+.cfg-card-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
 
-/* Add form */
-.add-form {
-    display: flex;
-    gap: 8px;
-}
-
-.label {
-    display: block;
-    font-size: 13px;
-    font-weight: 500;
-    color: #40484c;
-    margin-bottom: 6px;
-}
-
-.provider-btn {
-    padding: 7px 10px;
-    border-radius: 8px;
-    font-size: 12px;
-    font-weight: 500;
-    cursor: pointer;
-    border: 1px solid;
-    transition: all 0.15s;
-    text-align: center;
-}
-.provider-btn-active {
-    background: #E5004C;
-    color: #fff;
-    border-color: #E5004C;
-}
-.provider-btn-inactive {
-    background: #fff;
-    color: #40484c;
-    border-color: #e0e3e5;
-}
-.provider-btn-inactive:hover {
-    border-color: #E5004C;
-    color: #E5004C;
-}
-
-.input {
-    padding: 9px 14px;
-    border: 1px solid #e0e3e5;
-    border-radius: 8px;
-    font-size: 14px;
-    color: #191c1e;
-    background: #fff;
-    outline: none;
+/* ── Add row ─────────────────────────────────────────────────────────────── */
+.add-row { display: flex; gap: 8px; align-items: center; }
+.add-row-age { flex-wrap: wrap; }
+.add-input {
+    flex: 1; padding: 9px 12px;
+    border: 1px solid #e0e3e5; border-radius: 8px;
+    font-size: 13px; color: #191c1e; background: #fafafa;
+    outline: none; font-family: inherit;
     transition: border-color 0.15s, box-shadow 0.15s;
-    flex: 1;
 }
-.input:focus { border-color: #E5004C; box-shadow: 0 0 0 3px rgba(229,0,76,0.08); }
-.input-error { border-color: #ba1a1a; }
-.error-msg { font-size: 12px; color: #ba1a1a; }
+.add-input:focus { border-color: #E5004C; background: #fff; box-shadow: 0 0 0 3px rgba(229,0,76,0.07); }
+.input-error { border-color: #ba1a1a !important; }
 
-.btn-add {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 9px 16px;
-    background: #E5004C;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: background 0.15s;
+.add-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 9px 14px; background: #E5004C; color: #fff;
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; white-space: nowrap; transition: all 0.15s; flex-shrink: 0;
 }
-.btn-add:hover:not(:disabled) { background: #c40042; }
-.btn-add:disabled { opacity: 0.6; cursor: not-allowed; }
+.add-btn:hover:not(:disabled) { background: #c40042; transform: translateY(-1px); }
+.add-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
-/* List */
-.item-list {
-    display: flex;
-    flex-direction: column;
-    border: 1px solid #f0f1f3;
-    border-radius: 8px;
-    overflow: hidden;
+/* ── Age inputs ──────────────────────────────────────────────────────────── */
+.age-inputs { display: flex; align-items: center; gap: 6px; flex: 1; }
+.age-field  { display: flex; flex-direction: column; gap: 2px; }
+.age-lbl    { font-size: 10px; font-weight: 600; color: #515f74; text-transform: uppercase; letter-spacing: 0.3px; }
+.age-num    { width: 70px; flex: none; text-align: center; }
+.age-sep    { font-size: 16px; color: #adb5bd; font-weight: 300; margin-top: 14px; }
+.age-unit   { font-size: 12px; color: #515f74; font-weight: 600; margin-top: 14px; }
+.age-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 46px; height: 24px; padding: 0 8px;
+    background: #fef3c7; color: #b45309;
+    border-radius: 6px; font-size: 12px; font-weight: 700; flex-shrink: 0;
 }
 
-.item-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 10px 14px;
-    border-bottom: 1px solid #f0f1f3;
+/* ── Ref list ────────────────────────────────────────────────────────────── */
+.ref-list { display: flex; flex-direction: column; border: 1px solid #f2f4f6; border-radius: 8px; overflow: hidden; margin: 0; padding: 0; list-style: none; }
+.ref-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-bottom: 1px solid #f2f4f6;
     transition: background 0.12s;
 }
-.item-row:last-child { border-bottom: none; }
-.item-row:hover { background: #fafbfc; }
+.ref-item:last-child { border-bottom: none; }
+.ref-item:hover { background: #fafbfc; }
+.ref-item:hover .ref-actions { opacity: 1; }
 
-.item-name {
-    font-size: 14px;
-    color: #191c1e;
-}
+.ref-dot { width: 6px; height: 6px; border-radius: 50%; background: #c7cdd4; flex-shrink: 0; }
+.ref-name { flex: 1; font-size: 13px; color: #191c1e; font-weight: 500; }
+.ref-actions { display: flex; gap: 3px; opacity: 0; transition: opacity 0.15s; }
 
-.btn-icon-ok {
+.ref-btn {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 34px; height: 34px; border-radius: 7px;
-    background: #dcfce7; color: #166534; border: none; cursor: pointer;
-    transition: background 0.15s;
+    width: 28px; height: 28px; border-radius: 6px;
+    background: transparent; color: #9aaabb;
+    border: none; cursor: pointer; transition: all 0.15s;
 }
-.btn-icon-ok:hover { background: #bbf7d0; }
+.ref-btn:hover        { background: #f2f4f6; color: #E5004C; }
+.ref-btn.danger:hover { background: #ffdad6; color: #ba1a1a; }
 
-.btn-icon-cancel {
+/* ── Edit row ────────────────────────────────────────────────────────────── */
+.edit-row     { display: flex; align-items: center; gap: 6px; flex: 1; }
+.edit-row-age { flex-wrap: wrap; }
+
+.btn-ok {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 34px; height: 34px; border-radius: 7px;
-    background: #f3f4f6; color: #6b7280; border: none; cursor: pointer;
-    transition: background 0.15s;
+    width: 30px; height: 30px; border-radius: 7px;
+    background: #d1fae5; color: #065f46; border: none; cursor: pointer; transition: background 0.15s;
 }
-.btn-icon-cancel:hover { background: #e5e7eb; }
+.btn-ok:hover { background: #a7f3d0; }
 
-.icon-btn {
+.btn-cancel {
     display: inline-flex; align-items: center; justify-content: center;
-    padding: 5px; border-radius: 6px; background: none; border: none;
-    color: #9aaabb; cursor: pointer; transition: color 0.15s, background 0.15s;
+    width: 30px; height: 30px; border-radius: 7px;
+    background: #f2f4f6; color: #515f74; border: none; cursor: pointer; transition: background 0.15s;
 }
-.icon-btn:hover { color: #E5004C; background: #fdf0f4; }
-.icon-btn.danger:hover { color: #ba1a1a; background: #fff5f5; }
+.btn-cancel:hover { background: #e0e3e5; }
 
-.empty-state {
-    display: flex; flex-direction: column; align-items: center;
-    padding: 24px; text-align: center;
+/* ── Empty inline ────────────────────────────────────────────────────────── */
+.empty-inline {
+    display: flex; align-items: center; gap: 8px;
+    padding: 12px 14px; background: #fafbfc;
+    border: 1px dashed #e0e3e5; border-radius: 8px;
+    font-size: 12px; color: #9aaabb;
 }
 
-.gap-xs { gap: 4px; }
-.gap-sm { gap: 8px; }
-.mt-xs  { margin-top: 4px; }
+/* ── Error text ──────────────────────────────────────────────────────────── */
+.err { font-size: 12px; color: #ba1a1a; margin: 0; }
 
-/* Modal */
+/* ── IA tab layout ───────────────────────────────────────────────────────── */
+.ia-layout { display: flex; flex-direction: column; gap: 20px; }
+
+.ia-status-banner {
+    display: flex; align-items: center; gap: 14px;
+    padding: 14px 20px; border-radius: 10px; border: 1px solid transparent;
+}
+.ia-ok   { background: #d1fae5; border-color: #6ee7b7; }
+.ia-warn { background: #fef3c7; border-color: #fde68a; }
+
+.ia-status-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.dot-ok   { background: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.2); }
+.dot-warn { background: #f59e0b; box-shadow: 0 0 0 3px rgba(245,158,11,0.2); }
+
+.ia-status-title { font-size: 14px; font-weight: 700; color: #191c1e; }
+.ia-status-sub   { font-size: 12px; color: #515f74; margin-top: 2px; }
+
+.ia-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.ia-col-left, .ia-col-right {
+    background: #fff; border-radius: 12px;
+    border: 1px solid #e0e3e5; padding: 20px;
+}
+
+.ia-section-title { font-size: 13px; font-weight: 700; color: #191c1e; margin: 0 0 14px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+/* Provider cards */
+.provider-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.provider-card {
+    position: relative; display: flex; flex-direction: column; align-items: flex-start;
+    gap: 2px; padding: 10px 12px; border-radius: 9px;
+    cursor: pointer; transition: all 0.15s; border: 2px solid;
+    text-align: left;
+}
+.provider-card-selected  { border-color: #E5004C; background: #fff0f4; }
+.provider-card-inactive  { border-color: #e0e3e5; background: #fafbfc; }
+.provider-card-inactive:hover { border-color: #adb5bd; background: #fff; }
+.provider-card-live      { border-color: #10b981 !important; background: #f0fdf4 !important; box-shadow: 0 0 0 3px rgba(16,185,129,0.15); }
+
+.provider-card-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; width: 100%; }
+.provider-name  { font-size: 13px; font-weight: 700; color: #191c1e; }
+.provider-sub   { font-size: 11px; color: #515f74; }
+.provider-check { position: absolute; top: 8px; right: 8px; font-size: 16px; color: #E5004C; }
+
+.provider-live-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 7px; border-radius: 99px;
+    background: #d1fae5; color: #065f46;
+    font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px;
+    flex-shrink: 0;
+}
+.provider-live-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: #10b981;
+    animation: pulse-dot 1.5s ease-in-out infinite;
+    flex-shrink: 0;
+}
+@keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.75); }
+}
+
+.ia-col-hint { font-size: 11px; color: #9aaabb; margin: -8px 0 12px; line-height: 1.5; }
+
+/* IA form */
+.ia-form { display: flex; flex-direction: column; gap: 16px; }
+.ia-field { display: flex; flex-direction: column; gap: 5px; }
+.ia-label { font-size: 12px; font-weight: 600; color: #515f74; }
+.ia-optional { font-size: 11px; font-weight: 400; color: #9aaabb; }
+.req { color: #E5004C; }
+
+.ia-input {
+    padding: 10px 13px; border: 1px solid #e0e3e5; border-radius: 8px;
+    font-size: 13px; color: #191c1e; background: #fafafa;
+    outline: none; font-family: inherit;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ia-input:focus { border-color: #E5004C; background: #fff; box-shadow: 0 0 0 3px rgba(229,0,76,0.07); }
+
+.key-wrap { position: relative; display: flex; align-items: center; }
+.key-wrap .ia-input { flex: 1; padding-right: 42px; }
+.eye-btn {
+    position: absolute; right: 10px;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 6px;
+    background: transparent; color: #9aaabb; border: none; cursor: pointer;
+    transition: all 0.15s;
+}
+.eye-btn:hover { color: #515f74; background: #f2f4f6; }
+
+.ia-hint {
+    display: flex; align-items: center; gap: 3px;
+    font-size: 11px; color: #9aaabb;
+}
+
+.ia-footer { display: flex; justify-content: flex-end; padding-top: 4px; }
+.ia-save-btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 10px 20px; background: #E5004C; color: #fff;
+    border: none; border-radius: 9px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+}
+.ia-save-btn:hover:not(:disabled) { background: #c40042; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(229,0,76,0.3); }
+.ia-save-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.spin-sm {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.35); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Provider selector ──────────────────────────────────────────────────── */
+.provider-selector { background: #fff; border: 1px solid #e0e3e5; border-radius: 12px; padding: 16px 20px; }
+.provider-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.provider-card-big {
+    display: flex; flex-direction: column; gap: 8px;
+    padding: 14px 16px; border-radius: 10px; cursor: pointer; transition: all 0.15s;
+    border: 2px solid;
+}
+.provider-card-selected { border-color: #E5004C; background: #fff0f4; }
+.provider-card-inactive { border-color: #e0e3e5; background: #fafbfc; }
+.provider-card-inactive:hover { border-color: #adb5bd; background: #fff; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border-width: 0; }
+
+/* ── WhatsApp steps ──────────────────────────────────────────────────────── */
+.wa-steps { display: flex; flex-direction: column; gap: 10px; margin: 12px 0 16px; }
+.wa-step {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 13px; color: #3c4043; line-height: 1.5;
+}
+.wa-step-num {
+    display: flex; align-items: center; justify-content: center;
+    width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+    background: #25d366; color: #fff; font-size: 11px; font-weight: 700; margin-top: 1px;
+}
+.wa-link { color: #1d4ed8; text-decoration: underline; }
+.wa-link:hover { color: #1e40af; }
+.wa-info-box {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 10px 12px; background: #eff6ff; border: 1px solid #dbeafe;
+    border-radius: 8px; font-size: 12px; color: #1e40af; line-height: 1.5;
+}
+.wa-info-box p { margin: 0; }
+.ia-input code, .ia-hint code {
+    font-family: monospace; background: #f0f2f5; padding: 1px 5px;
+    border-radius: 4px; font-size: 12px; color: #1F3A4D;
+}
+
+/* ── Modal transitions ───────────────────────────────────────────────────── */
+.modal-enter-active, .modal-leave-active { transition: opacity 0.2s; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+
+/* ── Modal overlay / box ─────────────────────────────────────────────────── */
 .modal-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
+    position: fixed; inset: 0;
+    background: rgba(25,28,30,0.5);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000; padding: 20px;
+    backdrop-filter: blur(2px);
 }
-.modal-content {
-    background: #fff;
-    border-radius: 12px;
-    width: 90%;
-    max-width: 400px;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+.modal-box {
+    background: #fff; border-radius: 14px; width: 100%; max-width: 420px;
+    padding: 24px; box-shadow: 0 24px 48px -12px rgba(0,0,0,0.22);
+    display: flex; flex-direction: column; gap: 14px;
 }
-.modal-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 20px 24px;
-    border-bottom: 1px solid #f0f1f3;
+.modal-box-head { display: flex; align-items: center; gap: 12px; }
+.modal-warn-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 9px;
+    background: #fff3cd; color: #b45309; flex-shrink: 0;
 }
-.modal-icon {
-    font-size: 24px;
-    color: #dc2626;
+.modal-err-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 9px;
+    background: #ffdad6; color: #ba1a1a; flex-shrink: 0;
 }
-.modal-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: #191c1e;
-    margin: 0;
+.modal-box-title { font-size: 16px; font-weight: 700; color: #191c1e; }
+.modal-box-msg   { font-size: 14px; color: #515f74; line-height: 1.6; margin: 0; }
+
+.modal-box-foot { display: flex; justify-content: flex-end; gap: 8px; }
+
+.modal-cancel {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 16px; background: transparent; color: #515f74;
+    border: 1px solid #e0e3e5; border-radius: 8px;
+    font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s;
 }
-.modal-body {
-    padding: 20px 24px;
+.modal-cancel:hover { background: #f2f4f6; }
+
+.modal-delete {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 16px; background: #ba1a1a; color: #fff;
+    border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
 }
-.modal-text {
-    font-size: 14px;
-    color: #515f74;
-    margin: 0;
-    line-height: 1.5;
+.modal-delete:hover { background: #9b1616; }
+
+.modal-ok {
+    display: inline-flex; align-items: center;
+    padding: 9px 20px; background: #1F3A4D; color: #fff;
+    border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s;
 }
-.modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    padding: 12px 24px 20px;
+.modal-ok:hover { background: #17303f; }
+
+/* ── Toast ───────────────────────────────────────────────────────────────── */
+.toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 18px; border-radius: 10px;
+    font-size: 14px; font-weight: 500;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    min-width: 240px; max-width: 360px;
 }
-.btn-close {
-    padding: 8px 16px;
-    background: #1F3A4D;
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s;
+.toast-success { background: #1F3A4D; color: #fff; }
+.toast-error   { background: #ba1a1a; color: #fff; }
+
+.toast-enter-active { transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+.toast-leave-active { transition: all 0.2s ease-in; }
+.toast-enter-from   { opacity: 0; transform: translateY(16px) scale(0.95); }
+.toast-leave-to     { opacity: 0; transform: translateY(8px); }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+    .cfg-grid  { grid-template-columns: 1fr; }
+    .ia-cols   { grid-template-columns: 1fr; }
+    .provider-grid { grid-template-columns: 1fr 1fr 1fr; }
 }
-.btn-close:hover { background: #17303f; }
+@media (max-width: 600px) {
+    .tabs-bar  { width: 100%; }
+    .tab-btn   { flex: 1; justify-content: center; }
+    .provider-grid { grid-template-columns: 1fr 1fr; }
+    .ref-actions { opacity: 1; }
+}
 </style>

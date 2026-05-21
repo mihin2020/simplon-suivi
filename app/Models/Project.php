@@ -18,6 +18,7 @@ class Project extends Model
     protected $fillable = [
         'name',
         'description',
+        'budget',
         'started_at',
         'ended_at',
         'status',
@@ -28,6 +29,7 @@ class Project extends Model
         return [
             'started_at' => 'date',
             'ended_at'   => 'date',
+            'budget'     => 'integer',
             'status'     => ProjectStatus::class,
         ];
     }

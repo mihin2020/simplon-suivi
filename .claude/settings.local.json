@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find app/Enums -name \"CohortStatus*\")",
+      "Bash(cat app/Enums/CohortStatus.php)"
+    ]
+  }
+}

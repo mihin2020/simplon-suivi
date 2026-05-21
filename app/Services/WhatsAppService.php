@@ -2,23 +2,72 @@
 
 namespace App\Services;
 
+use App\Models\AppSetting;
 use Twilio\Rest\Client;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Service WhatsApp unifié supportant Twilio et Meta Cloud API
+ */
 class WhatsAppService
 {
-    protected ?Client $client = null;
-    protected string $from;
+    protected ?Client $twilioClient = null;
+    protected string $twilioFrom = '';
+    protected ?MetaWhatsAppService $metaService = null;
+    protected string $provider = 'twilio'; // 'twilio' ou 'meta'
 
     public function __construct()
     {
-        $sid = config('services.twilio.sid');
-        $token = config('services.twilio.token');
-        $this->from = config('services.twilio.whatsapp_from', '');
+        // Détection automatique du provider
+        $this->provider = AppSetting::get('whatsapp_provider', 'twilio');
+
+        // Initialisation Twilio
+        $sid   = AppSetting::get('twilio_sid')   ?: config('services.twilio.sid');
+        $token = AppSetting::get('twilio_token') ?: config('services.twilio.token');
+        $this->twilioFrom = AppSetting::get('twilio_whatsapp_from') ?: config('services.twilio.whatsapp_from', '');
 
         if ($sid && $token) {
-            $this->client = new Client($sid, $token);
+            try {
+                $this->twilioClient = new Client($sid, $token);
+            } catch (\Exception $e) {
+                Log::error('WhatsApp: impossible d\'initialiser Twilio', ['error' => $e->getMessage()]);
+            }
         }
+
+        // Initialisation Meta
+        $this->metaService = new MetaWhatsAppService();
+    }
+
+    /**
+     * Récupère la configuration des deux providers
+     */
+    public static function getConfig(): array
+    {
+        $twilioConfigured = !empty(AppSetting::get('twilio_sid'))
+            && !empty(AppSetting::get('twilio_token'))
+            && !empty(AppSetting::get('twilio_whatsapp_from'));
+
+        $metaConfigured = !empty(AppSetting::get('whatsapp_meta_token'))
+            && !empty(AppSetting::get('whatsapp_meta_phone_id'));
+
+        $provider = AppSetting::get('whatsapp_provider', 'twilio');
+
+        return [
+            'provider' => $provider,
+            'twilio' => [
+                'sid' => AppSetting::get('twilio_sid', ''),
+                'from' => AppSetting::get('twilio_whatsapp_from', ''),
+                'configured' => $twilioConfigured,
+            ],
+            'meta' => [
+                'token' => AppSetting::get('whatsapp_meta_token', '') ? '********' . substr(AppSetting::get('whatsapp_meta_token', ''), -4) : '',
+                'phone_number_id' => AppSetting::get('whatsapp_meta_phone_id', ''),
+                'business_account_id' => AppSetting::get('whatsapp_meta_business_id', ''),
+                'configured' => $metaConfigured,
+            ],
+            'configured' => $provider === 'twilio' ? $twilioConfigured : $metaConfigured,
+            'active_provider' => $provider,
+        ];
     }
 
     /**
@@ -26,10 +75,16 @@ class WhatsAppService
      */
     public function send(string $to, string $message): array
     {
-        if (!$this->client) {
+        // Utiliser le provider configuré
+        if ($this->provider === 'meta' && $this->metaService->isConfigured()) {
+            return $this->metaService->send($to, $message);
+        }
+
+        // Fallback sur Twilio
+        if (!$this->twilioClient) {
             return [
                 'success' => false,
-                'error' => 'Twilio non configuré. Vérifiez TWILIO_SID et TWILIO_AUTH_TOKEN dans .env'
+                'error' => 'Aucun service WhatsApp configuré. Configurez Twilio ou Meta Cloud API.'
             ];
         }
 
@@ -37,15 +92,15 @@ class WhatsAppService
         $to = $this->normalizePhone($to);
 
         try {
-            $result = $this->client->messages->create(
+            $result = $this->twilioClient->messages->create(
                 "whatsapp:$to",
                 [
-                    'from' => $this->from,
+                    'from' => $this->twilioFrom,
                     'body' => $message
                 ]
             );
 
-            Log::info('WhatsApp envoyé', [
+            Log::info('WhatsApp Twilio envoyé', [
                 'to' => $to,
                 'sid' => $result->sid,
                 'status' => $result->status
@@ -115,11 +170,30 @@ class WhatsAppService
     }
 
     /**
-     * Vérifie si Twilio est configuré
+     * Vérifie si un service WhatsApp est configuré
      */
     public function isConfigured(): bool
     {
-        return $this->client !== null && !empty($this->from);
+        if ($this->provider === 'meta') {
+            return $this->metaService->isConfigured();
+        }
+        return $this->twilioClient !== null && !empty($this->twilioFrom);
+    }
+
+    /**
+     * Retourne le provider actif
+     */
+    public function getProvider(): string
+    {
+        return $this->provider;
+    }
+
+    /**
+     * Change le provider actif
+     */
+    public function setProvider(string $provider): void
+    {
+        $this->provider = $provider;
     }
 
     /**
