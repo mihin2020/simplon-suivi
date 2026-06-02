@@ -203,10 +203,16 @@ function sendViaApi() {
                     <div class="page-meta">Envoi via WhatsApp Web ou API</div>
                 </div>
             </div>
-            <Link href="/configuration#whatsapp" @click.prevent="$inertia.visit('/configuration', { data: { tab: 'whatsapp' } })" class="cfg-link">
-                <span class="material-symbols-outlined" style="font-size:16px">settings</span>
-                Configurer
-            </Link>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <Link href="/communication/whatsapp/history" class="cfg-link">
+                    <span class="material-symbols-outlined" style="font-size:16px">history</span>
+                    Historique
+                </Link>
+                <Link href="/configuration#whatsapp" @click.prevent="$inertia.visit('/configuration', { data: { tab: 'whatsapp' } })" class="cfg-link">
+                    <span class="material-symbols-outlined" style="font-size:16px">settings</span>
+                    Configurer
+                </Link>
+            </div>
         </div>
 
         <div class="twilio-status-bar" :class="isConfigured ? 'twilio-ok' : 'twilio-warn'">

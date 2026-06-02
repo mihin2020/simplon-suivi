@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Email;
 use App\Models\Formation;
+use App\Models\WhatsAppMessage;
 use App\Services\EmailService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
@@ -368,10 +369,12 @@ class EmailController extends Controller
         WhatsAppService $whatsAppService,
     ) {
         $validated = $request->validate([
-            "recipients" => "required|array|min:1",
+            "recipients"         => "required|array|min:1",
             "recipients.*.phone" => "required|string",
-            "recipients.*.name" => "nullable|string",
-            "message" => "required|string|max:1600", // WhatsApp limite
+            "recipients.*.name"  => "nullable|string",
+            "message"            => "required|string|max:1600",
+            "formation_name"     => "nullable|string",
+            "project_name"       => "nullable|string",
         ]);
 
         // Vérifier si WhatsApp est configuré
@@ -382,6 +385,9 @@ class EmailController extends Controller
                 : "Twilio non configuré. Ajoutez vos credentials dans la Configuration.";
             return back()->with("error", $configMsg);
         }
+
+        $whatsAppService->currentFormationName = $validated["formation_name"] ?? null;
+        $whatsAppService->currentProjectName   = $validated["project_name"] ?? null;
 
         $results = $whatsAppService->sendBulk(
             $validated["recipients"],
@@ -403,6 +409,31 @@ class EmailController extends Controller
             $msg = "⚠️ {$results["success"]} envoyé(s), {$results["failed"]} échec(s)";
             return back()->with("warning", $msg);
         }
+    }
+
+    public function whatsappHistory(Request $request)
+    {
+        $query = WhatsAppMessage::query()->latest();
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('phone', 'like', "%$s%")
+                  ->orWhere('recipient_name', 'like', "%$s%")
+                  ->orWhere('formation_name', 'like', "%$s%")
+                  ->orWhere('project_name', 'like', "%$s%");
+            });
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $messages = $query->paginate(50)->withQueryString();
+
+        return Inertia::render('Communication/WhatsAppHistory', [
+            'messages' => $messages,
+            'filters'  => $request->only('search', 'status'),
+        ]);
     }
 
     public function archive(Email $email)

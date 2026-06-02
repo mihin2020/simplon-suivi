@@ -473,6 +473,10 @@ Route::middleware("auth")->group(function () {
             EmailController::class,
             "sendWhatsAppBulk",
         ])->name("whatsapp.send");
+        Route::get("/whatsapp/history", [
+            EmailController::class,
+            "whatsappHistory",
+        ])->name("whatsapp.history");
     });
 
     // Notifications

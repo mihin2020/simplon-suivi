@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AppSetting;
+use App\Models\WhatsAppMessage;
 use Twilio\Rest\Client;
 use Illuminate\Support\Facades\Log;
 
@@ -15,6 +16,9 @@ class WhatsAppService
     protected string $twilioFrom = '';
     protected ?MetaWhatsAppService $metaService = null;
     protected string $provider = 'twilio'; // 'twilio' ou 'meta'
+    public ?string $currentRecipientName = null;
+    public ?string $currentFormationName = null;
+    public ?string $currentProjectName   = null;
 
     public function __construct()
     {
@@ -24,7 +28,11 @@ class WhatsAppService
         // Initialisation Twilio
         $sid   = AppSetting::get('twilio_sid')   ?: config('services.twilio.sid');
         $token = AppSetting::get('twilio_token') ?: config('services.twilio.token');
-        $this->twilioFrom = AppSetting::get('twilio_whatsapp_from') ?: config('services.twilio.whatsapp_from', '');
+        $from = AppSetting::get('twilio_whatsapp_from') ?: config('services.twilio.whatsapp_from', '');
+        if ($from && !str_starts_with($from, 'whatsapp:')) {
+            $from = 'whatsapp:' . $from;
+        }
+        $this->twilioFrom = $from;
 
         if ($sid && $token) {
             try {
@@ -106,6 +114,17 @@ class WhatsAppService
                 'status' => $result->status
             ]);
 
+            WhatsAppMessage::create([
+                'phone'          => $to,
+                'recipient_name' => $this->currentRecipientName ?? null,
+                'message'        => $message,
+                'provider'       => 'twilio',
+                'status'         => 'sent',
+                'external_id'    => $result->sid,
+                'formation_name' => $this->currentFormationName ?? null,
+                'project_name'   => $this->currentProjectName ?? null,
+            ]);
+
             return [
                 'success' => true,
                 'sid' => $result->sid,
@@ -115,6 +134,17 @@ class WhatsAppService
             Log::error('Erreur WhatsApp Twilio', [
                 'to' => $to,
                 'error' => $e->getMessage()
+            ]);
+
+            WhatsAppMessage::create([
+                'phone'          => $to,
+                'recipient_name' => $this->currentRecipientName ?? null,
+                'message'        => $message,
+                'provider'       => 'twilio',
+                'status'         => 'failed',
+                'error'          => $e->getMessage(),
+                'formation_name' => $this->currentFormationName ?? null,
+                'project_name'   => $this->currentProjectName ?? null,
             ]);
 
             return [
@@ -149,6 +179,7 @@ class WhatsAppService
             // Personnaliser le message si {nom} présent
             $personalizedMessage = str_replace('{nom}', $name, $message);
 
+            $this->currentRecipientName = $name ?: null;
             $result = $this->send($phone, $personalizedMessage);
 
             if ($result['success']) {

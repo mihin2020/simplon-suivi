@@ -754,13 +754,17 @@ const destroyDipl = (d: LastDiploma) => {
                     <form @submit.prevent="submitWaConfig" class="ia-form">
 
                         <div class="ia-field">
-                            <label class="ia-label">Account SID <span class="req">*</span></label>
+                            <label class="ia-label">
+                                Account SID
+                                <span v-if="!whatsappConfig.twilio?.configured" class="req">*</span>
+                                <span v-else class="ia-optional">(laisser vide pour conserver)</span>
+                            </label>
                             <input
                                 v-model="waForm.twilio_sid"
                                 type="text"
                                 class="ia-input"
                                 :class="{ 'input-error': waForm.errors.twilio_sid }"
-                                placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                :placeholder="whatsappConfig.twilio?.configured ? '••••••••••••••••••••••••••••••••••••••' : 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'"
                                 autocomplete="off"
                             />
                             <p v-if="waForm.errors.twilio_sid" class="err">{{ waForm.errors.twilio_sid }}</p>
@@ -768,14 +772,18 @@ const destroyDipl = (d: LastDiploma) => {
                         </div>
 
                         <div class="ia-field">
-                            <label class="ia-label">Auth Token <span class="req">*</span></label>
+                            <label class="ia-label">
+                                Auth Token
+                                <span v-if="!whatsappConfig.twilio?.configured" class="req">*</span>
+                                <span v-else class="ia-optional">(laisser vide pour conserver)</span>
+                            </label>
                             <div class="key-wrap">
                                 <input
                                     v-model="waForm.twilio_token"
                                     :type="showTwilioToken ? 'text' : 'password'"
                                     class="ia-input"
                                     :class="{ 'input-error': waForm.errors.twilio_token }"
-                                    placeholder="Votre Auth Token Twilio"
+                                    :placeholder="whatsappConfig.twilio?.configured ? '••••••••••••••••••••••••••••••••••••••' : 'Votre Auth Token Twilio'"
                                     autocomplete="new-password"
                                 />
                                 <button type="button" class="eye-btn" @click="showTwilioToken = !showTwilioToken">
@@ -800,7 +808,7 @@ const destroyDipl = (d: LastDiploma) => {
                         </div>
 
                         <div class="ia-footer">
-                            <button type="submit" class="ia-save-btn" :disabled="waForm.processing || !waForm.twilio_sid || !waForm.twilio_token || !waForm.twilio_whatsapp_from">
+                            <button type="submit" class="ia-save-btn" :disabled="waForm.processing || (!whatsappConfig.twilio?.configured && (!waForm.twilio_sid || !waForm.twilio_token)) || !waForm.twilio_whatsapp_from">
                                 <span v-if="waForm.processing" class="spin-sm"></span>
                                 <span v-else class="material-symbols-outlined" style="font-size:17px">save</span>
                                 {{ waForm.processing ? 'Enregistrement...' : (whatsappConfig.twilio?.configured ? 'Mettre à jour' : 'Enregistrer') }}

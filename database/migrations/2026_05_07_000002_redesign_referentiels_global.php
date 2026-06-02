@@ -35,8 +35,8 @@ return new class extends Migration
         });
 
         // Step 4: Drop formation_id from referentiels.
-        // Must drop FK constraint first, then index, then column.
-        if (Schema::hasColumn('referentiels', 'formation_id')) {
+        // NOTE: Skip this step for SQLite as it has limited ALTER TABLE support
+        if (Schema::hasColumn('referentiels', 'formation_id') && DB::getDriverName() !== 'sqlite') {
             // Drop foreign key constraint first (Laravel naming convention)
             try {
                 Schema::table('referentiels', function (Blueprint $table) {

@@ -35,14 +35,20 @@ class ConfigurationController extends Controller
 
     public function saveWhatsAppConfig(Request $request)
     {
+        $alreadyConfigured = !empty(AppSetting::get('twilio_sid'));
+
         $validated = $request->validate([
-            'twilio_sid'            => 'required|string|min:2',
-            'twilio_token'          => 'required|string|min:2',
+            'twilio_sid'            => ($alreadyConfigured ? 'nullable' : 'required') . '|string|min:2',
+            'twilio_token'          => ($alreadyConfigured ? 'nullable' : 'required') . '|string|min:2',
             'twilio_whatsapp_from'  => 'required|string|min:2',
         ]);
 
-        AppSetting::set('twilio_sid',           $validated['twilio_sid'],           true);
-        AppSetting::set('twilio_token',         $validated['twilio_token'],         true);
+        if (!empty($validated['twilio_sid'])) {
+            AppSetting::set('twilio_sid',   $validated['twilio_sid'],   true);
+        }
+        if (!empty($validated['twilio_token'])) {
+            AppSetting::set('twilio_token', $validated['twilio_token'], true);
+        }
         AppSetting::set('twilio_whatsapp_from', $validated['twilio_whatsapp_from'], false);
 
         return back()->with('success', 'Configuration WhatsApp (Twilio) enregistrée.');
