@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
-import { Link, useForm } from '@inertiajs/vue3'
+import { Head, Link, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -48,6 +48,7 @@ const submit = () => {
 </script>
 
 <template>
+    <Head title="Créer une cohorte" />
     <div class="max-w-[720px] mx-auto space-y-xl">
 
         <!-- En-tête -->

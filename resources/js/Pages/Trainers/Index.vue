@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, router, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref, watch, computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -158,6 +158,7 @@ const isFormationSelected = (formationId: string) => {
 </script>
 
 <template>
+    <Head title="Formateurs" />
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->

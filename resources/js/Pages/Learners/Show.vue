@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, router, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -223,6 +223,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
 </script>
 
 <template>
+    <Head :title="`${learner.first_name} ${learner.last_name}`" />
     <div class="page-wrap">
         <!-- En-tête -->
         <div class="page-header">

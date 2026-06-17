@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -18,6 +18,7 @@ defineProps<{
 </script>
 
 <template>
+    <Head title="Référentiels" />
     <div class="max-w-[1200px] mx-auto space-y-xl">
 
         <!-- En-tête -->

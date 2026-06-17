@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -44,6 +44,7 @@ const submit = () => form.post('/partners', { forceFormData: true })
 </script>
 
 <template>
+    <Head title="Créer un partenaire" />
     <div class="page-wrapper">
 
         <!-- Titre -->

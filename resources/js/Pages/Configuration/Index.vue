@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, router } from '@inertiajs/vue3'
+import { Head, useForm, router } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -213,6 +213,7 @@ const destroyDipl = (d: LastDiploma) => {
 </script>
 
 <template>
+    <Head title="Configuration" />
     <div class="cfg-page">
 
         <!-- ── Toast ── -->

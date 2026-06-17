@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import StorageGauge from '@/Components/StorageGauge.vue'
@@ -583,6 +583,7 @@ const fmtDate = (date: string) => {
 </script>
 
 <template>
+  <Head :title="`Médiathèque · ${formation.name}`" />
   <div class="container">
     <!-- En-tête -->
     <div class="page-header">

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import { Link, router } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 // ── Modal de confirmation / blocage ──────────────────────────────────────────
@@ -77,6 +77,7 @@ const formatCost = (n: number) =>
 </script>
 
 <template>
+    <Head title="Formations Campus" />
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->

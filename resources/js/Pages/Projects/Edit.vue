@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -70,6 +70,7 @@ const submit = () => form.put(`/projects/${props.project.id}`)
 </script>
 
 <template>
+    <Head :title="`Modifier · ${project.name}`" />
     <div class="max-w-2xl mx-auto">
 
         <!-- En-tête -->

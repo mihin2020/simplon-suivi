@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, useForm } from '@inertiajs/vue3'
+import { Head, Link, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -58,6 +58,7 @@ const statusLabels: Record<string, string> = {
 </script>
 
 <template>
+    <Head :title="`${trainer.user.first_name} ${trainer.user.last_name}`" />
     <div class="max-w-[1400px] mx-auto space-y-xl">
 
         <!-- En-tête -->

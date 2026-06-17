@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3'
-import { Link } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -95,6 +95,7 @@ const totalCollected = props.globalStats.total_collected
 </script>
 
 <template>
+    <Head title="Finance" />
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -28,6 +28,7 @@ const submit = () => form.post(`/projects/${props.project.id}/formations`)
 </script>
 
 <template>
+    <Head title="Créer une formation" />
     <div class="page-wrap">
 
         <!-- En-tête -->

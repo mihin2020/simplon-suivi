@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import ConfirmModal from '@/Components/ConfirmModal.vue'
 import { ref } from 'vue'
@@ -63,6 +63,7 @@ const confirmDelete = () => {
 </script>
 
 <template>
+    <Head :title="formation.name" />
     <div class="max-w-[1200px] mx-auto space-y-xl">
 
         <!-- En-tête -->

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import PermissionPicker from '@/Components/PermissionPicker.vue'
@@ -79,6 +79,7 @@ const submit = () => {
 </script>
 
 <template>
+    <Head title="Inviter un utilisateur" />
     <div class="max-w-3xl mx-auto space-y-xl">
 
         <!-- En-tête -->

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -60,6 +60,7 @@ const optionalColumns = [
 </script>
 
 <template>
+    <Head title="Importer des apprenants" />
     <div class="import-page">
 
         <!-- ── En-tête ── -->

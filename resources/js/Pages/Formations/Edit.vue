@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -36,6 +36,7 @@ const submit = () => form.put(`/formations/${props.formation.id}`)
 </script>
 
 <template>
+    <Head :title="`Modifier · ${formation.name}`" />
     <div class="max-w-2xl mx-auto">
 
         <!-- En-tête -->

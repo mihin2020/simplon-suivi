@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -78,6 +78,7 @@ const photoUrl = (path: string | null) =>
 </script>
 
 <template>
+    <Head title="Apprenants" />
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->

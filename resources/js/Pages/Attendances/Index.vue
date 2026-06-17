@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { router, Link } from '@inertiajs/vue3'
+import { router, Link, Head } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import axios from 'axios'
 
@@ -169,6 +169,7 @@ function rowSummary(row: RecapRow): { code: string; count: number }[] {
 </script>
 
 <template>
+    <Head :title="`Présences · ${formation.name}`" />
     <div class="att-page">
 
         <!-- En-tête formation -->

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -47,6 +47,7 @@ const destroyFormation = (f: Formation) => {
 </script>
 
 <template>
+    <Head :title="`Formations · ${project.name}`" />
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->

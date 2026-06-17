@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -48,6 +48,7 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners`)
 </script>
 
 <template>
+    <Head title="Inscrire un apprenant" />
     <div class="max-w-2xl mx-auto">
 
         <!-- En-tête -->

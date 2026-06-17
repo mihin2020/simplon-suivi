@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Link, router, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import ConfirmModal from '@/Components/ConfirmModal.vue'
 
@@ -344,6 +344,7 @@ const confirmClose = () => {
 </script>
 
 <template>
+    <Head :title="cohort.name" />
     <div class="max-w-[1400px] mx-auto space-y-xl">
 
         <!-- En-tête -->

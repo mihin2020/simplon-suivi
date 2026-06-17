@@ -16,7 +16,7 @@ router.on('navigate', (event) => {
 });
 
 createInertiaApp({
-    title: (title) => `${title} — Simplon BF`,
+    title: (title) => (title ? `${title} · Simplon Suivi` : 'Simplon Suivi'),
     resolve: (name) =>
         resolvePageComponent(
             `./Pages/${name}.vue`,

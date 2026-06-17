@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -13,6 +13,7 @@ const submit = () => form.post('/referentiels')
 </script>
 
 <template>
+    <Head title="Créer un référentiel" />
     <div class="max-w-2xl mx-auto">
 
         <div class="flex items-center gap-md mb-xl">

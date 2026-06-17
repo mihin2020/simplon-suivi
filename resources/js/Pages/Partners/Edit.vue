@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -60,6 +60,7 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
 </script>
 
 <template>
+    <Head :title="`Modifier · ${partner.name}`" />
     <div class="page-wrapper">
 
         <!-- Titre -->

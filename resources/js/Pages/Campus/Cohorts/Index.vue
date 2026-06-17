@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { Link, router } from '@inertiajs/vue3'
+import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import ConfirmModal from '@/Components/ConfirmModal.vue'
 
@@ -100,6 +100,7 @@ const cancelDelete = () => {
 </script>
 
 <template>
+    <Head title="Cohortes" />
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->

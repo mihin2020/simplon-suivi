@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, useForm } from '@inertiajs/vue3'
+import { Head, Link, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import WhatsAppComposer from './Partials/WhatsAppComposer.vue'
@@ -594,6 +594,7 @@ function groupByDate(msgs: ThreadMsg[]) {
 </script>
 
 <template>
+<Head title="WhatsApp" />
 <div class="wa-page" @click="showEmojiPicker = false">
 
     <!-- Top bar -->

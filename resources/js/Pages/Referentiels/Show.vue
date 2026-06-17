@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Link, router } from '@inertiajs/vue3'
+import { Head, useForm, Link, router } from '@inertiajs/vue3'
 import { ref, reactive } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -81,6 +81,7 @@ const confirmDelete = () => {
 </script>
 
 <template>
+    <Head :title="referentiel.name" />
     <div class="max-w-[1200px] mx-auto space-y-xl">
 
         <!-- En-tête -->

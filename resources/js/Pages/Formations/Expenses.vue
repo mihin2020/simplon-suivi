@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, useForm, router } from '@inertiajs/vue3'
+import { Head, Link, useForm, router } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -283,6 +283,7 @@ const closeDetail = ()           => { showDetailModal.value = false; detailExpen
 </script>
 
 <template>
+    <Head :title="`Dépenses · ${formation.name}`" />
     <div class="max-w-6xl mx-auto">
 
         <!-- Toast notification -->

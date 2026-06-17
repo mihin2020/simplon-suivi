@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, router, useForm } from '@inertiajs/vue3'
+import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -91,6 +91,7 @@ const destroyFormation = () => {
 </script>
 
 <template>
+    <Head :title="project.name" />
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->

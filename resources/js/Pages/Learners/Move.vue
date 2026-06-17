@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -42,6 +42,7 @@ const submit = () => form.post(`/learners/${props.learner.id}/move`)
 </script>
 
 <template>
+    <Head :title="`Déplacer · ${learner.first_name} ${learner.last_name}`" />
     <div class="max-w-2xl mx-auto">
 
         <!-- En-tête -->

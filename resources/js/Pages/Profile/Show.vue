@@ -43,9 +43,14 @@ const submitPassword = () => {
 
     <div class="max-w-2xl mx-auto space-y-xl">
 
-        <div>
-            <h1 class="text-h1 font-bold text-on-surface">Mon profil</h1>
-            <p class="text-body-md text-secondary mt-xs">Gérez vos informations personnelles et votre mot de passe.</p>
+        <div class="flex items-center gap-md">
+            <div class="page-header-icon">
+                <span class="material-symbols-outlined">account_circle</span>
+            </div>
+            <div>
+                <h1 class="text-h1 font-bold text-on-surface">Mon profil</h1>
+                <p class="text-body-md text-secondary mt-xs">Gérez vos informations personnelles et votre mot de passe.</p>
+            </div>
         </div>
 
         <!-- Avatar + rôle -->
@@ -123,6 +128,14 @@ const submitPassword = () => {
 </template>
 
 <style scoped>
+.page-header-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff;
+}
+.page-header-icon .material-symbols-outlined { font-size: 24px; }
+
 .avatar-lg {
     width: 64px; height: 64px; border-radius: 50%;
     background: #E5004C; color: #fff;

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useForm, Link } from '@inertiajs/vue3'
+import { Head, useForm, Link } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -58,6 +58,7 @@ const submit = () => form.post('/projects')
 </script>
 
 <template>
+    <Head title="Créer un projet" />
     <div class="max-w-2xl mx-auto">
 
         <!-- En-tête -->

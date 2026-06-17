@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { Link } from '@inertiajs/vue3'
+import { Head, Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -91,6 +91,7 @@ const statusClass = (s: string) => ({
 </script>
 
 <template>
+    <Head title="Présences" />
     <div class="max-w-5xl mx-auto space-y-xl">
 
         <!-- En-tête -->
