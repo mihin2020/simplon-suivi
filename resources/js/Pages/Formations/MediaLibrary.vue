@@ -593,7 +593,18 @@ const fmtDate = (date: string) => {
         <span class="breadcrumb-separator">/</span>
         <span class="breadcrumb-current">Médiathèque</span>
       </div>
-      <h1 class="page-title">Médiathèque</h1>
+      <div class="page-header-row">
+        <Link :href="`/formations/${formation.id}`" class="icon-back">
+          <span class="material-symbols-outlined">arrow_back</span>
+        </Link>
+        <div class="page-header-icon">
+          <span class="material-symbols-outlined">photo_library</span>
+        </div>
+        <div>
+          <h1 class="page-title">Médiathèque</h1>
+          <p class="page-subtitle">{{ formation.name }}</p>
+        </div>
+      </div>
     </div>
 
     <!-- Jauge de stockage -->
@@ -1017,7 +1028,23 @@ const fmtDate = (date: string) => {
 .breadcrumb-link { color: #515f74; text-decoration: none; }
 .breadcrumb-link:hover { color: #E5004C; }
 .breadcrumb-current { color: #191c1e; font-weight: 500; }
-.page-title { font-size: 24px; font-weight: 700; color: #191c1e; }
+.page-header-row { display: flex; align-items: center; gap: 14px; }
+.icon-back {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent;
+    text-decoration: none; flex-shrink: 0; transition: background 0.15s, color 0.15s;
+}
+.icon-back:hover { background: #1F3A4D; color: #fff; }
+.page-header-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff;
+}
+.page-header-icon .material-symbols-outlined { font-size: 24px; }
+.page-title { font-size: 22px; font-weight: 700; color: #191c1e; line-height: 1.2; }
+.page-subtitle { font-size: 13px; color: #515f74; margin-top: 2px; }
 .upload-info { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; font-size: 13px; color: #0369a1; margin-bottom: 20px; }
 .actions-bar { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
 .filters { display: flex; gap: 12px; flex-wrap: wrap; }

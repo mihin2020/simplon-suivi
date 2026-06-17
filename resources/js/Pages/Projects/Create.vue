@@ -231,9 +231,10 @@ const submit = () => form.post('/projects')
 .icon-back {
     display: inline-flex; align-items: center; justify-content: center;
     width: 40px; height: 40px; border-radius: 50%;
-    color: #515f74; transition: background 0.15s; flex-shrink: 0;
+    border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent;
+    text-decoration: none; flex-shrink: 0; transition: background 0.15s, color 0.15s;
 }
-.icon-back:hover { background: #eceef0; color: #191c1e; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
 
 .card { background: #fff; border: 1px solid #e0e3e5; border-radius: 12px; padding: 32px; }
 .field { display: flex; flex-direction: column; gap: 6px; }

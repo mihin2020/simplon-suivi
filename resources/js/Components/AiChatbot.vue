@@ -43,12 +43,22 @@ const scrollToBottom = async () => {
     }
 }
 
-const send = async () => {
-    const text = input.value.trim()
+// Préfixes des réponses d'erreur renvoyées par AiChatService (HTTP 200, texte d'erreur dans `reply`)
+const ERROR_PREFIXES = [
+    'Aucune clé API configurée',
+    'Le provider IA met trop de temps',
+    'Impossible de contacter le provider IA',
+    'Clé API invalide',
+    'Quota API dépassé',
+    'Erreur du provider',
+    'La question nécessite trop d\'étapes',
+]
+const isErrorReply = (text: string): boolean => ERROR_PREFIXES.some(p => text.startsWith(p))
+
+const sendMessage = async (text: string) => {
     if (!text || isLoading.value) return
 
     messages.push({ role: 'user', content: text, timestamp: new Date() })
-    input.value = ''
     isLoading.value = true
     await scrollToBottom()
 
@@ -68,18 +78,33 @@ const send = async () => {
             role: 'assistant',
             content: response.data.reply,
             timestamp: new Date(),
+            error: isErrorReply(response.data.reply),
         })
     } catch (error: any) {
         const msg = error.response?.status === 429
             ? 'Vous envoyez trop de messages. Veuillez patienter une minute.'
             : 'Une erreur est survenue. Veuillez réessayer.'
 
-        messages.push({ role: 'assistant', content: msg, timestamp: new Date() })
+        messages.push({ role: 'assistant', content: msg, timestamp: new Date(), error: true })
     } finally {
         isLoading.value = false
         await scrollToBottom()
         inputRef.value?.focus()
     }
+}
+
+const send = () => {
+    const text = input.value.trim()
+    if (!text || isLoading.value) return
+    input.value = ''
+    sendMessage(text)
+}
+
+const retry = (index: number) => {
+    const userMsg = messages[index - 1]
+    if (!userMsg || userMsg.role !== 'user' || isLoading.value) return
+    messages.splice(index, 1)
+    sendMessage(userMsg.content)
 }
 
 const handleKeydown = (e: KeyboardEvent) => {
@@ -198,11 +223,11 @@ onMounted(async () => {
     <!-- Floating button -->
     <button
         @click="toggle"
-        class="relative flex items-center justify-center w-9 h-9 rounded-full transition-all duration-200"
-        :class="isOpen ? 'bg-primary text-white' : 'hover:bg-surface-container text-on-surface-variant hover:text-on-surface'"
+        class="relative flex items-center justify-center w-9 h-9 rounded-full shadow-md transition-all duration-200"
+        :class="isOpen ? 'bg-on-surface text-white' : 'bg-gradient-to-br from-primary to-rose-600 text-white hover:shadow-lg hover:scale-105'"
         title="Assistant IA"
     >
-        <span class="material-symbols-outlined" style="font-size: 22px;">
+        <span class="material-symbols-outlined" style="font-size: 20px;">
             {{ isOpen ? 'close' : 'smart_toy' }}
         </span>
         <!-- Dot if not configured -->
@@ -267,21 +292,34 @@ onMounted(async () => {
                 <div
                     v-for="(msg, i) in chatStore.messages"
                     :key="i"
-                    class="flex"
-                    :class="msg.role === 'user' ? 'justify-end' : 'justify-start'"
+                    class="flex flex-col"
+                    :class="msg.role === 'user' ? 'items-end' : 'items-start'"
                 >
-                    <!-- Assistant avatar -->
-                    <div v-if="msg.role === 'assistant'" class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mr-xs mt-0.5">
-                        <span class="material-symbols-outlined text-primary" style="font-size: 14px;">smart_toy</span>
+                    <div class="flex" :class="msg.role === 'user' ? 'justify-end' : 'justify-start'">
+                        <!-- Assistant avatar -->
+                        <div v-if="msg.role === 'assistant'" class="w-7 h-7 rounded-full flex items-center justify-center shrink-0 mr-xs mt-0.5" :class="msg.error ? 'bg-rose-50' : 'bg-primary/10'">
+                            <span class="material-symbols-outlined" style="font-size: 14px;" :class="msg.error ? 'text-rose-500' : 'text-primary'">{{ msg.error ? 'error_outline' : 'smart_toy' }}</span>
+                        </div>
+
+                        <div
+                            class="max-w-[80%] rounded-2xl px-sm py-xs text-body-sm leading-relaxed"
+                            :class="msg.role === 'user'
+                                ? 'bg-primary text-white rounded-tr-sm'
+                                : (msg.error ? 'bg-rose-50 text-rose-700 rounded-tl-sm' : 'bg-surface-container text-on-surface rounded-tl-sm')"
+                            v-html="msg.role === 'assistant' ? renderContent(msg.content) : msg.content"
+                        ></div>
                     </div>
 
-                    <div
-                        class="max-w-[80%] rounded-2xl px-sm py-xs text-body-sm leading-relaxed"
-                        :class="msg.role === 'user'
-                            ? 'bg-primary text-white rounded-tr-sm'
-                            : 'bg-surface-container text-on-surface rounded-tl-sm'"
-                        v-html="msg.role === 'assistant' ? renderContent(msg.content) : msg.content"
-                    ></div>
+                    <!-- Bouton relancer en cas d'échec -->
+                    <button
+                        v-if="msg.role === 'assistant' && msg.error"
+                        @click="retry(i)"
+                        :disabled="isLoading"
+                        class="flex items-center gap-1 ml-8 mt-1 text-[11px] text-primary hover:underline disabled:opacity-40"
+                    >
+                        <span class="material-symbols-outlined" style="font-size: 13px;">refresh</span>
+                        Relancer
+                    </button>
                 </div>
 
                 <!-- Loading indicator -->

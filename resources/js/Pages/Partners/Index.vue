@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -13,15 +14,20 @@ interface Partner {
 interface Paginated {
     data: Partner[]
     links: Array<{ url: string | null; label: string; active: boolean }>
-    meta: { from: number; to: number; total: number }
+    total: number
+    from: number
+    to: number
 }
 
 defineProps<{ partners: Paginated }>()
 
-const destroy = (p: Partner) => {
-    if (confirm(`Supprimer le partenaire « ${p.name} » ?`)) {
-        router.delete(`/partners/${p.id}`)
-    }
+const confirmTarget = ref<Partner | null>(null)
+
+const destroy = () => {
+    if (!confirmTarget.value) return
+    router.delete(`/partners/${confirmTarget.value.id}`, {
+        onFinish: () => { confirmTarget.value = null },
+    })
 }
 </script>
 
@@ -29,12 +35,17 @@ const destroy = (p: Partner) => {
     <div class="max-w-[900px] mx-auto space-y-xl">
 
         <!-- En-tête -->
-        <div class="flex justify-between items-end">
-            <div>
-                <h1 class="text-h1 font-bold text-on-surface">Partenaires</h1>
-                <p class="text-body-md text-secondary mt-xs">
-                    {{ partners.meta?.total ?? 0 }} partenaire(s) configuré(s).
-                </p>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-md">
+                <div class="page-header-icon">
+                    <span class="material-symbols-outlined">handshake</span>
+                </div>
+                <div>
+                    <h1 class="text-h1 font-bold text-on-surface">Partenaires</h1>
+                    <p class="text-body-md text-secondary mt-xs">
+                        {{ partners.total ?? 0 }} partenaire(s) configuré(s).
+                    </p>
+                </div>
             </div>
             <Link href="/partners/create" class="btn-primary">
                 <span class="material-symbols-outlined" style="font-size:18px">add</span>
@@ -78,7 +89,7 @@ const destroy = (p: Partner) => {
                     <Link :href="`/partners/${partner.id}/edit`" class="icon-btn" title="Modifier">
                         <span class="material-symbols-outlined" style="font-size:18px">edit</span>
                     </Link>
-                    <button @click="destroy(partner)" class="icon-btn danger" title="Supprimer">
+                    <button @click="confirmTarget = partner" class="icon-btn danger" title="Supprimer">
                         <span class="material-symbols-outlined" style="font-size:18px">delete</span>
                     </button>
                 </div>
@@ -86,7 +97,7 @@ const destroy = (p: Partner) => {
         </div>
 
         <!-- Pagination -->
-        <div v-if="partners.meta?.total > 20" class="flex items-center justify-center gap-xs">
+        <div v-if="partners.total > 20" class="flex items-center justify-center gap-xs">
             <template v-for="link in partners.links" :key="link.label">
                 <Link v-if="link.url" :href="link.url" class="page-btn" :class="{ 'page-active': link.active }" v-html="link.label" />
                 <span v-else class="page-btn page-disabled" v-html="link.label" />
@@ -94,9 +105,38 @@ const destroy = (p: Partner) => {
         </div>
 
     </div>
+
+    <!-- Modal de confirmation de suppression -->
+    <Teleport to="body">
+        <div v-if="confirmTarget" class="modal-backdrop" @click.self="confirmTarget = null">
+            <div class="modal-box">
+                <div class="modal-icon">
+                    <span class="material-symbols-outlined" style="font-size:32px;color:#E5004C">delete</span>
+                </div>
+                <h3 class="modal-title">Supprimer le partenaire</h3>
+                <p class="modal-body">
+                    Voulez-vous vraiment supprimer <strong>« {{ confirmTarget.name }} »</strong> ?
+                    Cette action est irréversible.
+                </p>
+                <div class="modal-actions">
+                    <button class="btn-cancel" @click="confirmTarget = null">Annuler</button>
+                    <button class="btn-danger" @click="destroy">Supprimer</button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
 </template>
 
 <style scoped>
+.page-header-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff;
+}
+.page-header-icon .material-symbols-outlined { font-size: 24px; }
+
 .btn-primary {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 16px; background: #E5004C; color: #fff;
@@ -167,4 +207,32 @@ const destroy = (p: Partner) => {
 .page-btn:hover { background: #eceef0; }
 .page-active { background: #E5004C !important; color: #fff; }
 .page-disabled { opacity: 0.4; cursor: default; }
+
+/* Modal */
+.modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 1000;
+}
+.modal-box {
+    background: #fff; border-radius: 16px; padding: 32px 28px;
+    width: 100%; max-width: 400px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.modal-icon { margin-bottom: 12px; }
+.modal-title { font-size: 18px; font-weight: 700; color: #191c1e; margin-bottom: 8px; }
+.modal-body { font-size: 14px; color: #515f74; line-height: 1.6; margin-bottom: 24px; }
+.modal-actions { display: flex; gap: 12px; justify-content: center; }
+.btn-cancel {
+    padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    border: 1.5px solid #d0d3d5; color: #515f74; background: #fff; cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-cancel:hover { background: #f4f5f6; }
+.btn-danger {
+    padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    background: #E5004C; color: #fff; border: none; cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-danger:hover { background: #c0003e; }
 </style>

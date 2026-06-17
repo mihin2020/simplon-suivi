@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { router } from '@inertiajs/vue3'
+import { router, Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import axios from 'axios'
 
@@ -123,6 +123,19 @@ const filteredLearners = computed(() => {
     return props.learners.filter(l => l.full_name.toLowerCase().includes(q))
 })
 
+// ── Pagination ────────────────────────────────────────────────────
+const PER_PAGE = 20
+const currentPage = ref(1)
+
+watch(searchQuery, () => { currentPage.value = 1 })
+
+const totalPages = computed(() => Math.ceil(filteredLearners.value.length / PER_PAGE))
+
+const paginatedLearners = computed(() => {
+    const start = (currentPage.value - 1) * PER_PAGE
+    return filteredLearners.value.slice(start, start + PER_PAGE)
+})
+
 // ── Récapitulatif ─────────────────────────────────────────────────
 function loadRecap() {
     router.visit(`/formations/${props.formation.id}/attendances/recap`, {
@@ -160,19 +173,24 @@ function rowSummary(row: RecapRow): { code: string; count: number }[] {
 
         <!-- En-tête formation -->
         <div class="page-header">
-            <div>
-                <p class="header-project">
-                    <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
-                    {{ formation.project.name }}
-                </p>
-                <h1 class="header-title">{{ formation.name }}</h1>
+            <div class="header-left">
+                <Link href="/presences" class="btn-back" title="Retour aux présences">
+                    <span class="material-symbols-outlined" style="font-size:20px">arrow_back</span>
+                </Link>
+                <div>
+                    <p class="header-project">
+                        <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
+                        {{ formation.project.name }}
+                    </p>
+                    <h1 class="header-title">{{ formation.name }}</h1>
+                </div>
             </div>
-            <div style="display:flex;gap:8px;">
-                <a :href="`/formations/${formation.id}/attendances/pdf?date=${currentDate}`" class="btn-outline">
+            <div class="header-actions">
+                <a :href="`/formations/${formation.id}/attendances/pdf?date=${currentDate}`" class="btn-pdf">
                     <span class="material-symbols-outlined" style="font-size:16px">picture_as_pdf</span>
                     PDF du jour
                 </a>
-                <a :href="`/formations/${formation.id}/attendances/pdf-recap`" class="btn-outline btn-outline-primary">
+                <a :href="`/formations/${formation.id}/attendances/pdf-recap`" class="btn-pdf-primary">
                     <span class="material-symbols-outlined" style="font-size:16px">summarize</span>
                     PDF récapitulatif
                 </a>
@@ -268,7 +286,7 @@ function rowSummary(row: RecapRow): { code: string; count: number }[] {
                     <p>Aucun apprenant actif dans cette formation.</p>
                 </div>
                 <div
-                    v-for="(learner, idx) in filteredLearners"
+                    v-for="learner in paginatedLearners"
                     :key="learner.id"
                     class="learner-row"
                     :class="`row-${records[learner.id]}`"
@@ -297,6 +315,20 @@ function rowSummary(row: RecapRow): { code: string; count: number }[] {
                         </span>
                     </div>
                 </div>
+            </div>
+
+            <!-- Pagination -->
+            <div v-if="totalPages > 1" class="pagination-bar">
+                <button class="page-btn" :disabled="currentPage === 1" @click="currentPage--">
+                    <span class="material-symbols-outlined" style="font-size:16px">chevron_left</span>
+                </button>
+                <span class="page-info">
+                    Page {{ currentPage }} / {{ totalPages }}
+                    <span class="page-count">({{ filteredLearners.length }} apprenant{{ filteredLearners.length > 1 ? 's' : '' }})</span>
+                </span>
+                <button class="page-btn" :disabled="currentPage === totalPages" @click="currentPage++">
+                    <span class="material-symbols-outlined" style="font-size:16px">chevron_right</span>
+                </button>
             </div>
 
             <!-- Jours de cours enregistrés -->
@@ -410,24 +442,42 @@ function rowSummary(row: RecapRow): { code: string; count: number }[] {
 
 /* ── Header ── */
 .page-header {
-    display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
-    padding: 18px 22px; background: #fff; border: 1px solid #e0e3e5; border-radius: 12px;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 16px 20px; background: #fff; border: 1px solid #e0e3e5; border-radius: 12px;
 }
+.header-left { display: flex; align-items: center; gap: 14px; }
+.header-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+.btn-back {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent;
+    text-decoration: none; transition: background 0.15s, color 0.15s; flex-shrink: 0;
+}
+.btn-back:hover { background: #1F3A4D; color: #fff; }
+
 .header-project {
     display: flex; align-items: center; gap: 4px;
     font-size: 11px; font-weight: 600; color: #9aaabb;
     text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px;
 }
 .header-title { font-size: 20px; font-weight: 700; color: #191c1e; }
-.btn-outline {
+
+.btn-pdf {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 14px; border: 1px solid #e0e3e5; border-radius: 6px;
-    font-size: 13px; color: #515f74; background: #fff; text-decoration: none;
-    transition: background 0.15s; white-space: nowrap;
+    padding: 8px 14px; border: 1.5px solid #1F3A4D; border-radius: 8px;
+    font-size: 13px; font-weight: 600; color: #1F3A4D; background: transparent;
+    text-decoration: none; transition: background 0.15s, color 0.15s; white-space: nowrap;
 }
-.btn-outline:hover { background: #f5f7f9; }
-.btn-outline-primary { background: #fff0f5; border-color: #E5004C; color: #E5004C; }
-.btn-outline-primary:hover { background: #ffe0ec; }
+.btn-pdf:hover { background: #1F3A4D; color: #fff; }
+
+.btn-pdf-primary {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border: none; border-radius: 8px;
+    font-size: 13px; font-weight: 600; color: #fff; background: #E5004C;
+    text-decoration: none; transition: background 0.15s; white-space: nowrap;
+}
+.btn-pdf-primary:hover { background: #c0003e; }
 
 /* ── Onglets ── */
 .tabs-bar {
@@ -584,6 +634,22 @@ function rowSummary(row: RecapRow): { code: string; count: number }[] {
 .si-saved  { color: #22c55e; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
+/* ── Pagination ── */
+.pagination-bar {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    padding: 10px 16px; background: #fff; border: 1px solid #e0e3e5;
+    border-radius: 8px;
+}
+.page-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border: 1.5px solid #e0e3e5; border-radius: 6px;
+    background: #fff; color: #515f74; cursor: pointer; transition: all 0.15s;
+}
+.page-btn:hover:not(:disabled) { border-color: #E5004C; color: #E5004C; }
+.page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.page-info { font-size: 13px; font-weight: 600; color: #191c1e; }
+.page-count { font-size: 12px; font-weight: 400; color: #9aaabb; margin-left: 4px; }
+
 /* ── Jours enregistrés ── */
 .dates-panel {
     padding: 14px 18px; background: #fff; border: 1px solid #e0e3e5; border-radius: 10px;
@@ -715,19 +781,9 @@ function rowSummary(row: RecapRow): { code: string; count: number }[] {
     .att-page { gap: 10px; padding: 0 2px; }
 
     /* Header : titre + boutons PDF en colonne */
-    .page-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 10px;
-        padding: 14px 16px;
-    }
-    .page-header > div:last-child {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        width: 100%;
-    }
-    .btn-outline { flex: 1; justify-content: center; font-size: 12px; padding: 6px 10px; }
+    .page-header { flex-direction: column; align-items: flex-start; gap: 10px; padding: 14px 16px; }
+    .header-actions { flex-wrap: wrap; width: 100%; }
+    .btn-pdf, .btn-pdf-primary { flex: 1; justify-content: center; font-size: 12px; padding: 7px 10px; }
 
     /* Onglets : texte réduit */
     .tabs-bar { padding: 3px; gap: 3px; }

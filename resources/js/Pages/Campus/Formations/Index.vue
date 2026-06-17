@@ -1,7 +1,29 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+
+// ── Modal de confirmation / blocage ──────────────────────────────────────────
+const confirmTarget = ref<CampusFormation | null>(null)
+const showConfirm   = ref(false)
+
+const hasCohortes = computed(() => (confirmTarget.value?.cohorts_count ?? 0) > 0)
+
+function askDelete(f: CampusFormation) {
+    confirmTarget.value = f
+    showConfirm.value   = true
+}
+
+function confirmDelete() {
+    if (!confirmTarget.value || hasCohortes.value) return
+    router.delete(`/campus/formations/${confirmTarget.value.id}`)
+    closeModal()
+}
+
+function closeModal() {
+    showConfirm.value   = false
+    confirmTarget.value = null
+}
 
 defineOptions({ layout: AdminLayout })
 
@@ -21,7 +43,11 @@ interface CampusFormation {
 interface Paginated {
     data: CampusFormation[]
     links: Array<{ url: string | null; label: string; active: boolean }>
-    meta: { from: number; to: number; total: number }
+    from: number | null
+    to: number | null
+    total: number
+    current_page: number
+    last_page: number
 }
 
 const props = defineProps<{
@@ -48,29 +74,30 @@ const modeIcon: Record<string, string> = {
 const formatCost = (n: number) =>
     new Intl.NumberFormat('fr-FR').format(n) + ' FCFA'
 
-const destroy = (f: CampusFormation) => {
-    if (confirm(`Supprimer la formation « ${f.name} » ?`)) {
-        router.delete(`/campus/formations/${f.id}`)
-    }
-}
 </script>
 
 <template>
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->
-        <div class="flex justify-between items-end">
-            <div>
-                <h1 class="text-h1 font-bold text-on-surface">Formations</h1>
-                <p class="text-body-md text-secondary mt-xs">
-                    {{ formations.meta?.total ?? 0 }} formation(s) dans le catalogue.
-                </p>
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-md">
+                <div class="page-header-icon">
+                    <span class="material-symbols-outlined" style="font-size:24px">local_library</span>
+                </div>
+                <div>
+                    <h1 class="text-h1 font-bold text-on-surface">Formations</h1>
+                    <p class="text-body-md text-secondary mt-xs">
+                        {{ formations.total ?? 0 }} formation(s) dans le catalogue.
+                    </p>
+                </div>
             </div>
             <Link href="/campus/formations/create" class="btn-primary">
                 <span class="material-symbols-outlined" style="font-size:18px">add</span>
                 Nouvelle formation
             </Link>
         </div>
+
 
         <!-- Barre de recherche -->
         <div class="search-bar">
@@ -136,7 +163,7 @@ const destroy = (f: CampusFormation) => {
                     <Link :href="`/campus/formations/${f.id}/edit`" class="icon-btn" title="Modifier">
                         <span class="material-symbols-outlined" style="font-size:18px">edit</span>
                     </Link>
-                    <button @click="destroy(f)" class="icon-btn danger" title="Supprimer" type="button">
+                    <button @click="askDelete(f)" class="icon-btn danger" title="Supprimer" type="button">
                         <span class="material-symbols-outlined" style="font-size:18px">delete</span>
                     </button>
                 </div>
@@ -156,7 +183,7 @@ const destroy = (f: CampusFormation) => {
         <!-- Pagination -->
         <div v-if="formations.links?.length > 3" class="flex items-center justify-between">
             <span class="text-body-sm text-on-surface-variant">
-                {{ formations.meta?.from }}–{{ formations.meta?.to }} sur {{ formations.meta?.total }}
+                {{ formations.from }}–{{ formations.to }} sur {{ formations.total }}
             </span>
             <div class="flex items-center gap-xs">
                 <template v-for="link in formations.links" :key="link.label">
@@ -166,9 +193,76 @@ const destroy = (f: CampusFormation) => {
             </div>
         </div>
     </div>
+
+    <!-- Modal suppression -->
+    <Teleport to="body">
+        <Transition name="modal">
+            <div v-if="showConfirm" class="modal-overlay" @click.self="closeModal">
+                <div class="modal-box" role="dialog" aria-modal="true">
+
+                    <!-- ── CAS BLOQUÉ : cohortes existantes ── -->
+                    <template v-if="hasCohortes">
+                        <div class="modal-icon modal-icon-warn">
+                            <span class="material-symbols-outlined" style="font-size:28px;color:#d97706">warning</span>
+                        </div>
+                        <h2 class="modal-title">Suppression impossible</h2>
+                        <p class="modal-body">
+                            La formation <strong>« {{ confirmTarget?.name }} »</strong>
+                            possède <strong>{{ confirmTarget?.cohorts_count }} cohorte(s)</strong>.
+                            Vous devez d'abord supprimer toutes les cohortes associées avant de pouvoir supprimer cette formation.
+                        </p>
+                        <div class="modal-actions">
+                            <Link
+                                :href="`/campus/formations/${confirmTarget?.id}`"
+                                class="modal-btn-view"
+                                @click="closeModal"
+                            >
+                                <span class="material-symbols-outlined" style="font-size:15px">open_in_new</span>
+                                Voir les cohortes
+                            </Link>
+                            <button class="modal-btn-cancel" @click="closeModal">Fermer</button>
+                        </div>
+                    </template>
+
+                    <!-- ── CAS AUTORISÉ : aucune cohorte ── -->
+                    <template v-else>
+                        <div class="modal-icon">
+                            <span class="material-symbols-outlined" style="font-size:28px;color:#ba1a1a">delete_forever</span>
+                        </div>
+                        <h2 class="modal-title">Supprimer la formation ?</h2>
+                        <p class="modal-body">
+                            Vous êtes sur le point de supprimer
+                            <strong>« {{ confirmTarget?.name }} »</strong>.
+                            Cette action est irréversible.
+                        </p>
+                        <div class="modal-actions">
+                            <button class="modal-btn-cancel" @click="closeModal">Annuler</button>
+                            <button class="modal-btn-delete" @click="confirmDelete">
+                                <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                                Supprimer
+                            </button>
+                        </div>
+                    </template>
+
+                </div>
+            </div>
+        </Transition>
+    </Teleport>
 </template>
 
 <style scoped>
+.page-header-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
 .btn-primary {
     display: inline-flex;
     align-items: center;
@@ -193,29 +287,31 @@ const destroy = (f: CampusFormation) => {
     gap: 6px;
     padding: 8px 16px;
     background: transparent;
-    color: #515f74;
+    color: #1F3A4D;
     border-radius: 8px;
     font-size: 13px;
-    font-weight: 500;
-    border: 1px solid #e0e3e5;
-    transition: background 0.15s;
+    font-weight: 600;
+    border: 1.5px solid #1F3A4D;
+    transition: background 0.15s, color 0.15s;
     text-decoration: none;
     cursor: pointer;
 }
-.btn-secondary:hover { background: #f2f4f6; }
+.btn-secondary:hover { background: #1F3A4D; color: #fff; }
 
 .icon-btn {
     padding: 6px;
-    color: #515f74;
+    color: #1F3A4D;
     border-radius: 6px;
-    border: 1px solid #e0e3e5;
+    border: 1.5px solid #1F3A4D;
     background: transparent;
-    transition: color 0.15s, background 0.15s;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
     display: inline-flex;
     cursor: pointer;
+    text-decoration: none;
 }
-.icon-btn:hover { color: #E5004C; background: #fff5f8; border-color: #fbb6ce; }
-.icon-btn.danger:hover { color: #ba1a1a; background: #fff1f2; border-color: #fca5a5; }
+.icon-btn:hover { background: #1F3A4D; color: #fff; }
+.icon-btn.danger { color: #ba1a1a; border-color: #fca5a5; }
+.icon-btn.danger:hover { background: #ba1a1a; color: #fff; border-color: #ba1a1a; }
 
 /* Search bar */
 .search-bar {
@@ -359,4 +455,82 @@ const destroy = (f: CampusFormation) => {
 .page-btn:hover { background: #eceef0; }
 .page-active { background: #E5004C !important; color: #fff; }
 .page-disabled { opacity: 0.4; cursor: default; }
+
+/* Modal de confirmation */
+.modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999;
+    padding: 16px;
+}
+.modal-box {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px 28px 24px;
+    max-width: 420px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    text-align: center;
+}
+.modal-icon {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: #fff1f2;
+    border: 1px solid #fca5a5;
+    display: flex; align-items: center; justify-content: center;
+}
+.modal-icon-warn {
+    background: #fffbeb;
+    border-color: #fcd34d;
+}
+.modal-btn-view {
+    flex: 1;
+    display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    padding: 10px 16px;
+    background: #1F3A4D;
+    border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600; color: #fff;
+    cursor: pointer; text-decoration: none;
+    transition: background .15s;
+}
+.modal-btn-view:hover { background: #162d3d; }
+.modal-title { font-size: 17px; font-weight: 700; color: #191c1e; margin: 0; }
+.modal-body  { font-size: 14px; color: #515f74; margin: 0; line-height: 1.55; }
+.modal-actions {
+    display: flex; gap: 10px; justify-content: center;
+    margin-top: 8px; width: 100%;
+}
+.modal-btn-cancel {
+    flex: 1;
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid #e0e3e5;
+    border-radius: 8px;
+    font-size: 14px; font-weight: 500; color: #515f74;
+    cursor: pointer;
+    transition: background .15s;
+}
+.modal-btn-cancel:hover { background: #f2f4f6; }
+.modal-btn-delete {
+    flex: 1;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 10px 20px;
+    background: #ba1a1a;
+    border: none; border-radius: 8px;
+    font-size: 14px; font-weight: 600; color: #fff;
+    cursor: pointer;
+    transition: background .15s;
+}
+.modal-btn-delete:hover { background: #991616; }
+
+/* Animation d'entrée/sortie */
+.modal-enter-active, .modal-leave-active { transition: opacity .2s ease; }
+.modal-enter-active .modal-box, .modal-leave-active .modal-box { transition: transform .2s ease, opacity .2s ease; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
+.modal-enter-from .modal-box, .modal-leave-to .modal-box { transform: scale(.93); opacity: 0; }
 </style>

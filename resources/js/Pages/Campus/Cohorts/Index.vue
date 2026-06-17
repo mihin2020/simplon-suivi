@@ -30,14 +30,17 @@ interface Paginated {
     last_page: number
 }
 
+interface Filters { formation: string; status: string }
+
 const props = defineProps<{
     cohorts: Paginated
     formations: Formation[]
     statuses: Status[]
+    filters: Filters
 }>()
 
-const filterFormation = ref('')
-const filterStatus    = ref('')
+const filterFormation = ref(props.filters.formation)
+const filterStatus    = ref(props.filters.status)
 
 watch([filterFormation, filterStatus], ([f, s]) => {
     router.get('/campus/cohorts', { formation: f, status: s }, { preserveState: true, replace: true })
@@ -100,12 +103,17 @@ const cancelDelete = () => {
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->
-        <div class="flex justify-between items-end">
-            <div>
-                <h1 class="text-h1 font-bold text-on-surface">Cohortes</h1>
-                <p class="text-body-md text-secondary mt-xs">
-                    {{ cohorts.total }} cohorte(s) enregistrée(s).
-                </p>
+        <div class="flex justify-between items-center">
+            <div class="flex items-center gap-md">
+                <div class="page-header-icon">
+                    <span class="material-symbols-outlined" style="font-size:24px">class</span>
+                </div>
+                <div>
+                    <h1 class="text-h1 font-bold text-on-surface">Cohortes</h1>
+                    <p class="text-body-md text-secondary mt-xs">
+                        {{ cohorts.total }} cohorte(s) enregistrée(s).
+                    </p>
+                </div>
             </div>
             <Link href="/campus/cohorts/create" class="btn-primary">
                 <span class="material-symbols-outlined" style="font-size:18px">add</span>
@@ -159,7 +167,7 @@ const cancelDelete = () => {
                                 </Link>
                             </td>
                             <td class="px-md py-sm text-body-sm text-on-surface-variant">
-                                {{ c.campus_formation.name }}
+                                {{ c.campus_formation?.name ?? '' }}
                             </td>
                             <td class="px-md py-sm">
                                 <span class="text-data-tabular text-on-surface">{{ fmt(c.started_at) }}</span>
@@ -247,6 +255,13 @@ const cancelDelete = () => {
 </template>
 
 <style scoped>
+.page-header-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+
 .btn-primary {
     display: inline-flex;
     align-items: center;

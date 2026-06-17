@@ -58,12 +58,13 @@ class Cohort extends Model
 
     public function getTotalExpectedAttribute(): int
     {
-        return $this->payments()->whereIn('status', ['en_attente', 'paye', 'en_retard'])->sum('amount');
+        $this->loadMissing(['campusFormation' => fn ($q) => $q->withTrashed()]);
+        return $this->activeLearners()->count() * ($this->campusFormation?->total_cost ?? 0);
     }
 
     public function getTotalRemainingAttribute(): int
     {
-        return $this->payments()->whereIn('status', ['en_attente', 'en_retard'])->sum('amount');
+        return max(0, $this->total_expected - $this->total_collected);
     }
 
     public function scopeActive($query)

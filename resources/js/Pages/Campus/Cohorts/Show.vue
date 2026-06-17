@@ -6,7 +6,7 @@ import ConfirmModal from '@/Components/ConfirmModal.vue'
 
 defineOptions({ layout: AdminLayout })
 
-interface Formation { id: string; name: string }
+interface Formation { id: string; name: string; total_cost?: number }
 interface StatusOpt { value: string; label: string; color: string }
 interface EducationLevel { id: number; name: string }
 interface Learner {
@@ -34,6 +34,13 @@ interface Cohort {
     campus_formation: Formation
 }
 
+interface CohortOption {
+    id: string
+    name: string
+    formation_name: string
+    total_cost: number
+}
+
 interface PaymentStats {
     total_collected: number
     total_expected: number
@@ -59,6 +66,7 @@ const props = defineProps<{
     statuses: StatusOpt[]
     availableLearners?: Learner[]
     educationLevels?: EducationLevel[]
+    availableCohorts?: CohortOption[]
 }>()
 
 const fmt = (d: string) =>
@@ -75,11 +83,13 @@ const learnerStatusClass: Record<string, string> = {
     actif:    'badge-green',
     retrait:  'badge-gray',
     diplome:  'badge-blue',
+    deplace:  'badge-purple',
 }
 const learnerStatusLabel: Record<string, string> = {
     actif:   'Actif',
     retrait: 'Retiré',
     diplome: 'Diplômé',
+    deplace: 'Déplacé',
 }
 
 // ── Inscription apprenants ────────────────────────────────────────────────
@@ -293,6 +303,34 @@ const confirmBulkRemove = () => {
     })
 }
 
+// ── Déplacer apprenant ───────────────────────────────────────────────────
+const showMoveModal  = ref(false)
+const moveTarget     = ref<Learner | null>(null)
+const moveForm       = useForm({ target_cohort_id: '' })
+
+const openMove = (l: Learner) => {
+    moveTarget.value           = l
+    moveForm.target_cohort_id  = ''
+    showMoveModal.value        = true
+    showLearnerModal.value     = false
+}
+const submitMove = () => {
+    if (!moveTarget.value) return
+    moveForm.post(`/campus/cohorts/${props.cohort.id}/learners/${moveTarget.value.id}/move`, {
+        preserveScroll: true,
+        onSuccess: () => { showMoveModal.value = false },
+    })
+}
+
+const selectedTargetCohort = computed<CohortOption | null>(() =>
+    (props.availableCohorts ?? []).find(c => c.id === moveForm.target_cohort_id) ?? null
+)
+const sourceCost = computed(() => props.cohort.campus_formation.total_cost ?? 0)
+const targetCostChanged = computed(() =>
+    selectedTargetCohort.value !== null &&
+    selectedTargetCohort.value.total_cost !== sourceCost.value
+)
+
 // ── Clôturer ─────────────────────────────────────────────────────────────
 const showCloseModal = ref(false)
 const closing        = ref(false)
@@ -328,7 +366,7 @@ const confirmClose = () => {
                 </div>
             </div>
             <div class="flex items-center gap-sm">
-                <Link :href="`/campus/cohorts/${cohort.id}/edit`" class="btn-secondary">
+                <Link :href="`/campus/cohorts/${cohort.id}/edit`" class="btn-navy">
                     <span class="material-symbols-outlined" style="font-size:18px">edit</span>
                     Modifier
                 </Link>
@@ -341,7 +379,7 @@ const confirmClose = () => {
                     <span class="material-symbols-outlined" style="font-size:18px">lock</span>
                     Clôturer
                 </button>
-                <Link :href="`/campus/cohorts/${cohort.id}/payments`" class="btn-secondary">
+                <Link :href="`/campus/cohorts/${cohort.id}/payments`" class="btn-brand">
                     <span class="material-symbols-outlined" style="font-size:18px">payments</span>
                     Paiements
                 </Link>
@@ -351,24 +389,46 @@ const confirmClose = () => {
         <!-- Stats financières -->
         <div class="stats-grid">
             <div class="stat-card">
-                <p class="stat-label">Encaissé</p>
-                <p class="stat-val green">{{ fmtCost(paymentStats.total_collected) }}</p>
+                <span class="sic sic-navy"><span class="material-symbols-outlined">groups</span></span>
+                <div>
+                    <p class="stat-label">Apprenants</p>
+                    <p class="stat-val">{{ learners.total }}</p>
+                </div>
             </div>
             <div class="stat-card">
-                <p class="stat-label">Attendu</p>
-                <p class="stat-val">{{ fmtCost(paymentStats.total_expected) }}</p>
+                <span class="sic sic-green"><span class="material-symbols-outlined">payments</span></span>
+                <div>
+                    <p class="stat-label">Encaissé</p>
+                    <p class="stat-val green">{{ fmtCost(paymentStats.total_collected) }}</p>
+                </div>
             </div>
             <div class="stat-card">
-                <p class="stat-label">Reste à payer</p>
-                <p class="stat-val amber">{{ fmtCost(paymentStats.total_remaining) }}</p>
+                <span class="sic sic-blue"><span class="material-symbols-outlined">account_balance</span></span>
+                <div>
+                    <p class="stat-label">Attendu</p>
+                    <p class="stat-val">{{ fmtCost(paymentStats.total_expected) }}</p>
+                </div>
             </div>
             <div class="stat-card">
-                <p class="stat-label">Soldés</p>
-                <p class="stat-val">{{ paymentStats.paid_count }}</p>
+                <span class="sic sic-amber"><span class="material-symbols-outlined">hourglass_empty</span></span>
+                <div>
+                    <p class="stat-label">Reste à payer</p>
+                    <p class="stat-val amber">{{ fmtCost(paymentStats.total_remaining) }}</p>
+                </div>
             </div>
             <div class="stat-card">
-                <p class="stat-label">En retard</p>
-                <p class="stat-val red">{{ paymentStats.overdue_count }}</p>
+                <span class="sic sic-emerald"><span class="material-symbols-outlined">verified</span></span>
+                <div>
+                    <p class="stat-label">Soldés</p>
+                    <p class="stat-val">{{ paymentStats.paid_count }}</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <span class="sic sic-red"><span class="material-symbols-outlined">warning</span></span>
+                <div>
+                    <p class="stat-label">En retard</p>
+                    <p class="stat-val red">{{ paymentStats.overdue_count }}</p>
+                </div>
             </div>
         </div>
 
@@ -463,7 +523,7 @@ const confirmClose = () => {
                             >
                                 {{ l.last_name }} {{ l.first_name }}
                             </button>
-                            <p class="text-body-sm text-on-surface-variant">{{ l.email ?? '—' }}</p>
+                            <p class="text-body-sm text-on-surface-variant">{{ l.email ?? '' }}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-sm">
@@ -473,14 +533,24 @@ const confirmClose = () => {
                         <span v-if="l.pivot" class="text-body-sm text-on-surface-variant">
                             Inscrit le {{ fmt(l.pivot.enrolled_at) }}
                         </span>
-                        <button
-                            @click="askRemove(l)"
-                            class="remove-btn opacity-0 group-hover:opacity-100"
-                            title="Retirer de la cohorte"
-                            type="button"
-                        >
-                            <span class="material-symbols-outlined" style="font-size:16px">person_remove</span>
-                        </button>
+                        <template v-if="cohort.status !== 'cloturee' && l.pivot?.status === 'actif'">
+                            <button
+                                @click="openMove(l)"
+                                class="move-btn opacity-0 group-hover:opacity-100"
+                                title="Déplacer vers une autre cohorte"
+                                type="button"
+                            >
+                                <span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span>
+                            </button>
+                            <button
+                                @click="askRemove(l)"
+                                class="remove-btn opacity-0 group-hover:opacity-100"
+                                title="Retirer de la cohorte"
+                                type="button"
+                            >
+                                <span class="material-symbols-outlined" style="font-size:16px">person_remove</span>
+                            </button>
+                        </template>
                     </div>
                 </div>
             </div>
@@ -566,15 +636,15 @@ const confirmClose = () => {
                     <div v-if="learnerTab === 'detail'" class="learner-detail-body">
                         <div class="detail-row">
                             <span class="detail-icon material-symbols-outlined">mail</span>
-                            <div><p class="detail-label">Email</p><p class="detail-val">{{ selectedLearner.email ?? '—' }}</p></div>
+                            <div><p class="detail-label">Email</p><p class="detail-val">{{ selectedLearner.email ?? '' }}</p></div>
                         </div>
                         <div class="detail-row">
                             <span class="detail-icon material-symbols-outlined">phone</span>
-                            <div><p class="detail-label">Téléphone</p><p class="detail-val">{{ selectedLearner.phone ?? '—' }}</p></div>
+                            <div><p class="detail-label">Téléphone</p><p class="detail-val">{{ selectedLearner.phone ?? '' }}</p></div>
                         </div>
                         <div class="detail-row">
                             <span class="detail-icon material-symbols-outlined">person</span>
-                            <div><p class="detail-label">Genre</p><p class="detail-val">{{ selectedLearner.gender ? genderLabel[selectedLearner.gender] : '—' }}</p></div>
+                            <div><p class="detail-label">Genre</p><p class="detail-val">{{ selectedLearner.gender ? genderLabel[selectedLearner.gender] : '' }}</p></div>
                         </div>
                         <div class="detail-row" v-if="selectedLearner.birth_date">
                             <span class="detail-icon material-symbols-outlined">cake</span>
@@ -593,15 +663,24 @@ const confirmClose = () => {
                             </div>
                         </div>
                         <div class="enroll-actions" style="padding:16px 0 0">
-                            <button
-                                v-if="cohort.status !== 'cloturee'"
-                                @click="askRemove(selectedLearner)"
-                                class="btn-danger-outline"
-                                type="button"
-                            >
-                                <span class="material-symbols-outlined" style="font-size:16px">person_remove</span>
-                                Retirer de la cohorte
-                            </button>
+                            <template v-if="cohort.status !== 'cloturee' && selectedLearner.pivot?.status === 'actif'">
+                                <button
+                                    @click="openMove(selectedLearner)"
+                                    class="btn-move-outline"
+                                    type="button"
+                                >
+                                    <span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span>
+                                    Déplacer
+                                </button>
+                                <button
+                                    @click="askRemove(selectedLearner)"
+                                    class="btn-danger-outline"
+                                    type="button"
+                                >
+                                    <span class="material-symbols-outlined" style="font-size:16px">person_remove</span>
+                                    Retirer
+                                </button>
+                            </template>
                             <button @click="showLearnerModal = false" class="btn-cancel" type="button">Fermer</button>
                         </div>
                     </div>
@@ -972,11 +1051,111 @@ const confirmClose = () => {
         @cancel="showRemoveModal = false"
     />
 
+    <!-- Modal déplacer apprenant -->
+    <Teleport to="body">
+        <Transition name="modal">
+            <div v-if="showMoveModal && moveTarget" class="backdrop" @click.self="showMoveModal = false">
+                <div class="enroll-modal" style="max-width:440px">
+                    <div class="enroll-header">
+                        <div>
+                            <h3 class="enroll-title">Déplacer l'apprenant</h3>
+                            <p class="enroll-sub">
+                                {{ moveTarget.last_name }} {{ moveTarget.first_name }} —
+                                ses paiements suivront dans la nouvelle cohorte
+                            </p>
+                        </div>
+                        <button @click="showMoveModal = false" class="close-btn" type="button">
+                            <span class="material-symbols-outlined" style="font-size:20px">close</span>
+                        </button>
+                    </div>
+                    <form @submit.prevent="submitMove" class="add-form-body">
+
+                        <!-- Frais actuels -->
+                        <div class="move-cost-row">
+                            <span class="move-cost-label">Formation actuelle</span>
+                            <span class="move-cost-val">
+                                {{ cohort.campus_formation.name }}
+                                <strong v-if="sourceCost"> — {{ fmtCost(sourceCost) }}</strong>
+                            </span>
+                        </div>
+
+                        <!-- Sélecteur cohorte cible -->
+                        <div class="form-group">
+                            <label class="form-label">Cohorte de destination <span class="req">*</span></label>
+                            <select v-model="moveForm.target_cohort_id" class="form-input" required>
+                                <option value="">— Sélectionner une cohorte —</option>
+                                <optgroup
+                                    v-for="formationName in [...new Set((availableCohorts ?? []).map(c => c.formation_name))]"
+                                    :key="formationName"
+                                    :label="formationName"
+                                >
+                                    <option
+                                        v-for="c in (availableCohorts ?? []).filter(c => c.formation_name === formationName)"
+                                        :key="c.id"
+                                        :value="c.id"
+                                    >
+                                        {{ c.name }} — {{ fmtCost(c.total_cost) }}
+                                    </option>
+                                </optgroup>
+                            </select>
+                            <p v-if="moveForm.errors.target_cohort_id" class="error-msg">
+                                {{ moveForm.errors.target_cohort_id }}
+                            </p>
+                            <p v-if="(availableCohorts ?? []).length === 0" class="error-msg">
+                                Aucune autre cohorte ouverte disponible.
+                            </p>
+                        </div>
+
+                        <!-- Aperçu frais cible + avertissements -->
+                        <template v-if="selectedTargetCohort">
+                            <!-- Changement de montant -->
+                            <div v-if="targetCostChanged" class="move-alert move-alert-warn">
+                                <span class="material-symbols-outlined" style="font-size:16px;flex-shrink:0">info</span>
+                                <div>
+                                    <strong>Les frais changent :</strong>
+                                    {{ fmtCost(sourceCost) }} → {{ fmtCost(selectedTargetCohort.total_cost) }}.
+                                    Le nouveau restant sera recalculé automatiquement.
+                                </div>
+                            </div>
+                            <div v-else class="move-alert move-alert-ok">
+                                <span class="material-symbols-outlined" style="font-size:16px;flex-shrink:0">check_circle</span>
+                                Même montant de frais — aucun recalcul nécessaire.
+                            </div>
+
+                            <!-- Tranches en attente toujours annulées -->
+                            <div class="move-alert move-alert-info">
+                                <span class="material-symbols-outlined" style="font-size:16px;flex-shrink:0">swap_horiz</span>
+                                <div>
+                                    Les <strong>versements encaissés</strong> suivront l'apprenant.
+                                    Les <strong>tranches en attente</strong> seront annulées
+                                    (à replanifier dans la nouvelle cohorte selon les nouveaux frais).
+                                </div>
+                            </div>
+                        </template>
+
+                        <div class="enroll-actions">
+                            <button type="button" @click="showMoveModal = false" class="btn-cancel">Annuler</button>
+                            <button
+                                type="submit"
+                                class="btn-confirm-enroll"
+                                :disabled="!moveForm.target_cohort_id || moveForm.processing"
+                            >
+                                <span v-if="moveForm.processing" class="spinner" />
+                                <span v-else class="material-symbols-outlined" style="font-size:15px">swap_horiz</span>
+                                Déplacer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </Transition>
+    </Teleport>
+
     <!-- Modal clôturer -->
     <ConfirmModal
         :show="showCloseModal"
         title="Clôturer la cohorte"
-        :message="`Vous êtes sur le point de clôturer « ${cohort.name} ». Cette action est irréversible.`"
+        :message="`Clôturer « ${cohort.name} » ? Tous les apprenants encore actifs seront automatiquement diplômés. Cette action est irréversible.`"
         confirm-label="Clôturer"
         :loading="closing"
         @confirm="confirmClose"
@@ -987,36 +1166,49 @@ const confirmClose = () => {
 <style scoped>
 .icon-back {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 40px; height: 40px; border-radius: 50%; color: #515f74;
-    transition: background 0.15s; flex-shrink: 0; text-decoration: none;
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent;
+    transition: background 0.15s, color 0.15s; flex-shrink: 0; text-decoration: none;
 }
-.icon-back:hover { background: #eceef0; color: #191c1e; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
 
 .status-badge {
     display: inline-flex; align-items: center;
     padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 600;
 }
-.badge-blue  { background: #dbeafe; color: #1d4ed8; }
-.badge-green { background: #d1fae5; color: #065f46; }
-.badge-gray  { background: #f3f4f6; color: #6b7280; }
+.badge-blue   { background: #dbeafe; color: #1d4ed8; }
+.badge-green  { background: #d1fae5; color: #065f46; }
+.badge-gray   { background: #f3f4f6; color: #6b7280; }
+.badge-purple { background: #ede9fe; color: #6d28d9; }
 
 /* Stats */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 16px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
 }
-@media (max-width: 1024px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
 .stat-card {
     background: #fff; border: 1px solid #e0e3e5; border-radius: 12px;
-    padding: 16px 20px; text-align: center;
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
+.sic {
+    width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+}
+.sic .material-symbols-outlined { font-size: 20px; }
+.sic-navy    { background: #e8edf2; color: #1F3A4D; }
+.sic-green   { background: #d1fae5; color: #059669; }
+.sic-blue    { background: #dbeafe; color: #2563eb; }
+.sic-amber   { background: #fef3c7; color: #d97706; }
+.sic-emerald { background: #d1fae5; color: #059669; }
+.sic-red     { background: #ffe4e6; color: #e11d48; }
 .stat-label { font-size: 11px; font-weight: 600; color: #9aaabb; text-transform: uppercase; letter-spacing: 0.04em; }
-.stat-val   { font-size: 18px; font-weight: 700; color: #191c1e; margin-top: 4px; }
-.stat-val.green { color: #065f46; }
-.stat-val.amber { color: #92400e; }
-.stat-val.red   { color: #dc2626; }
+.stat-val   { font-size: 16px; font-weight: 700; color: #191c1e; margin-top: 3px; }
+.stat-val.green { color: #059669; }
+.stat-val.amber { color: #d97706; }
+.stat-val.red   { color: #e11d48; }
 
 .count-badge {
     display: inline-flex; align-items: center; justify-content: center;
@@ -1048,13 +1240,33 @@ const confirmClose = () => {
     border: 1px solid #e0e3e5; transition: background 0.15s; text-decoration: none;
 }
 .btn-secondary:hover { background: #f2f4f6; }
+
+/* Modifier — navy Simplon */
+.btn-navy {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; background: transparent; color: #1F3A4D;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 1.5px solid #1F3A4D; transition: background 0.15s, color 0.15s; text-decoration: none;
+}
+.btn-navy:hover { background: #1F3A4D; color: #fff; }
+
+/* Paiements — rose Simplon */
+.btn-brand {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; background: #E5004C; color: #fff;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: none; transition: background 0.2s; text-decoration: none; cursor: pointer;
+}
+.btn-brand:hover { background: #c0003e; }
+
+/* Clôturer — ambre (action irréversible) */
 .btn-warn {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 14px; background: transparent; color: #d97706;
-    border-radius: 8px; font-size: 13px; font-weight: 500;
-    border: 1px solid #fde68a; transition: background 0.15s; cursor: pointer;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 1.5px solid #fbbf24; transition: background 0.15s, color 0.15s; cursor: pointer;
 }
-.btn-warn:hover { background: #fffbeb; }
+.btn-warn:hover { background: #d97706; color: #fff; border-color: #d97706; }
 
 /* Modal inscription */
 .backdrop {
@@ -1184,6 +1396,36 @@ const confirmClose = () => {
     transition: color 0.15s;
 }
 .remove-btn:hover { color: #ba1a1a; }
+
+.move-btn {
+    padding: 4px; color: #9aaabb; border-radius: 4px; border: none;
+    background: transparent; cursor: pointer; display: inline-flex;
+    transition: color 0.15s;
+}
+.move-btn:hover { color: #6d28d9; }
+
+.btn-move-outline {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 16px; border: 1px solid #ddd6fe; border-radius: 8px;
+    background: transparent; color: #6d28d9; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: background 0.15s;
+}
+.btn-move-outline:hover { background: #f5f3ff; }
+
+.move-cost-row {
+    display: flex; flex-direction: column; gap: 2px;
+    padding: 10px 14px; background: #f8f9fa; border-radius: 8px;
+}
+.move-cost-label { font-size: 11px; font-weight: 600; color: #9aaabb; text-transform: uppercase; letter-spacing: 0.04em; }
+.move-cost-val   { font-size: 13px; color: #191c1e; }
+
+.move-alert {
+    display: flex; align-items: flex-start; gap: 8px;
+    padding: 10px 14px; border-radius: 8px; font-size: 12px; line-height: 1.5;
+}
+.move-alert-warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+.move-alert-ok   { background: #f0fdf4; color: #065f46; border: 1px solid #a7f3d0; }
+.move-alert-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
 
 .learner-modal-header {
     padding: 20px 24px; border-bottom: 1px solid #e0e3e5;

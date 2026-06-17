@@ -824,18 +824,19 @@ const closeDetail = ()           => { showDetailModal.value = false; detailExpen
 .header-section { margin-bottom: 20px; }
 .icon-back {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 40px; height: 40px; border-radius: 10px;
-    background: #f2f4f6; color: #515f74; transition: all 0.15s; text-decoration: none; flex-shrink: 0;
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent;
+    text-decoration: none; flex-shrink: 0; transition: background 0.15s, color 0.15s;
 }
-.icon-back:hover { background: #fff0f4; color: #E5004C; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
 
 .header-icon-wrap {
     display: flex; align-items: center; justify-content: center;
-    width: 42px; height: 42px; border-radius: 10px;
-    background: linear-gradient(135deg, #E5004C 0%, #ff4d80 100%);
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
     color: #fff; flex-shrink: 0;
 }
-.header-icon-wrap .material-symbols-outlined { font-size: 22px; }
+.header-icon-wrap .material-symbols-outlined { font-size: 24px; }
 .page-title { font-size: 22px; font-weight: 700; color: #191c1e; line-height: 1.2; }
 .page-subtitle { font-size: 13px; color: #515f74; margin-top: 2px; }
 

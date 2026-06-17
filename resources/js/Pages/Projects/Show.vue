@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3'
-import { ref } from 'vue'
+import { Link, router, useForm } from '@inertiajs/vue3'
+import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -32,9 +32,44 @@ interface Project {
     partners: Partner[]
 }
 
-const props = defineProps<{ project: Project }>()
+const props = defineProps<{
+    project: Project
+    allPartners: Partner[]
+}>()
 
 const showPartnersModal = ref(false)
+const partnerSaved = ref(false)
+
+// Association partenaires — réactif aux props Inertia
+const partnerForm = useForm({
+    partner_ids: props.project.partners.map(p => p.id),
+})
+watch(() => props.project.partners, (val) => {
+    partnerForm.partner_ids = val.map(p => p.id)
+})
+
+const selectedPartners = computed(() =>
+    props.allPartners.filter(p => partnerForm.partner_ids.includes(p.id))
+)
+const unselectedPartners = computed(() =>
+    props.allPartners.filter(p => !partnerForm.partner_ids.includes(p.id))
+)
+
+const isSelected = (id: string) => partnerForm.partner_ids.includes(id)
+const togglePartner = (id: string) => {
+    partnerSaved.value = false
+    if (isSelected(id)) {
+        partnerForm.partner_ids = partnerForm.partner_ids.filter(pid => pid !== id)
+    } else {
+        partnerForm.partner_ids = [...partnerForm.partner_ids, id]
+    }
+}
+const savePartners = () => {
+    partnerForm.patch(`/projects/${props.project.id}/partners`, {
+        preserveScroll: true,
+        onSuccess: () => { partnerSaved.value = true },
+    })
+}
 
 const fmt = (d: string | null) =>
     d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''
@@ -45,10 +80,13 @@ const statusLabels: Record<string, string> = {
     archived: 'Archivé',
 }
 
-const destroyFormation = (f: Formation) => {
-    if (confirm(`Supprimer la formation « ${f.name} » ?`)) {
-        router.delete(`/formations/${f.id}`)
-    }
+const confirmFormation = ref<Formation | null>(null)
+
+const destroyFormation = () => {
+    if (!confirmFormation.value) return
+    router.delete(`/formations/${confirmFormation.value.id}`, {
+        onFinish: () => { confirmFormation.value = null },
+    })
 }
 </script>
 
@@ -87,7 +125,7 @@ const destroyFormation = (f: Formation) => {
                     <span class="tab-count">{{ project.partners?.length ?? 0 }}</span>
                 </button>
 
-                <Link :href="`/projects/${project.id}/edit`" class="btn-secondary">
+                <Link :href="`/projects/${project.id}/edit`" class="btn-navy">
                     <span class="material-symbols-outlined" style="font-size:18px">edit</span>
                     Modifier
                 </Link>
@@ -162,7 +200,7 @@ const destroyFormation = (f: Formation) => {
                                     <Link :href="`/formations/${formation.id}/edit`" class="icon-btn" title="Modifier">
                                         <span class="material-symbols-outlined" style="font-size:18px">edit</span>
                                     </Link>
-                                    <button @click="destroyFormation(formation)" class="icon-btn danger" title="Supprimer">
+                                    <button @click="confirmFormation = formation" class="icon-btn danger" title="Supprimer">
                                         <span class="material-symbols-outlined" style="font-size:18px">delete</span>
                                     </button>
                                 </div>
@@ -200,59 +238,107 @@ const destroyFormation = (f: Formation) => {
                     <!-- Body -->
                     <div class="modal-body">
 
-                        <!-- Vide -->
-                        <div v-if="!project.partners?.length" class="modal-empty">
+                        <!-- Aucun partenaire dans le système -->
+                        <div v-if="allPartners.length === 0" class="modal-empty">
                             <div class="modal-empty-icon">
                                 <span class="material-symbols-outlined" style="font-size:36px">handshake</span>
                             </div>
-                            <p class="modal-empty-title">Aucun partenaire affilié</p>
-                            <p class="modal-empty-hint">Modifiez le projet pour associer des partenaires.</p>
-                            <Link :href="`/projects/${project.id}/edit`" class="btn-primary mt-lg" @click="showPartnersModal = false">
-                                <span class="material-symbols-outlined" style="font-size:16px">edit</span>
-                                Modifier le projet
-                            </Link>
-                        </div>
-
-                        <!-- Liste -->
-                        <div v-else class="partners-grid">
-                            <div
-                                v-for="partner in project.partners"
-                                :key="partner.id"
-                                class="partner-card"
-                            >
-                                <!-- Logo -->
-                                <div class="partner-logo">
-                                    <img
-                                        v-if="partner.logo_path"
-                                        :src="`/storage/${partner.logo_path}`"
-                                        :alt="partner.name"
-                                        class="partner-logo-img"
-                                    />
-                                    <span v-else class="partner-logo-initial">
-                                        {{ partner.name.charAt(0).toUpperCase() }}
-                                    </span>
-                                </div>
-                                <p class="partner-name">{{ partner.name }}</p>
+                            <p class="modal-empty-title">Aucun partenaire disponible</p>
+                            <p class="modal-empty-hint">Créez d'abord des partenaires depuis la gestion.</p>
+                            <div class="modal-empty-actions">
+                                <Link href="/partners" class="btn-primary" @click="showPartnersModal = false">
+                                    <span class="material-symbols-outlined" style="font-size:16px">add_circle</span>
+                                    Créer un partenaire
+                                </Link>
                             </div>
                         </div>
+
+                        <template v-else>
+                            <!-- Banner succès -->
+                            <div v-if="partnerSaved" class="partner-saved-banner">
+                                <span class="material-symbols-outlined" style="font-size:16px">check_circle</span>
+                                Partenaires enregistrés avec succès.
+                            </div>
+
+                            <!-- Partenaires associés -->
+                            <div class="partner-section-label">
+                                Associés
+                                <span class="partner-section-count">{{ selectedPartners.length }}</span>
+                            </div>
+                            <div v-if="selectedPartners.length === 0" class="partner-section-empty">
+                                Aucun partenaire associé — cliquez sur un partenaire ci-dessous pour l'ajouter.
+                            </div>
+                            <div v-else class="partner-chips-row">
+                                <div v-for="p in selectedPartners" :key="p.id" class="partner-chip-item">
+                                    <div class="partner-chip-avatar">
+                                        <img v-if="p.logo_path" :src="`/storage/${p.logo_path}`" :alt="p.name" class="partner-logo-img" />
+                                        <span v-else>{{ p.name.charAt(0).toUpperCase() }}</span>
+                                    </div>
+                                    <span class="partner-chip-name">{{ p.name }}</span>
+                                    <button class="partner-chip-remove" @click="togglePartner(p.id)" title="Retirer">
+                                        <span class="material-symbols-outlined" style="font-size:14px">close</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Partenaires disponibles à ajouter -->
+                            <template v-if="unselectedPartners.length > 0">
+                                <div class="partner-section-label" style="margin-top:16px">
+                                    Disponibles
+                                    <span class="partner-section-count">{{ unselectedPartners.length }}</span>
+                                </div>
+                                <div class="partner-select-list">
+                                    <div
+                                        v-for="partner in unselectedPartners"
+                                        :key="partner.id"
+                                        class="partner-select-row"
+                                        @click="togglePartner(partner.id)"
+                                    >
+                                        <div class="partner-select-avatar">
+                                            <img v-if="partner.logo_path" :src="`/storage/${partner.logo_path}`" :alt="partner.name" class="partner-logo-img" />
+                                            <span v-else>{{ partner.name.charAt(0).toUpperCase() }}</span>
+                                        </div>
+                                        <span class="partner-select-name">{{ partner.name }}</span>
+                                        <span class="material-symbols-outlined" style="font-size:20px;color:#d0d5db">add_circle</span>
+                                    </div>
+                                </div>
+                            </template>
+                        </template>
                     </div>
 
                     <!-- Footer -->
                     <div class="modal-footer">
                         <span class="modal-footer-info">
                             <span class="material-symbols-outlined" style="font-size:16px">info</span>
-                            {{ project.partners?.length ?? 0 }} partenaire(s) affilié(s)
+                            {{ partnerForm.partner_ids.length }} partenaire(s) sélectionné(s)
                         </span>
-                        <Link
-                            :href="`/projects/${project.id}/edit`"
-                            class="btn-secondary-sm"
-                            @click="showPartnersModal = false"
-                        >
-                            <span class="material-symbols-outlined" style="font-size:16px">edit</span>
-                            Gérer les partenaires
-                        </Link>
+                        <button v-if="allPartners.length > 0" class="btn-primary" @click="savePartners" :disabled="partnerForm.processing">
+                            <span class="material-symbols-outlined" style="font-size:16px">save</span>
+                            {{ partnerForm.processing ? 'Enregistrement...' : 'Enregistrer' }}
+                        </button>
                     </div>
 
+                </div>
+            </div>
+        </Transition>
+    </Teleport>
+
+    <!-- Modale suppression formation -->
+    <Teleport to="body">
+        <Transition name="modal">
+            <div v-if="confirmFormation" class="del-overlay" @click.self="confirmFormation = null">
+                <div class="del-box">
+                    <div class="del-head">
+                        <div class="del-warn-icon">
+                            <span class="material-symbols-outlined" style="font-size:20px">warning</span>
+                        </div>
+                        <h3 class="del-title">Supprimer cette formation ?</h3>
+                    </div>
+                    <p class="del-msg">La formation <strong>« {{ confirmFormation.name }} »</strong> sera supprimée. Cette action est irréversible.</p>
+                    <div class="del-foot">
+                        <button class="del-cancel" @click="confirmFormation = null">Annuler</button>
+                        <button class="del-delete" @click="destroyFormation">Supprimer</button>
+                    </div>
                 </div>
             </div>
         </Transition>
@@ -263,9 +349,18 @@ const destroyFormation = (f: Formation) => {
 .icon-back {
     display: inline-flex; align-items: center; justify-content: center;
     width: 40px; height: 40px; border-radius: 50%;
-    color: #515f74; transition: background 0.15s; flex-shrink: 0; margin-top: 4px;
+    border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent;
+    text-decoration: none; flex-shrink: 0; margin-top: 4px;
+    transition: background 0.15s, color 0.15s;
 }
-.icon-back:hover { background: #eceef0; color: #191c1e; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
+.btn-navy {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; background: transparent; color: #1F3A4D;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 1.5px solid #1F3A4D; transition: background 0.15s, color 0.15s; text-decoration: none;
+}
+.btn-navy:hover { background: #1F3A4D; color: #fff; }
 
 /* ── Onglet Partenaires ── */
 .tab-partners {
@@ -393,9 +488,31 @@ const destroyFormation = (f: Formation) => {
     display: flex; align-items: center; justify-content: center; margin-bottom: 16px;
 }
 .modal-empty-title { font-size: 16px; font-weight: 600; color: #191c1e; }
-.modal-empty-hint { font-size: 14px; color: #adb5bd; margin-top: 4px; }
+.modal-empty-hint { font-size: 13px; color: #9aaabb; margin-top: 4px; }
+.modal-empty-actions { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
 
 /* Grille partenaires */
+/* liste sélection partenaires */
+.partner-select-hint { font-size: 12px; color: #9aaabb; margin-bottom: 10px; }
+.partner-select-list { display: flex; flex-direction: column; gap: 4px; }
+.partner-select-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 8px; cursor: pointer;
+    border: 1.5px solid transparent; transition: background 0.12s, border-color 0.12s;
+}
+.partner-select-row:hover { background: #f6f8fa; }
+.partner-select-row.partner-selected { background: #fff0f4; border-color: #ffc0d0; }
+.partner-select-avatar {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: #e8edf2; color: #1F3A4D;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px; flex-shrink: 0; overflow: hidden;
+}
+.partner-select-avatar.avatar-on { background: #1F3A4D; color: #fff; }
+.partner-select-name { flex: 1; font-size: 14px; font-weight: 500; color: #191c1e; }
+.partner-select-check { font-size: 20px; color: #d0d5db; }
+.partner-select-row.partner-selected .partner-select-check { color: #E5004C; }
+
 .partners-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
@@ -440,4 +557,80 @@ const destroyFormation = (f: Formation) => {
 .modal-enter-from, .modal-leave-to { opacity: 0; }
 .modal-enter-from .modal { transform: scale(0.95) translateY(8px); opacity: 0; }
 .modal-leave-to .modal { transform: scale(0.95) translateY(8px); opacity: 0; }
+
+.del-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center; z-index: 9999;
+}
+.del-box {
+    background: #fff; border-radius: 14px; padding: 28px 28px 22px;
+    width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+}
+.del-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.del-warn-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #fff0f4; color: #E5004C;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.del-title { font-size: 15px; font-weight: 700; color: #191c1e; }
+.del-msg { font-size: 13px; color: #515f74; margin-bottom: 20px; line-height: 1.5; }
+.del-foot { display: flex; justify-content: flex-end; gap: 10px; }
+.del-cancel {
+    padding: 8px 18px; background: #f2f4f6; color: #515f74;
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.del-cancel:hover { background: #e0e3e5; }
+.del-delete {
+    padding: 8px 18px; background: #E5004C; color: #fff;
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.del-delete:hover { background: #c0003e; }
+
+/* ── Partners modal redesign ── */
+.partner-saved-banner {
+    display: flex; align-items: center; gap: 6px;
+    padding: 10px 14px; margin-bottom: 14px;
+    background: #f0fdf4; border: 1px solid #bbf7d0;
+    border-radius: 8px; font-size: 13px; font-weight: 600; color: #166534;
+}
+.partner-section-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; color: #9aaabb;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 8px;
+}
+.partner-section-count {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 5px;
+    background: #e8edf2; color: #1F3A4D;
+    border-radius: 9px; font-size: 11px; font-weight: 700;
+}
+.partner-section-empty {
+    font-size: 12px; color: #adb5bd;
+    padding: 10px 0; margin-bottom: 4px;
+}
+.partner-chips-row {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 4px;
+}
+.partner-chip-item {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 8px 5px 6px;
+    background: #fff0f4; border: 1px solid #ffc0d0;
+    border-radius: 20px; font-size: 13px;
+}
+.partner-chip-avatar {
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #E5004C; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; flex-shrink: 0; overflow: hidden;
+}
+.partner-chip-name { font-size: 13px; font-weight: 500; color: #1F3A4D; }
+.partner-chip-remove {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 18px; height: 18px; border-radius: 50%;
+    border: none; background: #ffc0d0; color: #ba1a1a;
+    cursor: pointer; padding: 0; transition: background 0.12s;
+}
+.partner-chip-remove:hover { background: #E5004C; color: #fff; }
 </style>

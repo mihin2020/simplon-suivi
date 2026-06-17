@@ -164,9 +164,14 @@ const statusColorLearner: Record<string, string> = {
     <Head title="Statistiques" />
 
     <div class="max-w-[1600px] mx-auto space-y-xl">
-        <div>
-            <h1 class="text-h1 font-bold text-on-surface">Statistiques</h1>
-            <p class="text-body-md text-secondary mt-xs">Vue d'ensemble des apprenants et de leur insertion.</p>
+        <div class="stats-header">
+            <div class="stats-header-icon">
+                <span class="material-symbols-outlined">monitoring</span>
+            </div>
+            <div>
+                <h1 class="text-h1 font-bold text-on-surface">Statistiques</h1>
+                <p class="text-body-md text-secondary mt-xs">Vue d'ensemble des apprenants et de leur insertion.</p>
+            </div>
         </div>
 
         <!-- ===== STATS PAR PROJET ===== -->
@@ -211,6 +216,14 @@ const statusColorLearner: Record<string, string> = {
                                 <span class="material-symbols-outlined" style="font-size:14px">groups</span>
                                 {{ project.totals.total_learners }}
                             </div>
+                            <a
+                                :href="`/statistics/projects/${project.id}/export`"
+                                @click.stop
+                                class="btn-export"
+                                title="Exporter le projet en xlsx"
+                            >
+                                <span class="material-symbols-outlined" style="font-size:16px">download</span>
+                            </a>
                             <span class="material-symbols-outlined text-secondary transition-transform" :class="expandedProjects[project.id] ? 'rotate-180' : ''">
                                 expand_more
                             </span>
@@ -246,6 +259,13 @@ const statusColorLearner: Record<string, string> = {
                                             <div class="flex items-center gap-sm">
                                                 <span :class="['status-dot', statusClass[f.status] ?? '']" />
                                                 <span class="font-medium text-on-surface">{{ f.name }}</span>
+                                                <a
+                                                    :href="`/statistics/formations/${f.id}/export`"
+                                                    class="btn-export-sm"
+                                                    title="Exporter cette formation en xlsx"
+                                                >
+                                                    <span class="material-symbols-outlined" style="font-size:14px">download</span>
+                                                </a>
                                             </div>
                                         </td>
                                         <td class="px-lg py-sm text-center font-semibold cursor-pointer hover:underline" @click="openLearnersModal(f.id, f.name, 'gender', '', 'Tous les apprenants')">{{ f.total_learners }}</td>
@@ -388,6 +408,53 @@ const statusColorLearner: Record<string, string> = {
     border-radius: 99px;
     font-size: 12px;
     font-weight: 600;
+}
+
+/* Page header */
+.stats-header {
+    display: flex; align-items: center; gap: 16px;
+}
+.stats-header-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff;
+}
+.stats-header-icon .material-symbols-outlined { font-size: 24px; }
+
+/* Export buttons */
+.btn-export {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+    color: #1F3A4D;
+    background: #F1F5F9;
+    transition: all 0.15s;
+}
+.btn-export:hover {
+    background: #E5004C;
+    color: white;
+}
+.btn-export-sm {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    color: #9aaabb;
+    opacity: 0;
+    transition: all 0.15s;
+}
+tr:hover .btn-export-sm {
+    opacity: 1;
+}
+.btn-export-sm:hover {
+    background: #E5004C;
+    color: white;
 }
 
 /* Status dot */

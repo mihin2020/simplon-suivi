@@ -5,12 +5,16 @@ namespace App\Http\Controllers;
 use App\Enums\Gender;
 use App\Enums\InsertionStatus;
 use App\Enums\LearnerStatus;
+use App\Exports\FormationStatisticsSheet;
+use App\Exports\ProjectStatisticsExport;
 use App\Models\Formation;
 use App\Models\Learner;
 use App\Models\Project;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
+use Maatwebsite\Excel\Facades\Excel;
 
 class StatisticsController extends Controller
 {
@@ -138,17 +142,17 @@ class StatisticsController extends Controller
         $query = $formation->learners();
 
         // Filtre par genre
-        if ($request->has('gender')) {
+        if ($request->filled('gender')) {
             $query->where('gender', $request->input('gender'));
         }
 
         // Filtre par statut de formation
-        if ($request->has('status')) {
+        if ($request->filled('status')) {
             $query->wherePivot('status', $request->input('status'));
         }
 
         // Filtre par statut d'insertion
-        if ($request->has('insertion_status')) {
+        if ($request->filled('insertion_status')) {
             $insertionStatus = $request->input('insertion_status');
             $latestMap = $this->latestInsertionRecordsByLearner();
 
@@ -191,6 +195,27 @@ class StatisticsController extends Controller
             'count' => $learners->count(),
             'learners' => $learners,
         ]);
+    }
+
+    /**
+     * Exporte les statistiques d'un projet : un classeur xlsx avec une feuille
+     * récapitulative + une feuille par formation.
+     */
+    public function exportProject(Project $project): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $filename = 'statistiques-' . Str::slug($project->name) . '-' . now()->format('Y-m-d') . '.xlsx';
+
+        return Excel::download(new ProjectStatisticsExport($project), $filename);
+    }
+
+    /**
+     * Exporte les statistiques d'une seule formation (résumé + liste nominative).
+     */
+    public function exportFormation(Formation $formation): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    {
+        $filename = 'statistiques-' . Str::slug($formation->name) . '-' . now()->format('Y-m-d') . '.xlsx';
+
+        return Excel::download(new FormationStatisticsSheet($formation), $filename);
     }
 
     /**

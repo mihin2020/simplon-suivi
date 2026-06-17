@@ -20,6 +20,23 @@ watch(flash, (f) => {
 const userRole  = auth.user?.role as string | undefined
 const isTrainer = userRole === 'trainer'
 
+// ─── Sidebar collapse (persisted in localStorage) ───────────────────────────
+const getStoredCollapsed = (): boolean => {
+    try {
+        return JSON.parse(localStorage.getItem('sidebar_collapsed') ?? 'false')
+    } catch {
+        return false
+    }
+}
+
+const sidebarCollapsed = ref<boolean>(getStoredCollapsed())
+const sidebarWidth = computed(() => sidebarCollapsed.value ? '76px' : '260px')
+
+const toggleSidebar = () => {
+    sidebarCollapsed.value = !sidebarCollapsed.value
+    try { localStorage.setItem('sidebar_collapsed', JSON.stringify(sidebarCollapsed.value)) } catch {}
+}
+
 // ─── Nav groups ────────────────────────────────────────────────────────────
 interface NavItem {
     label: string
@@ -48,7 +65,6 @@ const allNavGroups: NavGroup[] = [
             { label: 'Utilisateurs',    icon: 'admin_panel_settings', href: '/users',                prefix: 'Users/',         roles: ['super_admin'] },
             { label: 'Projets',         icon: 'folder_open',          href: '/projects',             prefix: 'Projects/',      roles: ['super_admin', 'admin'] },
             { label: 'Apprenants',      icon: 'person_book',          href: '/learners',             prefix: 'Learners/',      roles: ['super_admin', 'admin'] },
-            { label: 'Formateurs',      icon: 'school',               href: '/trainers',             prefix: 'Trainers/',      roles: ['super_admin', 'admin'] },
             { label: 'Présences',       icon: 'fact_check',           href: '/presences',            prefix: 'Attendances/',   roles: ['super_admin', 'admin', 'trainer'] },
             { label: 'Référentiels',    icon: 'menu_book',            href: '/referentiels',         prefix: 'Referentiels/',  roles: ['super_admin', 'admin'] },
             { label: 'Partenaires',     icon: 'handshake',            href: '/partners',             prefix: 'Partners/',      roles: ['super_admin', 'admin'] },
@@ -135,16 +151,36 @@ const logout = () => router.post('/deconnexion', {}, {
     <div class="bg-background text-on-surface h-screen overflow-hidden flex">
 
         <!-- ═══════════════ SIDEBAR ═══════════════ -->
-        <aside class="bg-on-secondary-fixed w-[260px] h-screen fixed left-0 top-0 flex flex-col z-20">
+        <aside
+            class="bg-on-secondary-fixed h-screen fixed left-0 top-0 flex flex-col z-20 transition-[width] duration-200"
+            :style="{ width: sidebarWidth }"
+        >
 
-            <!-- Logo -->
-            <div class="px-md pt-md pb-sm flex justify-center border-b border-white/10">
+            <!-- Logo (toujours centré) -->
+            <div class="relative px-md pt-md pb-sm flex items-center justify-center border-b border-white/10">
                 <img
+                    v-if="!sidebarCollapsed"
                     src="/images/logo.jpeg"
                     alt="Simplon Burkina Faso"
                     class="h-10 w-auto object-contain"
                 />
+                <img
+                    v-else
+                    src="/images/logo.jpeg"
+                    alt="Simplon Burkina Faso"
+                    class="h-8 w-8 object-contain rounded"
+                />
             </div>
+
+            <!-- Bouton bascule (flotte sur le bord de la sidebar) -->
+            <button
+                @click="toggleSidebar"
+                type="button"
+                class="sidebar-toggle-btn"
+                :title="sidebarCollapsed ? 'Étendre la barre latérale' : 'Réduire la barre latérale'"
+            >
+                <span class="material-symbols-outlined text-[16px]">{{ sidebarCollapsed ? 'chevron_right' : 'chevron_left' }}</span>
+            </button>
 
             <!-- Navigation -->
             <nav class="flex-1 overflow-y-auto py-sm custom-scroll">
@@ -157,10 +193,11 @@ const logout = () => router.post('/deconnexion', {}, {
                             :key="item.href"
                             :href="item.href"
                             class="nav-link"
-                            :class="isActive(item.prefix) ? 'nav-active' : 'nav-inactive'"
+                            :class="[isActive(item.prefix) ? 'nav-active' : 'nav-inactive', sidebarCollapsed ? 'justify-center' : '']"
+                            :title="sidebarCollapsed ? item.label : ''"
                         >
                             <span class="material-symbols-outlined nav-icon">{{ item.icon }}</span>
-                            <span class="flex-1">{{ item.label }}</span>
+                            <span v-if="!sidebarCollapsed" class="flex-1">{{ item.label }}</span>
                         </Link>
                     </template>
 
@@ -169,20 +206,24 @@ const logout = () => router.post('/deconnexion', {}, {
                         <!-- Group header -->
                         <button
                             class="group-header"
-                            :class="isGroupActive(group) ? 'group-header-active' : ''"
+                            :class="[isGroupActive(group) ? 'group-header-active' : '', sidebarCollapsed ? 'justify-center' : '']"
                             @click="toggleGroup(group.id)"
                             type="button"
+                            :title="sidebarCollapsed ? group.label ?? '' : ''"
                         >
                             <span class="material-symbols-outlined group-header-icon" v-if="group.icon">{{ group.icon }}</span>
-                            <span class="flex-1 text-left text-xs font-semibold uppercase tracking-widest">{{ group.label }}</span>
-                            <span
-                                class="material-symbols-outlined transition-transform duration-200 text-[16px]"
-                                :class="openGroups[group.id] ? 'rotate-180' : ''"
-                            >expand_more</span>
+                            <template v-if="!sidebarCollapsed">
+                                <span class="flex-1 text-left text-xs font-semibold uppercase tracking-widest">{{ group.label }}</span>
+                                <span
+                                    class="material-symbols-outlined transition-transform duration-200 text-[16px]"
+                                    :class="openGroups[group.id] ? 'rotate-180' : ''"
+                                >expand_more</span>
+                            </template>
                         </button>
 
                         <!-- Group items (animated) -->
                         <div
+                            v-if="!sidebarCollapsed"
                             class="overflow-hidden transition-all duration-300 ease-in-out"
                             :style="openGroups[group.id] ? 'max-height: 400px; opacity: 1' : 'max-height: 0; opacity: 0'"
                         >
@@ -209,40 +250,38 @@ const logout = () => router.post('/deconnexion', {}, {
                     v-if="!isTrainer"
                     href="/configuration"
                     class="nav-link nav-inactive"
-                    :class="isActive('Configuration/') ? 'nav-active' : 'nav-inactive'"
+                    :class="[isActive('Configuration/') ? 'nav-active' : 'nav-inactive', sidebarCollapsed ? 'justify-center' : '']"
+                    :title="sidebarCollapsed ? 'Configuration' : ''"
                 >
                     <span class="material-symbols-outlined nav-icon">settings</span>
-                    Configuration
+                    <span v-if="!sidebarCollapsed">Configuration</span>
                 </Link>
                 <button
                     @click="logout"
                     class="nav-link nav-inactive hover:!text-error w-full text-left"
+                    :class="sidebarCollapsed ? 'justify-center' : ''"
                     type="button"
+                    :title="sidebarCollapsed ? 'Déconnexion' : ''"
                 >
                     <span class="material-symbols-outlined nav-icon">logout</span>
-                    Déconnexion
+                    <span v-if="!sidebarCollapsed">Déconnexion</span>
                 </button>
             </div>
         </aside>
 
         <!-- ═══════════════ MAIN AREA ═══════════════ -->
-        <div class="flex-1 flex flex-col ml-[260px] w-[calc(100%-260px)] h-screen overflow-hidden">
+        <div
+            class="flex-1 flex flex-col h-screen overflow-hidden transition-[margin,width] duration-200"
+            :style="{ marginLeft: sidebarWidth, width: `calc(100% - ${sidebarWidth})` }"
+        >
 
             <!-- Top bar -->
-            <header class="bg-surface fixed top-0 right-0 w-[calc(100%-260px)] h-16 border-b border-surface-container-highest flex justify-between items-center px-lg z-10">
-                <div class="flex items-center gap-md w-1/3">
-                    <div class="relative w-full max-w-[300px]">
-                        <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant" style="font-size: 20px;">search</span>
-                        <input
-                            type="text"
-                            placeholder="Rechercher..."
-                            class="w-full bg-surface-container-low border border-surface-container-highest rounded-full py-xs pl-xl pr-md text-body-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-colors"
-                        />
-                    </div>
-                </div>
-
+            <header
+                class="bg-surface fixed top-0 right-0 h-16 border-b border-surface-container-highest flex justify-end items-center px-lg z-10 transition-[width] duration-200"
+                :style="{ width: `calc(100% - ${sidebarWidth})` }"
+            >
                 <div class="flex items-center gap-md">
-                    <AiChatbot />
+                    <AiChatbot v-if="!isTrainer" />
                     <NotificationBell :initial-count="($page.props.unread_notifications_count as number) ?? 0" />
                     <div class="h-6 w-px bg-surface-container-highest mx-xs"></div>
                     <Link href="/profil" class="flex items-center gap-sm hover:opacity-80 transition-opacity">
@@ -302,6 +341,29 @@ const logout = () => router.post('/deconnexion', {}, {
 </template>
 
 <style scoped>
+/* ── Sidebar toggle ── */
+.sidebar-toggle-btn {
+    position: absolute;
+    top: 18px;
+    right: -12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.7);
+    background: #1F3A4D;
+    flex-shrink: 0;
+    z-index: 1;
+    transition: background 0.15s, color 0.15s;
+}
+.sidebar-toggle-btn:hover {
+    background: #2d5a7b;
+    color: #fff;
+}
+
 /* ── Scrollbar ── */
 .custom-scroll {
     padding-right: 4px;

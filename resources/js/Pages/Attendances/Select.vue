@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -38,6 +38,50 @@ const filtered = computed(() => {
     })
 })
 
+const groupedByProject = computed(() => {
+    const groups: { project: string; formations: Formation[] }[] = []
+    const seen: Record<string, number> = {}
+    for (const f of filtered.value) {
+        if (seen[f.project_name] === undefined) {
+            seen[f.project_name] = groups.length
+            groups.push({ project: f.project_name, formations: [] })
+        }
+        groups[seen[f.project_name]].formations.push(f)
+    }
+    return groups
+})
+
+// ── Pagination projets (5 par page) ──────────────────────────────
+const PROJECTS_PER_PAGE   = 5
+const FORMATIONS_PER_PROJECT = 7
+
+const projectPage = ref(1)
+const totalProjectPages = computed(() => Math.ceil(groupedByProject.value.length / PROJECTS_PER_PAGE))
+const paginatedGroups = computed(() => {
+    const start = (projectPage.value - 1) * PROJECTS_PER_PAGE
+    return groupedByProject.value.slice(start, start + PROJECTS_PER_PAGE)
+})
+
+// ── Pagination formations par projet (7 par projet) ───────────────
+const formationPages = ref<Record<string, number>>({})
+const getFormationPage = (project: string) => formationPages.value[project] ?? 1
+const setFormationPage = (project: string, page: number) => {
+    formationPages.value = { ...formationPages.value, [project]: page }
+}
+const getPaginatedFormations = (group: { project: string; formations: Formation[] }) => {
+    const page  = getFormationPage(group.project)
+    const start = (page - 1) * FORMATIONS_PER_PROJECT
+    return group.formations.slice(start, start + FORMATIONS_PER_PROJECT)
+}
+const getFormationTotalPages = (group: { project: string; formations: Formation[] }) =>
+    Math.ceil(group.formations.length / FORMATIONS_PER_PROJECT)
+
+// Reset paginations quand les filtres changent
+watch([filterProject, filterFormation], () => {
+    projectPage.value = 1
+    formationPages.value = {}
+})
+
 const statusClass = (s: string) => ({
     active:    'badge-active',
     completed: 'badge-completed',
@@ -50,11 +94,16 @@ const statusClass = (s: string) => ({
     <div class="max-w-5xl mx-auto space-y-xl">
 
         <!-- En-tête -->
-        <div>
-            <h1 class="text-h1 font-bold text-on-surface">Présences</h1>
-            <p class="text-body-md text-secondary mt-xs">
-                Sélectionnez une formation pour saisir ou consulter les présences.
-            </p>
+        <div class="flex items-center gap-md">
+            <div class="page-header-icon">
+                <span class="material-symbols-outlined">event_available</span>
+            </div>
+            <div>
+                <h1 class="text-h1 font-bold text-on-surface">Présences</h1>
+                <p class="text-body-md text-secondary mt-xs">
+                    Sélectionnez une formation pour saisir ou consulter les présences.
+                </p>
+            </div>
         </div>
 
         <!-- Filtres -->
@@ -102,60 +151,118 @@ const statusClass = (s: string) => ({
             </p>
         </div>
 
-        <!-- Grille des formations -->
-        <div v-else class="formations-grid">
-            <Link
-                v-for="f in filtered"
-                :key="f.id"
-                :href="`/formations/${f.id}/attendances`"
-                class="formation-card"
-            >
-                <!-- Header -->
-                <div class="card-header">
-                    <div class="flex-1 min-w-0">
-                        <p class="card-project">{{ f.project_name }}</p>
-                        <h3 class="card-name">{{ f.name }}</h3>
-                    </div>
-                    <span class="status-badge" :class="statusClass(f.status)">{{ f.status_label }}</span>
+        <!-- Groupes par projet -->
+        <div v-else class="space-y-xl">
+            <div v-for="group in paginatedGroups" :key="group.project">
+
+                <!-- Titre du projet -->
+                <div class="project-label">
+                    <span class="project-label-bar"></span>
+                    <span class="material-symbols-outlined" style="font-size:17px;color:#E5004C">folder_open</span>
+                    <span class="project-label-name">{{ group.project }}</span>
+                    <span class="project-count">{{ group.formations.length }} formation{{ group.formations.length > 1 ? 's' : '' }}</span>
                 </div>
 
-                <!-- Stats -->
-                <div class="card-stats">
-                    <div class="stat">
-                        <span class="material-symbols-outlined stat-icon">groups</span>
-                        <span class="stat-value">{{ f.active_learners_count }}</span>
-                        <span class="stat-label">apprenants</span>
-                    </div>
-                    <div class="stat" :class="{ 'stat-done': f.today_count > 0 }">
-                        <span class="material-symbols-outlined stat-icon">fact_check</span>
-                        <span class="stat-value">{{ f.today_count }}</span>
-                        <span class="stat-label">présences aujourd'hui</span>
-                    </div>
+                <!-- Grille des formations du projet -->
+                <div class="formations-grid">
+                    <Link
+                        v-for="f in getPaginatedFormations(group)"
+                        :key="f.id"
+                        :href="`/formations/${f.id}/attendances`"
+                        class="formation-card"
+                    >
+                        <div class="card-header">
+                            <div class="flex-1 min-w-0">
+                                <h3 class="card-name">{{ f.name }}</h3>
+                            </div>
+                            <span class="status-badge" :class="statusClass(f.status)">{{ f.status_label }}</span>
+                        </div>
+                        <div class="card-stats">
+                            <div class="stat">
+                                <span class="material-symbols-outlined stat-icon">groups</span>
+                                <span class="stat-value">{{ f.active_learners_count }}</span>
+                                <span class="stat-label">apprenants</span>
+                            </div>
+                            <div class="stat" :class="{ 'stat-done': f.today_count > 0 }">
+                                <span class="material-symbols-outlined stat-icon">fact_check</span>
+                                <span class="stat-value">{{ f.today_count }}</span>
+                                <span class="stat-label">présences aujourd'hui</span>
+                            </div>
+                        </div>
+                        <div class="card-footer">
+                            <span v-if="f.today_count > 0" class="already-done">
+                                <span class="material-symbols-outlined" style="font-size:14px">check_circle</span>
+                                Saisie du jour effectuée
+                            </span>
+                            <span v-else-if="f.status === 'active'" class="pending">
+                                <span class="material-symbols-outlined" style="font-size:14px">radio_button_unchecked</span>
+                                Saisie du jour en attente
+                            </span>
+                            <span v-else class="text-secondary text-body-sm"></span>
+                            <span class="cta">
+                                Saisir les présences
+                                <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span>
+                            </span>
+                        </div>
+                    </Link>
                 </div>
 
-                <!-- Footer -->
-                <div class="card-footer">
-                    <span v-if="f.today_count > 0" class="already-done">
-                        <span class="material-symbols-outlined" style="font-size:14px">check_circle</span>
-                        Saisie du jour effectuée
+                <!-- Pagination formations du projet -->
+                <div v-if="getFormationTotalPages(group) > 1" class="mini-pagination">
+                    <button
+                        class="mini-page-btn"
+                        :disabled="getFormationPage(group.project) === 1"
+                        @click="setFormationPage(group.project, getFormationPage(group.project) - 1)"
+                    >
+                        <span class="material-symbols-outlined" style="font-size:16px">chevron_left</span>
+                    </button>
+                    <span class="mini-page-info">
+                        {{ getFormationPage(group.project) }} / {{ getFormationTotalPages(group) }}
                     </span>
-                    <span v-else-if="f.status === 'active'" class="pending">
-                        <span class="material-symbols-outlined" style="font-size:14px">radio_button_unchecked</span>
-                        Saisie du jour en attente
-                    </span>
-                    <span v-else class="text-secondary text-body-sm"></span>
-                    <span class="cta">
-                        Saisir les présences
-                        <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span>
-                    </span>
+                    <button
+                        class="mini-page-btn"
+                        :disabled="getFormationPage(group.project) === getFormationTotalPages(group)"
+                        @click="setFormationPage(group.project, getFormationPage(group.project) + 1)"
+                    >
+                        <span class="material-symbols-outlined" style="font-size:16px">chevron_right</span>
+                    </button>
                 </div>
-            </Link>
+
+            </div>
+
+            <!-- Pagination projets -->
+            <div v-if="totalProjectPages > 1" class="project-pagination">
+                <button class="pp-btn" :disabled="projectPage === 1" @click="projectPage--">
+                    <span class="material-symbols-outlined" style="font-size:18px">chevron_left</span>
+                </button>
+                <div class="pp-dots">
+                    <button
+                        v-for="p in totalProjectPages"
+                        :key="p"
+                        class="pp-dot"
+                        :class="{ 'pp-dot-active': p === projectPage }"
+                        @click="projectPage = p"
+                    >{{ p }}</button>
+                </div>
+                <button class="pp-btn" :disabled="projectPage === totalProjectPages" @click="projectPage++">
+                    <span class="material-symbols-outlined" style="font-size:18px">chevron_right</span>
+                </button>
+            </div>
+
         </div>
 
     </div>
 </template>
 
 <style scoped>
+.page-header-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff;
+}
+.page-header-icon .material-symbols-outlined { font-size: 24px; }
+
 /* Filtres */
 .filters-bar {
     display: flex;
@@ -262,6 +369,81 @@ const statusClass = (s: string) => ({
     transition: background 0.15s;
 }
 .reset-btn:hover { background: #f5f7f9; }
+
+/* Titre projet */
+.project-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+.project-label-bar {
+    display: block;
+    width: 4px;
+    height: 22px;
+    border-radius: 99px;
+    background: #E5004C;
+    flex-shrink: 0;
+}
+.project-label-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: #1F3A4D;
+    letter-spacing: 0.01em;
+}
+.project-count {
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    background: #9aaabb;
+    padding: 2px 8px;
+    border-radius: 99px;
+    letter-spacing: 0;
+}
+
+/* Pagination formations par projet */
+.mini-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 10px;
+}
+.mini-page-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 6px;
+    border: 1px solid #e0e3e5; background: #fff; color: #515f74;
+    cursor: pointer; transition: all 0.15s;
+}
+.mini-page-btn:hover:not(:disabled) { border-color: #E5004C; color: #E5004C; }
+.mini-page-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.mini-page-info { font-size: 12px; font-weight: 600; color: #9aaabb; }
+
+/* Pagination projets */
+.project-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding-top: 8px;
+}
+.pp-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 8px;
+    border: 1px solid #e0e3e5; background: #fff; color: #515f74;
+    cursor: pointer; transition: all 0.15s;
+}
+.pp-btn:hover:not(:disabled) { border-color: #E5004C; color: #E5004C; }
+.pp-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.pp-dots { display: flex; gap: 6px; }
+.pp-dot {
+    width: 32px; height: 32px; border-radius: 8px;
+    border: 1px solid #e0e3e5; background: #fff;
+    font-size: 13px; font-weight: 600; color: #515f74;
+    cursor: pointer; transition: all 0.15s;
+}
+.pp-dot:hover { border-color: #E5004C; color: #E5004C; }
+.pp-dot-active { background: #E5004C !important; color: #fff !important; border-color: #E5004C !important; }
 
 /* Grille */
 .formations-grid {

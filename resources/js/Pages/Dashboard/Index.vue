@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
+import { computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -53,6 +54,8 @@ interface TrainerFormation {
     status: string
     active_learners_count: number
     attendances_today_count: number
+    needs_attendance_today: boolean
+    ending_soon: boolean
     started_at: string | null
     ended_at: string | null
     is_lead: boolean
@@ -64,17 +67,86 @@ interface TrainerStats {
     attendances_today: number
 }
 
+interface RecentAbsence {
+    id: string
+    first_name: string
+    last_name: string
+    formation_name: string
+    absences_count: number
+}
+
+interface DistItem {
+    key: string
+    label: string
+    count: number
+}
+
 const props = defineProps<{
     role: 'admin' | 'trainer'
     // Admin props
     stats?: Stats
+    learnerStatus?: DistItem[]
+    insertion?: DistItem[]
+    insertionTracked?: number
+    gender?: { male: number; female: number }
     activeFormations?: PaginatedActiveFormations
     recentEnrollments?: RecentEnrollment[]
     // Trainer props
     trainer?: { id: string; full_name: string; speciality: string | null } | null
     myFormations?: TrainerFormation[]
     trainerStats?: TrainerStats
+    recentAbsences?: RecentAbsence[]
 }>()
+
+// ── Couleurs par catégorie ──
+const statusColors: Record<string, string> = {
+    in_progress: '#1F3A4D',
+    completed:   '#16a34a',
+    withdrawn:   '#ef4444',
+    moved:       '#f59e0b',
+}
+const insertionColors: Record<string, string> = {
+    employed:   '#16a34a',
+    internship: '#1F3A4D',
+    searching:  '#f59e0b',
+    unemployed: '#94a3b8',
+}
+
+// ── Helper donut : construit le conic-gradient + légende avec % ──
+function buildDonut(items: DistItem[] | undefined, colors: Record<string, string>) {
+    const data = items ?? []
+    const total = data.reduce((s, i) => s + i.count, 0)
+    let acc = 0
+    const segments: string[] = []
+    const legend = data.map((i) => {
+        const pct = total > 0 ? (i.count / total) * 100 : 0
+        const start = acc
+        acc += pct
+        if (i.count > 0) {
+            segments.push(`${colors[i.key] ?? '#cbd5e1'} ${start}% ${acc}%`)
+        }
+        return {
+            ...i,
+            color: colors[i.key] ?? '#cbd5e1',
+            pct: total > 0 ? Math.round(pct) : 0,
+        }
+    })
+    return {
+        total,
+        gradient: segments.length ? `conic-gradient(${segments.join(', ')})` : 'conic-gradient(#eef1f4 0% 100%)',
+        legend,
+    }
+}
+
+const statusDonut    = computed(() => buildDonut(props.learnerStatus, statusColors))
+const insertionDonut = computed(() => buildDonut(props.insertion, insertionColors))
+
+// ── Parité ──
+const genderTotal = computed(() => (props.gender?.male ?? 0) + (props.gender?.female ?? 0))
+const femalePct = computed(() =>
+    genderTotal.value > 0 ? Math.round((props.gender!.female / genderTotal.value) * 100) : 0
+)
+const malePct = computed(() => genderTotal.value > 0 ? 100 - femalePct.value : 0)
 
 const photoUrl = (path: string | null) => path ? `/storage/${path}` : null
 
@@ -137,6 +209,93 @@ const statusClass: Record<string, string> = {
                 <div class="kpi-value">{{ stats!.insertion_rate }}<span style="font-size:18px">%</span></div>
                 <div class="kpi-label">Taux d'insertion</div>
                 <div class="kpi-sub">Promo en cours</div>
+            </div>
+        </div>
+
+        <!-- Graphiques analytiques -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-md">
+
+            <!-- Statut des apprenants -->
+            <div class="chart-card">
+                <div class="chart-head">
+                    <h2 class="chart-title">Parcours des apprenants</h2>
+                    <span class="material-symbols-outlined chart-head-icon">school</span>
+                </div>
+                <div v-if="statusDonut.total === 0" class="chart-empty">Aucune donnée disponible.</div>
+                <div v-else class="donut-row">
+                    <div class="donut" :style="{ background: statusDonut.gradient }">
+                        <div class="donut-hole">
+                            <span class="donut-total">{{ statusDonut.total }}</span>
+                            <span class="donut-cap">apprenants</span>
+                        </div>
+                    </div>
+                    <div class="donut-legend">
+                        <div v-for="l in statusDonut.legend" :key="l.key" class="legend-row">
+                            <span class="legend-dot" :style="{ background: l.color }"></span>
+                            <span class="legend-label">{{ l.label }}</span>
+                            <span class="legend-val">{{ l.count }}</span>
+                            <span class="legend-pct">{{ l.pct }}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insertion professionnelle -->
+            <div class="chart-card">
+                <div class="chart-head">
+                    <h2 class="chart-title">Insertion professionnelle</h2>
+                    <span class="material-symbols-outlined chart-head-icon">work</span>
+                </div>
+                <div v-if="(insertionTracked ?? 0) === 0" class="chart-empty">
+                    Aucun suivi d'insertion enregistré.
+                </div>
+                <div v-else class="donut-row">
+                    <div class="donut" :style="{ background: insertionDonut.gradient }">
+                        <div class="donut-hole">
+                            <span class="donut-total">{{ stats!.insertion_rate }}<small>%</small></span>
+                            <span class="donut-cap">insérés</span>
+                        </div>
+                    </div>
+                    <div class="donut-legend">
+                        <div v-for="l in insertionDonut.legend" :key="l.key" class="legend-row">
+                            <span class="legend-dot" :style="{ background: l.color }"></span>
+                            <span class="legend-label">{{ l.label }}</span>
+                            <span class="legend-val">{{ l.count }}</span>
+                            <span class="legend-pct">{{ l.pct }}%</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Parité -->
+            <div class="chart-card">
+                <div class="chart-head">
+                    <h2 class="chart-title">Parité Hommes / Femmes</h2>
+                    <span class="material-symbols-outlined chart-head-icon">diversity_3</span>
+                </div>
+                <div v-if="genderTotal === 0" class="chart-empty">Aucune donnée disponible.</div>
+                <div v-else class="parity-wrap">
+                    <div class="parity-bar">
+                        <div class="parity-seg parity-female" :style="{ width: femalePct + '%' }"></div>
+                        <div class="parity-seg parity-male" :style="{ width: malePct + '%' }"></div>
+                    </div>
+                    <div class="parity-legend">
+                        <div class="parity-item">
+                            <span class="legend-dot" style="background:#E5004C"></span>
+                            <div>
+                                <div class="parity-num">{{ gender!.female }} <span class="parity-pct">· {{ femalePct }}%</span></div>
+                                <div class="parity-lab">Femmes</div>
+                            </div>
+                        </div>
+                        <div class="parity-item">
+                            <span class="legend-dot" style="background:#1F3A4D"></span>
+                            <div>
+                                <div class="parity-num">{{ gender!.male }} <span class="parity-pct">· {{ malePct }}%</span></div>
+                                <div class="parity-lab">Hommes</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -237,7 +396,7 @@ const statusClass: Record<string, string> = {
     <div v-else class="max-w-4xl mx-auto space-y-xl">
 
         <div>
-            <h1 class="text-h1 font-bold text-on-surface">Bonjour, {{ trainer?.full_name ?? 'Formateur' }} 👋</h1>
+            <h1 class="text-h1 font-bold text-on-surface">Bonjour, {{ trainer?.full_name ?? 'Formateur' }}</h1>
             <p class="text-body-md text-secondary mt-xs">
                 {{ trainer?.speciality ? `Spécialité : ${trainer.speciality}` : 'Voici un résumé de vos formations.' }}
             </p>
@@ -294,6 +453,10 @@ const statusClass: Record<string, string> = {
                         <div class="flex items-center gap-sm">
                             <span class="font-semibold text-on-surface truncate">{{ f.name }}</span>
                             <span v-if="f.is_lead" class="lead-badge">Référent</span>
+                            <span v-if="f.ending_soon" class="ending-soon-badge">
+                                <span class="material-symbols-outlined" style="font-size:12px">schedule</span>
+                                Se termine bientôt
+                            </span>
                         </div>
                         <div class="flex items-center gap-sm mt-xs text-body-sm text-secondary">
                             <span class="material-symbols-outlined" style="font-size:14px">folder_open</span>
@@ -315,11 +478,33 @@ const statusClass: Record<string, string> = {
                             <span class="material-symbols-outlined" style="font-size:14px">fact_check</span>
                             {{ f.attendances_today_count }}
                         </div>
+                        <span v-else-if="f.needs_attendance_today" class="needs-attendance-badge" title="Présence du jour non saisie">
+                            <span class="material-symbols-outlined" style="font-size:14px">warning</span>
+                            À saisir
+                        </span>
                         <Link :href="`/formations/${f.id}/attendances`" class="btn-attendance">
                             <span class="material-symbols-outlined" style="font-size:16px">edit_note</span>
                             Présences
                         </Link>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Absences répétées récentes -->
+        <div v-if="recentAbsences?.length" class="bg-surface-container-lowest border border-surface-container-highest rounded-xl overflow-hidden shadow-sm">
+            <div class="px-lg py-md border-b border-surface-container-highest flex items-center justify-between">
+                <h2 class="text-h2 font-semibold text-on-surface">Absences répétées (7 derniers jours)</h2>
+                <span class="count-badge">{{ recentAbsences.length }}</span>
+            </div>
+            <div class="divide-y divide-surface-container-highest">
+                <div v-for="a in recentAbsences" :key="a.id"
+                    class="px-lg py-sm flex items-center justify-between gap-md">
+                    <div class="min-w-0">
+                        <span class="font-semibold text-on-surface">{{ a.first_name }} {{ a.last_name }}</span>
+                        <span class="text-body-sm text-secondary ml-sm">{{ a.formation_name }}</span>
+                    </div>
+                    <span class="absence-count-badge">{{ a.absences_count }} absences</span>
                 </div>
             </div>
         </div>
@@ -336,8 +521,9 @@ const statusClass: Record<string, string> = {
     display: flex;
     flex-direction: column;
     gap: 4px;
-    border-left: 4px solid #e0e3e5;
+    transition: box-shadow 0.15s, border-color 0.15s;
 }
+.kpi-card:hover { border-color: #d0d8e0; box-shadow: 0 4px 14px rgba(31,58,77,0.06); }
 .kpi-icon {
     font-size: 22px;
     color: #9aaabb;
@@ -363,6 +549,58 @@ const statusClass: Record<string, string> = {
     color: #9aaabb;
     margin-top: 2px;
 }
+
+/* ── Chart cards ── */
+.chart-card {
+    background: #fff;
+    border: 1px solid #e0e3e5;
+    border-radius: 12px;
+    padding: 20px;
+}
+.chart-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px;
+}
+.chart-title { font-size: 14px; font-weight: 700; color: #191c1e; }
+.chart-head-icon { font-size: 20px; color: #c0cad4; }
+.trend-total { font-size: 12px; font-weight: 600; color: #9aaabb; }
+.chart-empty { font-size: 13px; color: #9aaabb; padding: 24px 0; text-align: center; }
+
+/* Donut */
+.donut-row { display: flex; align-items: center; gap: 18px; }
+.donut {
+    position: relative; width: 104px; height: 104px;
+    border-radius: 50%; flex-shrink: 0;
+}
+.donut-hole {
+    position: absolute; inset: 18px;
+    background: #fff; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.donut-total { font-size: 24px; font-weight: 700; color: #191c1e; line-height: 1; }
+.donut-total small { font-size: 13px; font-weight: 600; }
+.donut-cap { font-size: 10px; color: #9aaabb; margin-top: 2px; }
+.donut-legend { flex: 1; display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+.legend-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.legend-label { flex: 1; color: #515f74; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.legend-val { font-weight: 700; color: #191c1e; }
+.legend-pct { color: #9aaabb; min-width: 32px; text-align: right; }
+
+/* Parité */
+.parity-wrap { display: flex; flex-direction: column; gap: 16px; }
+.parity-bar {
+    display: flex; height: 16px; border-radius: 99px; overflow: hidden;
+    background: #eef1f4;
+}
+.parity-seg { height: 100%; transition: width 0.4s ease; }
+.parity-female { background: #E5004C; }
+.parity-male { background: #1F3A4D; }
+.parity-legend { display: flex; gap: 24px; }
+.parity-item { display: flex; align-items: center; gap: 8px; }
+.parity-num { font-size: 16px; font-weight: 700; color: #191c1e; line-height: 1; }
+.parity-pct { font-size: 12px; font-weight: 500; color: #9aaabb; }
+.parity-lab { font-size: 11px; color: #9aaabb; margin-top: 3px; }
 
 /* Badges & Elements */
 .count-badge {
@@ -457,6 +695,47 @@ const statusClass: Record<string, string> = {
     font-size: 12px;
     font-weight: 600;
     color: #166534;
+}
+
+/* Needs attendance badge */
+.needs-attendance-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: #fef3c7;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #92400e;
+}
+
+/* Ending soon badge */
+.ending-soon-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 8px;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #c2410c;
+    white-space: nowrap;
+}
+
+/* Absence count badge */
+.absence-count-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    background: #fee2e2;
+    border-radius: 99px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #b91c1c;
+    white-space: nowrap;
 }
 
 /* Btn attendance */

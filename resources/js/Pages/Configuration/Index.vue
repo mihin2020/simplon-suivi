@@ -11,14 +11,6 @@ interface AgeRange { id: number; name: string; age_min: number; age_max: number;
 interface Vulnerability { id: string; name: string }
 interface LastDiploma { id: string; name: string }
 interface AiConfig { provider: string; model: string; base_url: string; configured: boolean }
-interface WhatsAppConfig {
-    provider: 'twilio' | 'meta'
-    twilio: { sid: string; from: string; configured: boolean }
-    meta: { token: string; phone_number_id: string; business_account_id: string; configured: boolean }
-    configured: boolean
-    active_provider: 'twilio' | 'meta'
-}
-
 const props = defineProps<{
     trainerProfiles: Profile[]
     educationLevels: EducationLevel[]
@@ -26,11 +18,10 @@ const props = defineProps<{
     vulnerabilities: Vulnerability[]
     lastDiplomas: LastDiploma[]
     aiConfig: AiConfig
-    whatsappConfig: WhatsAppConfig
 }>()
 
 // ── Navigation par onglets ──
-const activeTab = ref<'referentiels' | 'ia' | 'whatsapp'>('referentiels')
+const activeTab = ref<'referentiels' | 'ia'>('referentiels')
 
 // ── Toast ──
 const toast = ref<{ message: string; type: 'success' | 'error' } | null>(null)
@@ -78,36 +69,11 @@ const submitAiKey = () => {
         onSuccess: () => { aiKeyForm.ai_api_key = ''; showToast('Configuration IA mise à jour') },
     })
 }
-
-// ── WhatsApp / Twilio ──
-const showTwilioToken = ref(false)
-const waForm = useForm({
-    twilio_sid:           '',
-    twilio_token:         '',
-    twilio_whatsapp_from: props.whatsappConfig.twilio?.from || '',
-})
-const submitWaConfig = () => {
-    waForm.post('/configuration/whatsapp', {
-        onSuccess: () => { waForm.twilio_sid = ''; waForm.twilio_token = ''; showToast('Configuration Twilio enregistrée') },
-    })
-}
-
-// ── WhatsApp / Meta Cloud API ──
-const showMetaToken = ref(false)
-const waProvider = ref<'twilio' | 'meta'>(props.whatsappConfig.provider || 'twilio')
-const metaForm = useForm({
-    whatsapp_meta_token:          '',
-    whatsapp_meta_phone_id:       props.whatsappConfig.meta?.phone_number_id || '',
-    whatsapp_meta_business_id:    props.whatsappConfig.meta?.business_account_id || '',
-    whatsapp_provider:            props.whatsappConfig.provider || 'twilio',
-})
-const submitMetaConfig = () => {
-    metaForm.whatsapp_provider = waProvider.value
-    metaForm.post('/configuration/whatsapp-meta', {
-        onSuccess: () => {
-            metaForm.whatsapp_meta_token = ''
-            showToast('Configuration Meta WhatsApp enregistrée')
-        },
+const showDeactivateModal = ref(false)
+const deactivateForm = useForm({})
+const confirmDeactivate = () => {
+    deactivateForm.delete('/configuration/ai-key', {
+        onSuccess: () => { showDeactivateModal.value = false; showToast('Assistant IA désactivé') },
     })
 }
 
@@ -283,13 +249,6 @@ const destroyDipl = (d: LastDiploma) => {
                 Assistant IA
                 <span class="tab-badge" :class="aiConfig.configured ? 'badge-ok' : 'badge-warn'">
                     {{ aiConfig.configured ? 'Actif' : 'Inactif' }}
-                </span>
-            </button>
-            <button class="tab-btn" :class="{ 'tab-active': activeTab === 'whatsapp' }" @click="activeTab = 'whatsapp'">
-                <span class="material-symbols-outlined tab-icon">chat</span>
-                WhatsApp
-                <span class="tab-badge" :class="whatsappConfig.configured ? 'badge-ok' : 'badge-warn'">
-                    {{ whatsappConfig.configured ? 'Actif' : 'Inactif' }}
                 </span>
             </button>
         </div>
@@ -622,256 +581,9 @@ const destroyDipl = (d: LastDiploma) => {
                                 <span v-else class="material-symbols-outlined" style="font-size:17px">save</span>
                                 {{ aiKeyForm.processing ? 'Enregistrement...' : (aiConfig.configured ? 'Mettre à jour' : 'Enregistrer la configuration') }}
                             </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
-
-        <!-- ══════════ ONGLET WHATSAPP ══════════ -->
-        <div v-if="activeTab === 'whatsapp'" class="ia-layout">
-
-            <!-- Statut -->
-            <div class="ia-status-banner" :class="whatsappConfig.configured ? 'ia-ok' : 'ia-warn'">
-                <div class="ia-status-dot" :class="whatsappConfig.configured ? 'dot-ok' : 'dot-warn'"></div>
-                <div>
-                    <p class="ia-status-title">
-                        <span v-if="whatsappConfig.configured">
-                            WhatsApp opérationnel via {{ whatsappConfig.active_provider === 'meta' ? 'Meta Cloud API' : 'Twilio' }}
-                        </span>
-                        <span v-else>WhatsApp non configuré</span>
-                    </p>
-                    <p class="ia-status-sub">
-                        <span v-if="whatsappConfig.configured && whatsappConfig.active_provider === 'twilio'">
-                            Numéro expéditeur : {{ whatsappConfig.twilio?.from }}
-                        </span>
-                        <span v-else-if="whatsappConfig.configured && whatsappConfig.active_provider === 'meta'">
-                            Phone ID : {{ whatsappConfig.meta?.phone_number_id }}
-                        </span>
-                        <span v-else>
-                            Choisissez un provider (Twilio ou Meta Cloud API) et configurez vos credentials.
-                        </span>
-                    </p>
-                </div>
-            </div>
-
-            <!-- Sélection du Provider -->
-            <div class="provider-selector">
-                <label class="ia-label" style="margin-bottom: 10px; display: block;">Provider WhatsApp</label>
-                <div class="provider-grid-2">
-                    <label class="provider-card-big" :class="{ 'provider-card-selected': waProvider === 'twilio', 'provider-card-inactive': waProvider !== 'twilio' }">
-                        <input type="radio" v-model="waProvider" value="twilio" class="sr-only">
-                        <div class="provider-card-top">
-                            <div>
-                                <div class="provider-name">Twilio</div>
-                                <div class="provider-sub">API simple, sandbox gratuit</div>
-                            </div>
-                            <span v-if="waProvider === 'twilio'" class="provider-check material-symbols-outlined">check_circle</span>
-                        </div>
-                        <div v-if="whatsappConfig.twilio?.configured" class="provider-live-badge">
-                            <span class="provider-live-dot"></span>
-                            Configuré
-                        </div>
-                    </label>
-
-                    <label class="provider-card-big" :class="{ 'provider-card-selected': waProvider === 'meta', 'provider-card-inactive': waProvider !== 'meta' }">
-                        <input type="radio" v-model="waProvider" value="meta" class="sr-only">
-                        <div class="provider-card-top">
-                            <div>
-                                <div class="provider-name">Meta Cloud API</div>
-                                <div class="provider-sub">API directe, moins cher</div>
-                            </div>
-                            <span v-if="waProvider === 'meta'" class="provider-check material-symbols-outlined">check_circle</span>
-                        </div>
-                        <div v-if="whatsappConfig.meta?.configured" class="provider-live-badge">
-                            <span class="provider-live-dot"></span>
-                            Configuré
-                        </div>
-                    </label>
-                </div>
-            </div>
-
-            <div class="ia-cols">
-                <!-- Info / aide -->
-                <div class="ia-col-left">
-                    <h3 class="ia-section-title">Comment ça marche ?</h3>
-
-                    <!-- Aide Twilio -->
-                    <div v-if="waProvider === 'twilio'">
-                        <p class="ia-col-hint">L'envoi automatique via <strong>Twilio</strong> nécessite :</p>
-                        <div class="wa-steps">
-                            <div class="wa-step">
-                                <div class="wa-step-num">1</div>
-                                <div>Créez un compte sur <a href="https://www.twilio.com" target="_blank" class="wa-link">twilio.com</a></div>
-                            </div>
-                            <div class="wa-step">
-                                <div class="wa-step-num">2</div>
-                                <div>Activez le <strong>Sandbox WhatsApp</strong> ou un numéro approuvé</div>
-                            </div>
-                            <div class="wa-step">
-                                <div class="wa-step-num">3</div>
-                                <div>Copiez votre <strong>Account SID</strong> et <strong>Auth Token</strong></div>
-                            </div>
-                            <div class="wa-step">
-                                <div class="wa-step-num">4</div>
-                                <div>Le numéro expéditeur : <code>whatsapp:+14155238886</code></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Aide Meta -->
-                    <div v-else>
-                        <p class="ia-col-hint">L'API <strong>Meta Cloud</strong> nécessite :</p>
-                        <div class="wa-steps">
-                            <div class="wa-step">
-                                <div class="wa-step-num">1</div>
-                                <div>Créez un compte sur <a href="https://developers.facebook.com" target="_blank" class="wa-link">developers.facebook.com</a></div>
-                            </div>
-                            <div class="wa-step">
-                                <div class="wa-step-num">2</div>
-                                <div>Créez une app WhatsApp Business</div>
-                            </div>
-                            <div class="wa-step">
-                                <div class="wa-step-num">3</div>
-                                <div>Ajoutez un numéro de téléphone dans <strong>API Setup</strong></div>
-                            </div>
-                            <div class="wa-step">
-                                <div class="wa-step-num">4</div>
-                                <div>Copiez le <strong>Token d'accès</strong> et le <strong>Phone Number ID</strong></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="wa-info-box">
-                        <span class="material-symbols-outlined" style="font-size:15px;color:#1d4ed8">info</span>
-                        <p>Sans configuration, vous pouvez utiliser les <strong>liens wa.me</strong> (mode manuel gratuit).</p>
-                    </div>
-                </div>
-
-                <!-- Formulaire Twilio -->
-                <div v-if="waProvider === 'twilio'" class="ia-col-right">
-                    <h3 class="ia-section-title">Credentials Twilio</h3>
-                    <form @submit.prevent="submitWaConfig" class="ia-form">
-
-                        <div class="ia-field">
-                            <label class="ia-label">
-                                Account SID
-                                <span v-if="!whatsappConfig.twilio?.configured" class="req">*</span>
-                                <span v-else class="ia-optional">(laisser vide pour conserver)</span>
-                            </label>
-                            <input
-                                v-model="waForm.twilio_sid"
-                                type="text"
-                                class="ia-input"
-                                :class="{ 'input-error': waForm.errors.twilio_sid }"
-                                :placeholder="whatsappConfig.twilio?.configured ? '••••••••••••••••••••••••••••••••••••••' : 'ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'"
-                                autocomplete="off"
-                            />
-                            <p v-if="waForm.errors.twilio_sid" class="err">{{ waForm.errors.twilio_sid }}</p>
-                            <p class="ia-hint"><span class="material-symbols-outlined" style="font-size:12px">lock</span> Chiffré en base de données.</p>
-                        </div>
-
-                        <div class="ia-field">
-                            <label class="ia-label">
-                                Auth Token
-                                <span v-if="!whatsappConfig.twilio?.configured" class="req">*</span>
-                                <span v-else class="ia-optional">(laisser vide pour conserver)</span>
-                            </label>
-                            <div class="key-wrap">
-                                <input
-                                    v-model="waForm.twilio_token"
-                                    :type="showTwilioToken ? 'text' : 'password'"
-                                    class="ia-input"
-                                    :class="{ 'input-error': waForm.errors.twilio_token }"
-                                    :placeholder="whatsappConfig.twilio?.configured ? '••••••••••••••••••••••••••••••••••••••' : 'Votre Auth Token Twilio'"
-                                    autocomplete="new-password"
-                                />
-                                <button type="button" class="eye-btn" @click="showTwilioToken = !showTwilioToken">
-                                    <span class="material-symbols-outlined" style="font-size:18px">{{ showTwilioToken ? 'visibility_off' : 'visibility' }}</span>
-                                </button>
-                            </div>
-                            <p v-if="waForm.errors.twilio_token" class="err">{{ waForm.errors.twilio_token }}</p>
-                            <p class="ia-hint"><span class="material-symbols-outlined" style="font-size:12px">lock</span> Chiffré en base de données.</p>
-                        </div>
-
-                        <div class="ia-field">
-                            <label class="ia-label">Numéro expéditeur WhatsApp <span class="req">*</span></label>
-                            <input
-                                v-model="waForm.twilio_whatsapp_from"
-                                type="text"
-                                class="ia-input"
-                                :class="{ 'input-error': waForm.errors.twilio_whatsapp_from }"
-                                placeholder="whatsapp:+14155238886"
-                            />
-                            <p v-if="waForm.errors.twilio_whatsapp_from" class="err">{{ waForm.errors.twilio_whatsapp_from }}</p>
-                            <p class="ia-hint">Format : <code>whatsapp:+[code pays][numéro]</code></p>
-                        </div>
-
-                        <div class="ia-footer">
-                            <button type="submit" class="ia-save-btn" :disabled="waForm.processing || (!whatsappConfig.twilio?.configured && (!waForm.twilio_sid || !waForm.twilio_token)) || !waForm.twilio_whatsapp_from">
-                                <span v-if="waForm.processing" class="spin-sm"></span>
-                                <span v-else class="material-symbols-outlined" style="font-size:17px">save</span>
-                                {{ waForm.processing ? 'Enregistrement...' : (whatsappConfig.twilio?.configured ? 'Mettre à jour' : 'Enregistrer') }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Formulaire Meta -->
-                <div v-else class="ia-col-right">
-                    <h3 class="ia-section-title">Credentials Meta Cloud API</h3>
-                    <form @submit.prevent="submitMetaConfig" class="ia-form">
-
-                        <div class="ia-field">
-                            <label class="ia-label">Token d'accès (Access Token) <span class="req">*</span></label>
-                            <div class="key-wrap">
-                                <input
-                                    v-model="metaForm.whatsapp_meta_token"
-                                    :type="showMetaToken ? 'text' : 'password'"
-                                    class="ia-input"
-                                    :class="{ 'input-error': metaForm.errors.whatsapp_meta_token }"
-                                    placeholder="EAAXXXXXXXXXXXX..."
-                                    autocomplete="off"
-                                />
-                                <button type="button" class="eye-btn" @click="showMetaToken = !showMetaToken">
-                                    <span class="material-symbols-outlined" style="font-size:18px">{{ showMetaToken ? 'visibility_off' : 'visibility' }}</span>
-                                </button>
-                            </div>
-                            <p v-if="metaForm.errors.whatsapp_meta_token" class="err">{{ metaForm.errors.whatsapp_meta_token }}</p>
-                            <p class="ia-hint"><span class="material-symbols-outlined" style="font-size:12px">lock</span> Chiffré en base de données.</p>
-                        </div>
-
-                        <div class="ia-field">
-                            <label class="ia-label">Phone Number ID <span class="req">*</span></label>
-                            <input
-                                v-model="metaForm.whatsapp_meta_phone_id"
-                                type="text"
-                                class="ia-input"
-                                :class="{ 'input-error': metaForm.errors.whatsapp_meta_phone_id }"
-                                placeholder="123456789012345"
-                            />
-                            <p v-if="metaForm.errors.whatsapp_meta_phone_id" class="err">{{ metaForm.errors.whatsapp_meta_phone_id }}</p>
-                            <p class="ia-hint">Trouvé dans la console Meta → API Setup</p>
-                        </div>
-
-                        <div class="ia-field">
-                            <label class="ia-label">Business Account ID <span class="ia-optional">(optionnel)</span></label>
-                            <input
-                                v-model="metaForm.whatsapp_meta_business_id"
-                                type="text"
-                                class="ia-input"
-                                :class="{ 'input-error': metaForm.errors.whatsapp_meta_business_id }"
-                                placeholder="123456789012345"
-                            />
-                            <p v-if="metaForm.errors.whatsapp_meta_business_id" class="err">{{ metaForm.errors.whatsapp_meta_business_id }}</p>
-                            <p class="ia-hint">Requis uniquement pour les templates</p>
-                        </div>
-
-                        <div class="ia-footer">
-                            <button type="submit" class="ia-save-btn" :disabled="metaForm.processing || !metaForm.whatsapp_meta_token || !metaForm.whatsapp_meta_phone_id">
-                                <span v-if="metaForm.processing" class="spin-sm"></span>
-                                <span v-else class="material-symbols-outlined" style="font-size:17px">save</span>
-                                {{ metaForm.processing ? 'Enregistrement...' : (whatsappConfig.meta?.configured ? 'Mettre à jour' : 'Enregistrer') }}
+                            <button v-if="aiConfig.configured" type="button" class="ia-deactivate-btn" @click="showDeactivateModal = true">
+                                <span class="material-symbols-outlined" style="font-size:17px">power_settings_new</span>
+                                Désactiver
                             </button>
                         </div>
                     </form>
@@ -893,6 +605,28 @@ const destroyDipl = (d: LastDiploma) => {
                             <button class="modal-cancel" @click="confirmDialog.visible = false">Annuler</button>
                             <button class="modal-delete" @click="doConfirm">
                                 <span class="material-symbols-outlined" style="font-size:16px">delete</span> Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
+
+        <!-- ── Modale désactivation IA ── -->
+        <Teleport to="body">
+            <Transition name="modal">
+                <div v-if="showDeactivateModal" class="modal-overlay" @click.self="showDeactivateModal = false">
+                    <div class="modal-box">
+                        <div class="modal-box-head">
+                            <div class="modal-warn-icon"><span class="material-symbols-outlined" style="font-size:20px">power_settings_new</span></div>
+                            <h3 class="modal-box-title">Désactiver l'assistant IA</h3>
+                        </div>
+                        <p class="modal-box-msg">La clé API et la configuration seront effacées. Le chatbot ne sera plus disponible. Vous pourrez reconfigurer un provider à tout moment.</p>
+                        <div class="modal-box-foot">
+                            <button class="modal-cancel" @click="showDeactivateModal = false">Annuler</button>
+                            <button class="modal-delete" @click="confirmDeactivate" :disabled="deactivateForm.processing">
+                                <span class="material-symbols-outlined" style="font-size:16px">power_settings_new</span>
+                                {{ deactivateForm.processing ? 'Désactivation...' : 'Désactiver' }}
                             </button>
                         </div>
                     </div>
@@ -1190,7 +924,14 @@ const destroyDipl = (d: LastDiploma) => {
     font-size: 11px; color: #9aaabb;
 }
 
-.ia-footer { display: flex; justify-content: flex-end; padding-top: 4px; }
+.ia-footer { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding-top: 4px; }
+.ia-deactivate-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 18px; background: transparent; color: #6b7280;
+    border: 1.5px solid #d1d5db; border-radius: 9px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+}
+.ia-deactivate-btn:hover { background: #fff0f4; color: #E5004C; border-color: #E5004C; }
 .ia-save-btn {
     display: inline-flex; align-items: center; gap: 7px;
     padding: 10px 20px; background: #E5004C; color: #fff;

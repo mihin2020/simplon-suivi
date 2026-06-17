@@ -25,10 +25,10 @@ class StoreUserRequest extends FormRequest
             'role'          => ['required', Rule::enum(UserRole::class)->only([UserRole::Admin, UserRole::Trainer])],
             'permissions'   => ['nullable', 'array'],
             'permissions.*' => ['integer', 'exists:permissions,id'],
-            'profile_id'    => $isTrainer ? ['nullable', 'uuid', 'exists:trainer_profiles,id'] : ['sometimes'],
-            'phone'         => $isTrainer ? ['nullable', 'string', 'max:20'] : ['sometimes'],
-            'phone2'        => ['nullable', 'string', 'max:20'],
-            'cv'            => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
+            'profile_id'    => [$isTrainer ? 'nullable' : 'prohibited', 'uuid', 'exists:trainer_profiles,id'],
+            'phone'         => [$isTrainer ? 'nullable' : 'prohibited', 'string', 'max:20'],
+            'phone2'        => [$isTrainer ? 'nullable' : 'prohibited', 'string', 'max:20'],
+            'cv'            => [$isTrainer ? 'nullable' : 'prohibited', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
         ];
     }
 
@@ -45,10 +45,8 @@ class StoreUserRequest extends FormRequest
             'email.unique'        => 'Cette adresse email est déjà utilisée.',
             'role.required'       => 'Le type de compte est obligatoire.',
             'role.enum'           => 'Le type de compte sélectionné est invalide.',
-            'profile_id.exists'   => 'Le profil sélectionné est invalide.',
-            'cv.file'             => 'Le CV doit être un fichier.',
-            'cv.mimes'            => 'Le CV doit être au format PDF, DOC ou DOCX.',
-            'cv.max'              => 'Le CV ne peut pas dépasser 5 Mo.',
+            'cv.mimes'             => 'Le CV doit être au format PDF, DOC ou DOCX.',
+            'cv.max'               => 'Le CV ne doit pas dépasser 5 Mo.',
         ];
     }
 }

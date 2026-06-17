@@ -14,6 +14,8 @@ class ReferentielController extends Controller
 {
     public function index(): Response
     {
+        $this->authorize('viewAny', Referentiel::class);
+
         $referentiels = Referentiel::withCount('formations')
             ->with('blocks')
             ->orderBy('name')
@@ -33,11 +35,15 @@ class ReferentielController extends Controller
 
     public function create(): Response
     {
+        $this->authorize('create', Referentiel::class);
+
         return Inertia::render('Referentiels/Create');
     }
 
     public function store(Request $request): RedirectResponse
     {
+        $this->authorize('create', Referentiel::class);
+
         $data = $request->validate([
             'name'        => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
@@ -52,6 +58,8 @@ class ReferentielController extends Controller
 
     public function show(Referentiel $referentiel): Response
     {
+        $this->authorize('view', $referentiel);
+
         $referentiel->load('blocks.competences', 'formations.project');
 
         return Inertia::render('Referentiels/Show', [
@@ -61,6 +69,8 @@ class ReferentielController extends Controller
 
     public function update(Request $request, Referentiel $referentiel): RedirectResponse
     {
+        $this->authorize('update', $referentiel);
+
         $data = $request->validate([
             'name'                           => ['required', 'string', 'max:255'],
             'description'                    => ['nullable', 'string'],
@@ -121,6 +131,8 @@ class ReferentielController extends Controller
 
     public function destroy(Referentiel $referentiel): RedirectResponse
     {
+        $this->authorize('delete', $referentiel);
+
         $referentiel->blocks()->each(function ($block) {
             $block->competences()->delete();
             $block->delete();

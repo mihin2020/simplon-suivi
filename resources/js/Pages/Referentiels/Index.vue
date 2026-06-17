@@ -22,11 +22,16 @@ defineProps<{
 
         <!-- En-tête -->
         <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-h1 font-bold text-on-surface">Référentiels de Compétences</h1>
-                <p class="text-body-md text-secondary mt-xs">
-                    Gérez les référentiels partagés entre plusieurs formations.
-                </p>
+            <div class="flex items-center gap-md">
+                <div class="page-header-icon">
+                    <span class="material-symbols-outlined">menu_book</span>
+                </div>
+                <div>
+                    <h1 class="text-h1 font-bold text-on-surface">Référentiels de Compétences</h1>
+                    <p class="text-body-md text-secondary mt-xs">
+                        Gérez les référentiels partagés entre plusieurs formations.
+                    </p>
+                </div>
             </div>
             <Link href="/referentiels/create" class="btn-primary">
                 <span class="material-symbols-outlined" style="font-size:18px">add_circle</span>
@@ -80,6 +85,14 @@ defineProps<{
 </template>
 
 <style scoped>
+.page-header-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff;
+}
+.page-header-icon .material-symbols-outlined { font-size: 24px; }
+
 .btn-primary {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 10px 20px; background: #E5004C; color: #fff;

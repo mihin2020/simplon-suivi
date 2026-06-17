@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\FormationStatus;
 use App\Enums\UserRole;
 use App\Models\Formation;
 use Illuminate\Support\Carbon;

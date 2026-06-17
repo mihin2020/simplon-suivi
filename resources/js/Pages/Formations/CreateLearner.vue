@@ -116,8 +116,8 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners/new`,
 
         <!-- Lien vers import Excel -->
         <div class="notice-import mb-lg">
-            <span class="material-symbols-outlined" style="font-size:18px; color:#1d4ed8">upload_file</span>
-            <p class="text-body-sm text-blue-700 flex-1">
+            <span class="material-symbols-outlined" style="font-size:18px; color:#1F3A4D">upload_file</span>
+            <p class="text-body-sm flex-1" style="color:#1F3A4D; font-size:13px">
                 Pour ajouter plusieurs apprenants à la fois, utilisez l'import Excel.
             </p>
             <Link :href="`/learners/import?formation=${formation.id}`" class="btn-import">
@@ -366,21 +366,22 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners/new`,
 <style scoped>
 .icon-back {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 40px; height: 40px; border-radius: 50%; color: #515f74;
-    transition: background 0.15s; flex-shrink: 0;
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent;
+    text-decoration: none; flex-shrink: 0; transition: background 0.15s, color 0.15s;
 }
-.icon-back:hover { background: #eceef0; color: #191c1e; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
 
 .notice-import {
     display: flex; align-items: center; gap: 10px;
-    padding: 12px 16px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px;
+    padding: 12px 16px; background: #f0f3f6; border: 1px solid #d0d8e0; border-radius: 10px;
 }
 .btn-import {
-    padding: 6px 14px; background: #1d4ed8; color: #fff;
+    padding: 6px 14px; background: #1F3A4D; color: #fff;
     border-radius: 6px; font-size: 12px; font-weight: 600;
-    text-decoration: none; white-space: nowrap; transition: opacity 0.15s;
+    text-decoration: none; white-space: nowrap; transition: background 0.15s;
 }
-.btn-import:hover { opacity: 0.85; }
+.btn-import:hover { background: #2d5a7b; }
 
 .card { background: #fff; border: 1px solid #e0e3e5; border-radius: 12px; padding: 28px; }
 
@@ -417,7 +418,7 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners/new`,
     display: inline-flex; align-items: center; justify-content: center;
     width: 24px; height: 24px; border-radius: 50%; font-size: 11px; font-weight: 700;
 }
-.gender-m { background: #dbeafe; color: #1d4ed8; }
+.gender-m { background: #e8edf2; color: #1F3A4D; }
 .gender-f { background: #fce7f3; color: #be185d; }
 
 .field { display: flex; flex-direction: column; gap: 6px; }

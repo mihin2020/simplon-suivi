@@ -5,16 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\TrainerProfile;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class TrainerProfileController extends Controller
 {
-    public function index(): Response
+    public function index(): RedirectResponse
     {
-        return Inertia::render('Configuration/Index', [
-            'trainerProfiles' => TrainerProfile::orderBy('name')->get(['id', 'name']),
-        ]);
+        return redirect()->route('configuration');
     }
 
     public function store(Request $request): RedirectResponse

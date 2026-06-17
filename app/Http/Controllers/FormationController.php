@@ -13,6 +13,7 @@ use App\Models\Project;
 use App\Models\Referentiel;
 use App\Models\Trainer;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -86,10 +87,11 @@ class FormationController extends Controller
             ->get(['id', 'user_id']);
 
         return Inertia::render('Formations/Show', [
-            'formation' => $formation,
-            'activeLearners' => $activeLearners,
+            'formation'        => $formation,
+            'activeLearners'   => $activeLearners,
             'inactiveLearners' => $inactiveLearners,
             'availableTrainers' => $availableTrainers,
+            'referentiels'     => Referentiel::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -102,6 +104,19 @@ class FormationController extends Controller
             'statuses'     => collect(FormationStatus::cases())->map(fn ($s) => ['value' => $s->value, 'label' => $s->label()]),
             'referentiels' => Referentiel::orderBy('name')->get(['id', 'name']),
         ]);
+    }
+
+    public function assignReferentiel(Request $request, Formation $formation): RedirectResponse
+    {
+        $this->authorize('update', $formation);
+
+        $request->validate([
+            'referentiel_id' => ['nullable', 'uuid', 'exists:referentiels,id'],
+        ]);
+
+        $formation->update(['referentiel_id' => $request->input('referentiel_id')]);
+
+        return back()->with('success', 'Référentiel assigné avec succès.');
     }
 
     public function update(UpdateFormationRequest $request, Formation $formation): RedirectResponse

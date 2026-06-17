@@ -1,19 +1,46 @@
 <script setup lang="ts">
+import { computed, watch } from 'vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
 
-interface Formation { id: string; name: string }
+interface Formation {
+    id: string
+    name: string
+    duration_months: number | null
+}
 
-const props = defineProps<{ formations: Formation[] }>()
+const props = defineProps<{
+    formations: Formation[]
+    preselectedFormation: string | null
+}>()
 
 const form = useForm({
-    campus_formation_id: '',
+    campus_formation_id: props.preselectedFormation ?? '',
     name:                '',
     started_at:          '',
     ended_at:            '',
 })
+
+// Formation sélectionnée (pour afficher la durée)
+const selectedFormation = computed(() =>
+    props.formations.find(f => f.id === form.campus_formation_id) ?? null
+)
+
+// Calcul automatique de ended_at dès que started_at ou la formation change
+watch(
+    [() => form.campus_formation_id, () => form.started_at],
+    () => {
+        const dur = selectedFormation.value?.duration_months
+        if (!dur || !form.started_at) return
+
+        const start = new Date(form.started_at)
+        const end   = new Date(start)
+        end.setMonth(end.getMonth() + dur)
+        form.ended_at = end.toISOString().slice(0, 10)
+    }
+)
 
 const submit = () => {
     form.post('/campus/cohorts')
@@ -25,7 +52,7 @@ const submit = () => {
 
         <!-- En-tête -->
         <div class="flex items-center gap-md">
-            <Link href="/campus/cohorts" class="icon-back">
+            <Link :href="preselectedFormation ? `/campus/formations/${preselectedFormation}` : '/campus/cohorts'" class="icon-back">
                 <span class="material-symbols-outlined">arrow_back</span>
             </Link>
             <div>
@@ -46,7 +73,9 @@ const submit = () => {
                     :class="{ 'input-error': form.errors.campus_formation_id }"
                 >
                     <option value="">Sélectionner une formation</option>
-                    <option v-for="f in formations" :key="f.id" :value="f.id">{{ f.name }}</option>
+                    <option v-for="f in formations" :key="f.id" :value="f.id">
+                        {{ f.name }}{{ f.duration_months ? ` (${f.duration_months} mois)` : '' }}
+                    </option>
                 </select>
                 <p v-if="form.errors.campus_formation_id" class="error-msg">{{ form.errors.campus_formation_id }}</p>
             </div>
@@ -59,7 +88,7 @@ const submit = () => {
                     type="text"
                     class="input"
                     :class="{ 'input-error': form.errors.name }"
-                    placeholder="ex : Cohorte 2025 — Groupe A"
+                    placeholder="ex : Cohorte 2025 Groupe A"
                 />
                 <p v-if="form.errors.name" class="error-msg">{{ form.errors.name }}</p>
             </div>
@@ -77,14 +106,26 @@ const submit = () => {
                     <p v-if="form.errors.started_at" class="error-msg">{{ form.errors.started_at }}</p>
                 </div>
                 <div class="field">
-                    <label class="label">Date de fin <span class="required">*</span></label>
+                    <label class="label">
+                        Date de fin <span class="required">*</span>
+                        <span
+                            v-if="selectedFormation?.duration_months && form.started_at"
+                            class="auto-badge"
+                        >
+                            <span class="material-symbols-outlined" style="font-size:11px;vertical-align:-1px">auto_awesome</span>
+                            calculée ({{ selectedFormation.duration_months }} mois)
+                        </span>
+                    </label>
                     <input
                         v-model="form.ended_at"
                         type="date"
                         class="input"
-                        :class="{ 'input-error': form.errors.ended_at }"
+                        :class="{ 'input-error': form.errors.ended_at, 'input-auto': selectedFormation?.duration_months && form.started_at }"
                     />
                     <p v-if="form.errors.ended_at" class="error-msg">{{ form.errors.ended_at }}</p>
+                    <p v-if="!selectedFormation?.duration_months && form.campus_formation_id" class="hint-msg">
+                        Cette formation n'a pas de durée définie, saisissez la date manuellement.
+                    </p>
                 </div>
             </div>
 
@@ -106,15 +147,17 @@ const submit = () => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    color: #515f74;
-    transition: background 0.15s;
+    border: 1.5px solid #1F3A4D;
+    color: #1F3A4D;
+    background: transparent;
+    transition: background 0.15s, color 0.15s;
     flex-shrink: 0;
     text-decoration: none;
 }
-.icon-back:hover { background: #eceef0; color: #191c1e; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
 
 .card {
     background: #fff;
@@ -125,8 +168,22 @@ const submit = () => {
 }
 
 .field { display: flex; flex-direction: column; gap: 6px; }
-.label { font-size: 12px; font-weight: 600; color: #191c1e; }
+.label { font-size: 12px; font-weight: 600; color: #191c1e; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .required { color: #E5004C; }
+
+/* Badge "calculée automatiquement" */
+.auto-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 500;
+    color: #1d6a3a;
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
+    border-radius: 20px;
+    padding: 1px 7px;
+}
 
 .input {
     padding: 10px 14px;
@@ -142,6 +199,9 @@ const submit = () => {
 }
 .input:focus { border-color: #E5004C; box-shadow: 0 0 0 3px rgba(229,0,76,0.08); }
 .input-error { border-color: #ba1a1a !important; }
+/* Champ de date calculé automatiquement : légère teinte verte */
+.input-auto { border-color: #86efac; background: #f0fdf4; }
+.input-auto:focus { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,0.1); }
 .input::placeholder { color: #9aaabb; }
 select.input {
     appearance: none;
@@ -153,6 +213,7 @@ select.input {
 }
 
 .error-msg { font-size: 12px; color: #ba1a1a; }
+.hint-msg  { font-size: 11px; color: #9aaabb; font-style: italic; }
 
 .form-actions {
     display: flex;

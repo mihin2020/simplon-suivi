@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3'
+import { Link, router, useForm } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -63,6 +63,7 @@ const props = defineProps<{
     }
     inactiveLearners: Learner[]
     availableTrainers: Trainer[]
+    referentiels: Array<{ id: string; name: string }>
 }>()
 
 const fmt = (d: string | null) =>
@@ -202,6 +203,22 @@ const unassignTrainer = (trainer: Trainer) => {
     }
 }
 
+// Modal assignation référentiel
+const showReferentielModal = ref(false)
+const referentielForm = useForm({ referentiel_id: props.formation.referentiel?.id ?? '' })
+
+const openReferentielModal = () => {
+    referentielForm.referentiel_id = props.formation.referentiel?.id ?? ''
+    showReferentielModal.value = true
+}
+
+const saveReferentiel = () => {
+    referentielForm.patch(`/formations/${props.formation.id}/referentiel`, {
+        preserveScroll: true,
+        onSuccess: () => { showReferentielModal.value = false },
+    })
+}
+
 // Recherche apprenants actifs
 const learnerSearch = ref('')
 const filteredLearners = computed(() => {
@@ -260,31 +277,27 @@ const filteredInactiveLearners = computed(() => {
                     <span v-if="formation.description" class="text-secondary">· {{ formation.description }}</span>
                 </div>
                 <div class="flex items-center gap-sm flex-wrap min-w-0">
-                <Link :href="`/formations/${formation.id}/attendances`" class="btn-secondary">
+                <Link :href="`/formations/${formation.id}/attendances`" class="btn-navy">
                     <span class="material-symbols-outlined" style="font-size:18px">fact_check</span>
                     Présences
                 </Link>
-                <Link :href="`/formations/${formation.id}/expenses`" class="btn-secondary">
+                <Link :href="`/formations/${formation.id}/expenses`" class="btn-navy">
                     <span class="material-symbols-outlined" style="font-size:18px">payments</span>
                     Finance
                 </Link>
-                <Link
-                    :href="formation.referentiel ? `/referentiels/${formation.referentiel.id}` : `/formations/${formation.id}/edit`"
-                    class="btn-secondary"
-                    :title="formation.referentiel ? formation.referentiel.name : 'Aucun référentiel · cliquez pour en assigner un'"
-                >
+                <button class="btn-navy" @click="openReferentielModal" :title="formation.referentiel ? formation.referentiel.name : 'Assigner un référentiel'">
                     <span class="material-symbols-outlined" style="font-size:18px">menu_book</span>
                     {{ formation.referentiel ? 'Référentiel' : 'Assigner un référentiel' }}
-                </Link>
-                <Link :href="`/formations/${formation.id}/edit`" class="btn-secondary">
+                </button>
+                <Link :href="`/formations/${formation.id}/edit`" class="btn-navy">
                     <span class="material-symbols-outlined" style="font-size:18px">edit</span>
                     Modifier
                 </Link>
-                <Link :href="`/formations/${formation.id}/learners/enroll`" class="btn-secondary">
+                <Link :href="`/formations/${formation.id}/learners/enroll`" class="btn-navy">
                     <span class="material-symbols-outlined" style="font-size:18px">search</span>
                     Apprenant existant
                 </Link>
-                <Link :href="`/formations/${formation.id}/medias`" class="btn-secondary">
+                <Link :href="`/formations/${formation.id}/medias`" class="btn-navy">
                     <span class="material-symbols-outlined" style="font-size:18px">photo_library</span>
                     Médiathèque
                 </Link>
@@ -552,6 +565,56 @@ const filteredInactiveLearners = computed(() => {
             </div>
         </div>
 
+        <!-- Modal Assigner un référentiel -->
+        <Teleport to="body">
+            <div v-if="showReferentielModal" class="ref-overlay" @click.self="showReferentielModal = false">
+                <div class="ref-box">
+                    <div class="ref-header">
+                        <div>
+                            <p class="ref-title">Référentiel de compétences</p>
+                            <p class="ref-subtitle">{{ formation.name }}</p>
+                        </div>
+                        <button class="ref-close" @click="showReferentielModal = false">
+                            <span class="material-symbols-outlined" style="font-size:20px">close</span>
+                        </button>
+                    </div>
+                    <div class="ref-body">
+                        <p class="ref-label">Choisir un référentiel</p>
+                        <div class="ref-list">
+                            <button
+                                type="button"
+                                class="ref-row"
+                                :class="{ 'ref-row-active': referentielForm.referentiel_id === '' }"
+                                @click="referentielForm.referentiel_id = ''"
+                            >
+                                <span class="ref-row-name" style="color:#9aaabb;font-style:italic">Aucun référentiel</span>
+                                <span v-if="referentielForm.referentiel_id === ''" class="material-symbols-outlined ref-check">check_circle</span>
+                            </button>
+                            <button
+                                v-for="r in (referentiels ?? [])"
+                                :key="r.id"
+                                type="button"
+                                class="ref-row"
+                                :class="{ 'ref-row-active': referentielForm.referentiel_id === r.id }"
+                                @click="referentielForm.referentiel_id = r.id"
+                            >
+                                <span class="ref-row-icon material-symbols-outlined">menu_book</span>
+                                <span class="ref-row-name">{{ r.name }}</span>
+                                <span v-if="referentielForm.referentiel_id === r.id" class="material-symbols-outlined ref-check">check_circle</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="ref-footer">
+                        <button class="ref-cancel" @click="showReferentielModal = false">Annuler</button>
+                        <button class="ref-save" :disabled="referentielForm.processing" @click="saveReferentiel">
+                            <span v-if="referentielForm.processing" class="ref-spinner" />
+                            Enregistrer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
         <!-- Modal Assigner un formateur -->
         <div v-if="showTrainerModal" class="modal-overlay" @click.self="closeTrainerModal">
             <div class="modal-content">
@@ -707,18 +770,13 @@ const filteredInactiveLearners = computed(() => {
 
 <style scoped>
 .icon-back {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    color: #515f74;
-    transition: background 0.15s;
-    flex-shrink: 0;
-    margin-top: 2px;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent;
+    text-decoration: none; flex-shrink: 0; margin-top: 2px;
+    transition: background 0.15s, color 0.15s;
 }
-.icon-back:hover { background: rgba(255,255,255,0.1); color: #191c1e; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
 
 .status-badge {
     display: inline-flex;
@@ -798,20 +856,19 @@ const filteredInactiveLearners = computed(() => {
 .btn-primary:hover { background: #c0003e; }
 
 .btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: transparent;
-    color: #515f74;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    border: 1px solid #e0e3e5;
-    transition: background 0.15s;
-    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 7px 12px; background: transparent; color: #515f74;
+    border-radius: 8px; font-size: 12px; font-weight: 500;
+    border: 1px solid #e0e3e5; transition: background 0.15s; text-decoration: none;
 }
 .btn-secondary:hover { background: #f2f4f6; }
+.btn-navy {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 7px 14px; background: transparent; color: #1F3A4D;
+    border-radius: 8px; font-size: 12px; font-weight: 600;
+    border: 1.5px solid #1F3A4D; transition: background 0.15s, color 0.15s; text-decoration: none;
+}
+.btn-navy:hover { background: #1F3A4D; color: #fff; }
 
 .icon-btn {
     padding: 4px;
@@ -1256,5 +1313,70 @@ const filteredInactiveLearners = computed(() => {
     border-color: #E5004C;
     background: #fff;
     box-shadow: 0 0 0 3px rgba(229, 0, 76, 0.08);
+}
+
+/* ── Modal Référentiel ── */
+.ref-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center; z-index: 9999;
+}
+.ref-box {
+    background: #fff; border-radius: 14px;
+    width: 100%; max-width: 440px; box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    overflow: hidden;
+}
+.ref-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 20px 24px; border-bottom: 1px solid #f0f2f5;
+}
+.ref-title { font-size: 15px; font-weight: 700; color: #191c1e; }
+.ref-subtitle { font-size: 12px; color: #9aaabb; margin-top: 2px; }
+.ref-close {
+    margin-left: auto; display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 8px; border: none;
+    background: transparent; color: #9aaabb; cursor: pointer; transition: background 0.12s;
+}
+.ref-close:hover { background: #f2f4f6; color: #515f74; }
+.ref-body { padding: 20px 24px; display: flex; flex-direction: column; gap: 10px; }
+.ref-label { font-size: 11px; font-weight: 700; color: #9aaabb; letter-spacing: 0.06em; text-transform: uppercase; }
+.ref-list {
+    display: flex; flex-direction: column; gap: 4px;
+    max-height: 280px; overflow-y: auto;
+    border: 1px solid #e0e3e5; border-radius: 10px; padding: 6px;
+}
+.ref-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px; width: 100%;
+    border: 1.5px solid transparent; background: transparent;
+    cursor: pointer; text-align: left; transition: background 0.12s, border-color 0.12s;
+}
+.ref-row:hover { background: #f6f8fa; }
+.ref-row-active { background: #fff0f4 !important; border-color: #ffc0d0; }
+.ref-row-icon { font-size: 18px; color: #9aaabb; flex-shrink: 0; }
+.ref-row-active .ref-row-icon { color: #E5004C; }
+.ref-row-name { flex: 1; font-size: 14px; font-weight: 500; color: #191c1e; }
+.ref-check { font-size: 18px; color: #E5004C; flex-shrink: 0; }
+.ref-footer {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding: 16px 24px; border-top: 1px solid #f0f2f5; background: #fafbfc;
+}
+.ref-cancel {
+    padding: 8px 18px; background: #f2f4f6; color: #515f74;
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background 0.12s;
+}
+.ref-cancel:hover { background: #e0e3e5; }
+.ref-save {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 20px; background: #E5004C; color: #fff;
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s;
+}
+.ref-save:hover:not(:disabled) { background: #c0003e; }
+.ref-save:disabled { opacity: 0.6; cursor: not-allowed; }
+.ref-spinner {
+    display: inline-block; width: 12px; height: 12px;
+    border: 2px solid rgba(255,255,255,0.4); border-top-color: #fff;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
 }
 </style>

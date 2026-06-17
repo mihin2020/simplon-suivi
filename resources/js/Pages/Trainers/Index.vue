@@ -17,6 +17,7 @@ interface Formation {
 }
 
 interface User {
+    id: string
     first_name: string
     last_name: string
     email: string
@@ -62,12 +63,6 @@ watch(search, (val) => {
         router.get('/trainers', { search: val }, { preserveState: true, replace: true })
     }, 400)
 })
-
-const destroy = (t: Trainer) => {
-    if (confirm(`Supprimer le formateur « ${t.user.first_name} ${t.user.last_name} » ?`)) {
-        router.delete(`/trainers/${t.id}`)
-    }
-}
 
 const unassign = (trainer: Trainer, formation: Formation) => {
     if (confirm(`Retirer ${trainer.user.first_name} ${trainer.user.last_name} de la formation "${formation.name}" ?`)) {
@@ -173,7 +168,7 @@ const isFormationSelected = (formationId: string) => {
                     {{ trainers.meta?.total ?? 0 }} formateur(s) enregistré(s).
                 </p>
             </div>
-            <Link href="/trainers/create" class="btn-primary">
+            <Link href="/users/create" class="btn-primary">
                 <span class="material-symbols-outlined" style="font-size:18px">person_add</span>
                 Inviter un Formateur
             </Link>
@@ -274,12 +269,9 @@ const isFormationSelected = (formationId: string) => {
                                     <Link :href="`/trainers/${trainer.id}`" class="icon-btn" title="Voir le profil">
                                         <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
                                     </Link>
-                                    <Link :href="`/trainers/${trainer.id}/edit`" class="icon-btn" title="Modifier">
+                                    <Link :href="`/users/${trainer.user.id}/edit`" class="icon-btn" title="Modifier">
                                         <span class="material-symbols-outlined" style="font-size:18px">edit</span>
                                     </Link>
-                                    <button @click="destroy(trainer)" class="icon-btn danger" title="Supprimer">
-                                        <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -457,25 +449,25 @@ const isFormationSelected = (formationId: string) => {
     align-items: center;
     gap: 4px;
     padding: 4px 10px;
-    background: #fef3c7;
-    border: 1px solid #fde68a;
+    background: #e8edf2;
+    border: 1px solid #c5d0d9;
     border-radius: 6px;
     font-size: 11px;
 }
 .formation-project {
-    color: #92400e;
-    font-weight: 600;
+    color: #1F3A4D;
+    font-weight: 700;
 }
 .formation-name {
-    color: #78350f;
+    color: #3d5a6e;
 }
 .formation-remove {
     width: 16px;
     height: 16px;
     border-radius: 50%;
     border: none;
-    background: rgba(146, 64, 14, 0.15);
-    color: #92400e;
+    background: rgba(31, 58, 77, 0.12);
+    color: #1F3A4D;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -484,9 +476,32 @@ const isFormationSelected = (formationId: string) => {
     margin-left: 4px;
 }
 .formation-remove:hover {
-    background: rgba(146, 64, 14, 0.25);
-    color: #78350f;
+    background: #E5004C;
+    color: #fff;
 }
+
+/* Modal suppression */
+.modal-box {
+    background: #fff; border-radius: 16px; padding: 32px 28px;
+    width: 100%; max-width: 400px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.modal-icon { margin-bottom: 12px; }
+.modal-box-title { font-size: 18px; font-weight: 700; color: #191c1e; margin-bottom: 8px; }
+.modal-box-body { font-size: 14px; color: #515f74; line-height: 1.6; margin-bottom: 24px; }
+.modal-box-actions { display: flex; gap: 12px; justify-content: center; }
+.btn-cancel {
+    padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    border: 1.5px solid #d0d3d5; color: #515f74; background: #fff; cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-cancel:hover { background: #f4f5f6; }
+.btn-confirm-danger {
+    padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    background: #E5004C; color: #fff; border: none; cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-confirm-danger:hover { background: #c0003e; }
 
 /* Liste de formations en checkboxes */
 .formation-placeholder {

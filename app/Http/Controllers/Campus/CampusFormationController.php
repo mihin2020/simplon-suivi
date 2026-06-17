@@ -12,11 +12,16 @@ use Inertia\Response;
 
 class CampusFormationController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $formations = CampusFormation::withCount('cohorts')
+            ->when($request->input('search'), fn($q, $s) =>
+                $q->where('name', 'like', "%{$s}%")
+                  ->orWhere('description', 'like', "%{$s}%")
+            )
             ->latest()
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render('Campus/Formations/Index', [
             'formations' => $formations,
@@ -95,6 +100,11 @@ class CampusFormationController extends Controller
 
     public function destroy(CampusFormation $campusFormation): RedirectResponse
     {
+        if ($campusFormation->cohorts()->exists()) {
+            return redirect()->back()
+                ->with('error', "Impossible de supprimer « {$campusFormation->name} » : cette formation possède des cohortes. Supprimez d'abord les cohortes associées.");
+        }
+
         $campusFormation->delete();
 
         return redirect()->route('campus.formations.index')

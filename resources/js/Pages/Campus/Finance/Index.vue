@@ -34,6 +34,7 @@ interface FormationGroup {
 }
 
 interface GlobalStats {
+    total_expected: number
     total_collected: number
     total_remaining: number
     overdue_count: number
@@ -89,20 +90,25 @@ const progressColor = (rate: number) => {
     return '#ef4444'
 }
 
-const totalExpected  = props.byFormation.reduce((s, f) => s + f.totals.total_expected, 0)
-const totalCollected = props.byFormation.reduce((s, f) => s + f.totals.total_collected, 0)
+const totalExpected  = props.globalStats.total_expected
+const totalCollected = props.globalStats.total_collected
 </script>
 
 <template>
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->
-        <div class="flex items-end justify-between">
-            <div>
-                <h1 class="text-h1 font-bold text-on-surface">Finance</h1>
-                <p class="text-body-md text-secondary mt-xs">
-                    Suivi des encaissements par cohorte — session {{ selectedYear }}.
-                </p>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-md">
+                <div class="page-header-icon">
+                    <span class="material-symbols-outlined" style="font-size:24px">account_balance</span>
+                </div>
+                <div>
+                    <h1 class="text-h1 font-bold text-on-surface">Finance</h1>
+                    <p class="text-body-md text-secondary mt-xs">
+                        Suivi des encaissements par cohorte, session {{ selectedYear }}.
+                    </p>
+                </div>
             </div>
             <div class="flex items-center gap-sm">
                 <span class="text-body-sm text-on-surface-variant">Année :</span>
@@ -115,12 +121,25 @@ const totalCollected = props.byFormation.reduce((s, f) => s + f.totals.total_col
         <!-- KPIs -->
         <div class="kpi-grid">
             <div class="kpi-card">
+                <div class="kpi-icon kpi-blue">
+                    <span class="material-symbols-outlined" style="font-size:22px">calculate</span>
+                </div>
+                <div>
+                    <p class="kpi-label">Total planifié</p>
+                    <p class="kpi-val">{{ fmt(globalStats.total_expected) }}</p>
+                    <p class="kpi-sub">coût × apprenants actifs</p>
+                </div>
+            </div>
+            <div class="kpi-card">
                 <div class="kpi-icon kpi-green">
                     <span class="material-symbols-outlined" style="font-size:22px">account_balance_wallet</span>
                 </div>
                 <div>
                     <p class="kpi-label">Total encaissé</p>
                     <p class="kpi-val" style="color:#065f46">{{ fmt(globalStats.total_collected) }}</p>
+                    <p class="kpi-sub" v-if="globalStats.total_expected > 0">
+                        {{ Math.min(100, Math.round(globalStats.total_collected / globalStats.total_expected * 100)) }}% collecté
+                    </p>
                 </div>
             </div>
             <div class="kpi-card">
@@ -129,7 +148,10 @@ const totalCollected = props.byFormation.reduce((s, f) => s + f.totals.total_col
                 </div>
                 <div>
                     <p class="kpi-label">Reste à percevoir</p>
-                    <p class="kpi-val">{{ fmt(globalStats.total_remaining) }}</p>
+                    <p class="kpi-val" :style="globalStats.total_remaining > 0 ? 'color:#92400e' : 'color:#065f46'">
+                        {{ fmt(globalStats.total_remaining) }}
+                    </p>
+                    <p class="kpi-sub">sur le total planifié</p>
                 </div>
             </div>
             <div class="kpi-card">
@@ -137,8 +159,9 @@ const totalCollected = props.byFormation.reduce((s, f) => s + f.totals.total_col
                     <span class="material-symbols-outlined" style="font-size:22px">warning</span>
                 </div>
                 <div>
-                    <p class="kpi-label">Échéances en retard</p>
+                    <p class="kpi-label">Apprenants en retard</p>
                     <p class="kpi-val" style="color:#dc2626">{{ globalStats.overdue_count }}</p>
+                    <p class="kpi-sub">avec ≥ 1 échéance dépassée</p>
                 </div>
             </div>
             <div class="kpi-card">
@@ -157,7 +180,7 @@ const totalCollected = props.byFormation.reduce((s, f) => s + f.totals.total_col
             <div class="flex items-center justify-between mb-sm">
                 <div class="flex items-center gap-sm">
                     <span class="material-symbols-outlined" style="font-size:18px;color:#E5004C">donut_large</span>
-                    <span class="font-semibold text-on-surface text-body-md">Taux de collecte global — {{ selectedYear }}</span>
+                    <span class="font-semibold text-on-surface text-body-md">Taux de collecte global {{ selectedYear }}</span>
                 </div>
                 <span class="text-body-sm text-on-surface-variant">
                     {{ fmt(totalCollected) }} / {{ fmt(totalExpected) }}
@@ -247,19 +270,19 @@ const totalCollected = props.byFormation.reduce((s, f) => s + f.totals.total_col
                                 <span class="font-semibold">{{ cohort.learners_count }}</span>
                             </td>
                             <td class="td text-right text-body-sm text-on-surface-variant">
-                                {{ cohort.total_expected > 0 ? fmtShort(cohort.total_expected) + ' FCFA' : '—' }}
+                                {{ cohort.total_expected > 0 ? fmtShort(cohort.total_expected) + ' FCFA' : '' }}
                             </td>
                             <td class="td text-right font-semibold" style="color:#065f46">
-                                {{ cohort.total_collected > 0 ? fmtShort(cohort.total_collected) + ' FCFA' : '—' }}
+                                {{ cohort.total_collected > 0 ? fmtShort(cohort.total_collected) + ' FCFA' : '' }}
                             </td>
                             <td class="td text-right text-body-sm" :style="cohort.total_remaining > 0 ? 'color:#92400e' : 'color:#9aaabb'">
-                                {{ cohort.total_remaining > 0 ? fmtShort(cohort.total_remaining) + ' FCFA' : '—' }}
+                                {{ cohort.total_remaining > 0 ? fmtShort(cohort.total_remaining) + ' FCFA' : '' }}
                             </td>
                             <td class="td text-center">
                                 <span v-if="cohort.overdue_count > 0" class="overdue-badge">
                                     {{ cohort.overdue_count }}
                                 </span>
-                                <span v-else class="text-on-surface-variant text-body-sm">—</span>
+                                <span v-else class="text-on-surface-variant text-body-sm"></span>
                             </td>
                             <td class="td">
                                 <div class="flex items-center gap-sm">
@@ -288,21 +311,21 @@ const totalCollected = props.byFormation.reduce((s, f) => s + f.totals.total_col
 
                         <!-- Formation totals row -->
                         <tr class="totals-row">
-                            <td class="td font-bold text-on-surface" colspan="4">Total — {{ formation.name }}</td>
+                            <td class="td font-bold text-on-surface" colspan="4">Total {{ formation.name }}</td>
                             <td class="td text-right text-body-sm font-semibold text-on-surface-variant">
-                                {{ formation.totals.total_expected > 0 ? fmtShort(formation.totals.total_expected) + ' FCFA' : '—' }}
+                                {{ formation.totals.total_expected > 0 ? fmtShort(formation.totals.total_expected) + ' FCFA' : '' }}
                             </td>
                             <td class="td text-right font-bold" style="color:#065f46">
-                                {{ formation.totals.total_collected > 0 ? fmtShort(formation.totals.total_collected) + ' FCFA' : '—' }}
+                                {{ formation.totals.total_collected > 0 ? fmtShort(formation.totals.total_collected) + ' FCFA' : '' }}
                             </td>
                             <td class="td text-right font-semibold" :style="formation.totals.total_remaining > 0 ? 'color:#92400e' : 'color:#9aaabb'">
-                                {{ formation.totals.total_remaining > 0 ? fmtShort(formation.totals.total_remaining) + ' FCFA' : '—' }}
+                                {{ formation.totals.total_remaining > 0 ? fmtShort(formation.totals.total_remaining) + ' FCFA' : '' }}
                             </td>
                             <td class="td text-center">
                                 <span v-if="formation.totals.overdue_count > 0" class="overdue-badge">
                                     {{ formation.totals.overdue_count }}
                                 </span>
-                                <span v-else class="text-on-surface-variant text-body-sm">—</span>
+                                <span v-else class="text-on-surface-variant text-body-sm"></span>
                             </td>
                             <td class="td" colspan="2">
                                 <div class="flex items-center gap-sm">
@@ -385,6 +408,13 @@ const totalCollected = props.byFormation.reduce((s, f) => s + f.totals.total_col
 </template>
 
 <style scoped>
+.page-header-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff; display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+
 /* Year select */
 .year-select {
     padding: 8px 32px 8px 12px;
@@ -407,36 +437,40 @@ const totalCollected = props.byFormation.reduce((s, f) => s + f.totals.total_col
 /* KPIs */
 .kpi-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 16px;
 }
-@media (max-width: 1024px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 1280px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 768px)  { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
 
 .kpi-card {
     display: flex;
-    align-items: center;
-    gap: 16px;
+    align-items: flex-start;
+    gap: 14px;
     background: #fff;
     border: 1px solid #e0e3e5;
     border-radius: 12px;
-    padding: 20px;
+    padding: 18px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.04);
 }
 .kpi-icon {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    margin-top: 2px;
 }
+.kpi-blue    { background: #dbeafe; color: #1d4ed8; }
 .kpi-green   { background: #d1fae5; color: #065f46; }
 .kpi-amber   { background: #fef3c7; color: #92400e; }
 .kpi-red     { background: #fee2e2; color: #dc2626; }
 .kpi-primary { background: #fff0f3; color: #E5004C; }
 .kpi-label { font-size: 11px; font-weight: 600; color: #9aaabb; text-transform: uppercase; letter-spacing: 0.05em; }
-.kpi-val   { font-size: 17px; font-weight: 700; color: #191c1e; margin-top: 2px; }
+.kpi-val   { font-size: 16px; font-weight: 700; color: #191c1e; margin-top: 2px; }
+.kpi-sub   { font-size: 10px; color: #9aaabb; margin-top: 2px; }
 
 /* Global progress card */
 .global-progress-card {

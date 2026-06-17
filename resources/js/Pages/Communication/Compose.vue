@@ -17,6 +17,13 @@ const files = ref<File[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 
 const sending = ref(false)
+const showCc = ref(false)
+
+function fileSize(bytes: number) {
+    if (bytes < 1024) return bytes + ' o'
+    if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' Ko'
+    return (bytes / 1024 / 1024).toFixed(1) + ' Mo'
+}
 
 function submit() {
     if (sending.value) return
@@ -79,6 +86,9 @@ function removeFile(index: number) {
             <Link href="/communication/emails" class="back-btn" title="Retour">
                 <span class="material-symbols-outlined">arrow_back</span>
             </Link>
+            <div class="page-header-icon">
+                <span class="material-symbols-outlined" style="font-size:24px">edit_square</span>
+            </div>
             <div>
                 <h1 class="page-title">Nouveau message</h1>
                 <p class="page-subtitle">Composez et envoyez un email à un ou plusieurs destinataires</p>
@@ -86,30 +96,47 @@ function removeFile(index: number) {
         </div>
 
         <form @submit.prevent="submit" class="compose-form" @dragover.prevent @drop="onDrop">
+
+            <!-- Destinataires -->
             <div class="form-section">
-                <label class="form-label">
-                    <span class="material-symbols-outlined label-icon">group</span>
-                    Destinataires
-                </label>
+                <div class="form-label-row">
+                    <label class="form-label">
+                        <span class="material-symbols-outlined label-icon">group</span>
+                        Destinataires
+                    </label>
+                    <button v-if="!showCc" type="button" class="cc-toggle" @click="showCc = true">
+                        <span class="material-symbols-outlined" style="font-size:15px">add</span>
+                        Ajouter Cc
+                    </button>
+                </div>
                 <RecipientSelector v-model="to" :projects="projects ?? []" />
             </div>
 
-            <div class="form-section">
-                <label class="form-label">
-                    <span class="material-symbols-outlined label-icon">mail</span>
-                    Copie à (CC)
-                </label>
-                <input v-model="cc" type="text" class="form-input" placeholder="Emails en copie, séparés par des virgules..." />
+            <!-- Copie (CC) — masqué par défaut -->
+            <div v-if="showCc" class="form-section">
+                <div class="form-label-row">
+                    <label class="form-label">
+                        <span class="material-symbols-outlined label-icon">content_copy</span>
+                        Copie (Cc)
+                    </label>
+                    <button type="button" class="cc-toggle cc-toggle-remove" @click="showCc = false; cc = ''">
+                        <span class="material-symbols-outlined" style="font-size:15px">close</span>
+                        Retirer
+                    </button>
+                </div>
+                <input v-model="cc" type="text" class="form-input" placeholder="Emails en copie, séparés par des virgules…" />
             </div>
 
+            <!-- Objet -->
             <div class="form-section">
                 <label class="form-label">
                     <span class="material-symbols-outlined label-icon">subject</span>
                     Objet
                 </label>
-                <input v-model="subject" type="text" class="form-input" placeholder="Sujet de votre message..." required />
+                <input v-model="subject" type="text" class="form-input" placeholder="Sujet de votre message…" required />
             </div>
 
+            <!-- Message -->
             <div class="form-section">
                 <label class="form-label">
                     <span class="material-symbols-outlined label-icon">edit_note</span>
@@ -118,22 +145,25 @@ function removeFile(index: number) {
                 <TiptapEditor v-model="body" />
             </div>
 
+            <!-- Pièces jointes -->
             <div class="form-section">
                 <label class="form-label">
                     <span class="material-symbols-outlined label-icon">attach_file</span>
                     Pièces jointes
+                    <span v-if="files.length" class="attach-count">{{ files.length }}</span>
                 </label>
                 <div class="upload-zone" @click="fileInput?.click()">
-                    <span class="material-symbols-outlined upload-icon">upload_file</span>
+                    <span class="material-symbols-outlined upload-icon">cloud_upload</span>
                     <p class="upload-text">Glissez-déposez des fichiers ici ou <strong>cliquez pour sélectionner</strong></p>
+                    <p class="upload-hint">Taille max : 10 Mo par fichier</p>
                     <input ref="fileInput" type="file" multiple class="hidden" @change="e => files.push(...Array.from((e.target as HTMLInputElement).files || []))" />
                 </div>
                 <div v-if="files.length" class="file-list">
                     <div v-for="(f, i) in files" :key="i" class="file-item">
                         <span class="material-symbols-outlined file-icon">description</span>
                         <span class="file-name">{{ f.name }}</span>
-                        <span class="file-size">{{ (f.size / 1024).toFixed(1) }} Ko</span>
-                        <button type="button" @click="removeFile(i)" class="file-remove">
+                        <span class="file-size">{{ fileSize(f.size) }}</span>
+                        <button type="button" @click="removeFile(i)" class="file-remove" title="Retirer">
                             <span class="material-symbols-outlined" style="font-size:16px">close</span>
                         </button>
                     </div>
@@ -146,8 +176,8 @@ function removeFile(index: number) {
                     Annuler
                 </Link>
                 <button type="submit" class="btn-primary" :disabled="sending || to.length === 0 || !subject || !body">
-                    <span class="material-symbols-outlined" style="font-size:16px">{{ sending ? 'progress_activity' : 'send' }}</span>
-                    {{ sending ? 'Envoi en cours...' : 'Envoyer' }}
+                    <span class="material-symbols-outlined" style="font-size:16px" :class="{ 'spin-send': sending }">{{ sending ? 'progress_activity' : 'send' }}</span>
+                    {{ sending ? 'Envoi en cours…' : 'Envoyer' }}
                 </button>
             </div>
         </form>
@@ -185,17 +215,30 @@ function removeFile(index: number) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    color: #515f74;
-    transition: all 0.15s;
+    border: 1.5px solid #1F3A4D;
+    color: #1F3A4D;
+    background: transparent;
+    transition: background 0.15s, color 0.15s;
     flex-shrink: 0;
     text-decoration: none;
 }
 .back-btn:hover {
-    background: #f2f4f6;
-    color: #191c1e;
+    background: #1F3A4D;
+    color: #fff;
+}
+.page-header-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 .page-title {
     font-size: 24px;
@@ -226,6 +269,12 @@ function removeFile(index: number) {
     flex-direction: column;
     gap: 8px;
 }
+.form-label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
 .form-label {
     display: flex;
     align-items: center;
@@ -240,6 +289,36 @@ function removeFile(index: number) {
     font-size: 16px;
     color: #E5004C;
 }
+.attach-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 99px;
+    background: #E5004C;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+}
+.cc-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 10px;
+    border: 1px solid #e0e3e5;
+    border-radius: 99px;
+    background: #fff;
+    color: #1F3A4D;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.cc-toggle:hover { background: #1F3A4D; color: #fff; border-color: #1F3A4D; }
+.cc-toggle-remove { color: #9aaabb; }
+.cc-toggle-remove:hover { background: #f2f4f6; color: #515f74; border-color: #e0e3e5; }
 .form-input {
     padding: 10px 14px;
     border: 1px solid #e0e3e5;
@@ -287,6 +366,12 @@ function removeFile(index: number) {
 }
 .upload-text strong {
     color: #E5004C;
+}
+.upload-hint {
+    font-size: 11px;
+    color: #9aaabb;
+    margin: 4px 0 0;
+    text-align: center;
 }
 .hidden {
     display: none;
@@ -390,6 +475,9 @@ function removeFile(index: number) {
     background: #e0e3e5;
     color: #191c1e;
 }
+
+.spin-send { animation: spin-send 0.8s linear infinite; }
+@keyframes spin-send { to { transform: rotate(360deg); } }
 
 /* Loading overlay */
 .loading-overlay {

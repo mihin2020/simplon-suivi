@@ -7,6 +7,7 @@ defineOptions({ layout: AdminLayout })
 
 const props = defineProps<{
     emails: any
+    search: string
     inboxCount: number
     archivedCount: number
     sentCount: number
@@ -14,6 +15,23 @@ const props = defineProps<{
 }>()
 
 const confirmDeleteId = ref<string | null>(null)
+const searchTerm = ref(props.search ?? '')
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+function runSearch() {
+    router.get('/communication/emails/sent',
+        { search: searchTerm.value || undefined },
+        { preserveState: true, replace: true, preserveScroll: true, only: ['emails', 'search'] }
+    )
+}
+function onSearchInput() {
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = setTimeout(runSearch, 350)
+}
+function clearSearch() {
+    searchTerm.value = ''
+    runSearch()
+}
 
 function avatarLetter(name: string | null, email: string | null) {
     return ((name || email || '?')[0]).toUpperCase()
@@ -41,11 +59,14 @@ function fmtDate(d: string | null) {
     const now = new Date()
     const isToday = date.toDateString() === now.toDateString()
     if (isToday) return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+    const sameYear = date.getFullYear() === now.getFullYear()
+    return date.toLocaleDateString('fr-FR', sameYear
+        ? { day: '2-digit', month: 'short' }
+        : { day: '2-digit', month: 'short', year: '2-digit' })
 }
 
 function recipientsLabel(to: any[]) {
-    if (!to?.length) return '—'
+    if (!to?.length) return ''
     return to.slice(0, 3).map((t: any) => t.name || t.email).join(', ') + (to.length > 3 ? ` +${to.length - 3}` : '')
 }
 </script>
@@ -90,6 +111,22 @@ function recipientsLabel(to: any[]) {
         <!-- ══ MAIN ══ -->
         <main class="mail-main">
 
+            <!-- Barre de recherche -->
+            <div class="search-bar">
+                <span class="material-symbols-outlined search-icon">search</span>
+                <input
+                    v-model="searchTerm"
+                    type="text"
+                    class="search-input"
+                    placeholder="Rechercher dans les envoyés…"
+                    @input="onSearchInput"
+                    @keydown.enter="runSearch"
+                />
+                <button v-if="searchTerm" @click="clearSearch" class="search-clear" title="Effacer">
+                    <span class="material-symbols-outlined" style="font-size:18px">close</span>
+                </button>
+            </div>
+
             <!-- Toolbar -->
             <div class="mail-toolbar">
                 <div class="toolbar-left">
@@ -117,10 +154,16 @@ function recipientsLabel(to: any[]) {
             <!-- Liste -->
             <div class="thread-list">
                 <div v-if="!emails.data.length" class="empty-state">
-                    <span class="material-symbols-outlined empty-icon">send</span>
-                    <p class="empty-title">Aucun email envoyé</p>
-                    <p class="empty-sub">Vos emails envoyés apparaîtront ici.</p>
-                    <Link href="/communication/emails/compose" class="compose-btn-empty">
+                    <span class="material-symbols-outlined empty-icon">{{ search ? 'search_off' : 'send' }}</span>
+                    <p class="empty-title">
+                        <template v-if="search">Aucun résultat pour « {{ search }} »</template>
+                        <template v-else>Aucun email envoyé</template>
+                    </p>
+                    <p class="empty-sub">
+                        <template v-if="search">Essayez d'autres mots-clés.</template>
+                        <template v-else>Vos emails envoyés apparaîtront ici.</template>
+                    </p>
+                    <Link v-if="!search" href="/communication/emails/compose" class="compose-btn-empty">
                         <span class="material-symbols-outlined" style="font-size:18px">edit_square</span>
                         Rédiger un message
                     </Link>
@@ -145,20 +188,24 @@ function recipientsLabel(to: any[]) {
                             <span class="sent-to-label">À :</span>
                             {{ recipientsLabel(e.to) }}
                         </div>
-                        <div class="thread-subject-row">
+                        <div class="thread-content">
                             <span class="thread-subject">{{ e.subject || '(Sans sujet)' }}</span>
+                            <span v-if="e.snippet" class="thread-snippet"> {{ e.snippet }}</span>
                         </div>
                     </Link>
+
+                    <!-- Indicateur PJ -->
+                    <span v-if="e.has_attachments" class="thread-attach" title="Pièce jointe">
+                        <span class="material-symbols-outlined" style="font-size:16px">attach_file</span>
+                    </span>
 
                     <!-- Date + action supprimer -->
                     <div class="thread-right">
                         <span class="thread-date">{{ fmtDate(e.sent_at) }}</span>
-                        <button
-                            class="del-btn"
-                            title="Supprimer"
-                            @click.prevent="confirmDelete(e.id)"
-                        >
-                            <span class="material-symbols-outlined" style="font-size:17px">delete</span>
+                    </div>
+                    <div class="row-actions" @click.stop>
+                        <button class="row-act row-act-danger" title="Supprimer" @click.prevent="confirmDelete(e.id)">
+                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
                         </button>
                     </div>
                 </div>
@@ -243,11 +290,36 @@ function recipientsLabel(to: any[]) {
     overflow: hidden; display: flex; flex-direction: column;
 }
 
+/* ── Barre de recherche ── */
+.search-bar {
+    display: flex; align-items: center; gap: 10px;
+    margin: 10px 12px 4px; padding: 0 14px;
+    height: 46px; background: #f1f3f4; border-radius: 12px;
+    transition: background 0.15s, box-shadow 0.15s;
+}
+.search-bar:focus-within {
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 1px #e0e3e5;
+}
+.search-icon { font-size: 21px; color: #5f6368; flex-shrink: 0; }
+.search-input {
+    flex: 1; border: none; outline: none; background: transparent;
+    font-size: 14px; color: #202124; min-width: 0;
+}
+.search-input::placeholder { color: #80868b; }
+.search-clear {
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: none; background: transparent; color: #5f6368;
+    cursor: pointer; transition: background 0.12s; flex-shrink: 0;
+}
+.search-clear:hover { background: #e0e3e5; }
+
 /* ── Toolbar ── */
 .mail-toolbar {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 16px; border-bottom: 1px solid #f0f1f3;
-    min-height: 48px; gap: 12px;
+    padding: 4px 16px; border-bottom: 1px solid #f0f1f3;
+    min-height: 44px; gap: 12px;
 }
 .toolbar-left { display: flex; align-items: center; gap: 10px; flex: 1; }
 .toolbar-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
@@ -288,7 +360,6 @@ function recipientsLabel(to: any[]) {
     transition: background 0.1s; position: relative;
 }
 .thread-row:hover { background: #f5f6f7; }
-.thread-row:hover .del-btn { opacity: 1; }
 .thread-row:last-child { border-bottom: none; }
 
 .thread-avatar {
@@ -300,7 +371,7 @@ function recipientsLabel(to: any[]) {
 .thread-body {
     flex: 1; min-width: 0; text-decoration: none;
     display: grid; grid-template-columns: 200px 1fr;
-    gap: 0 8px; align-items: center;
+    gap: 0 12px; align-items: center;
 }
 .thread-sender {
     font-size: 13px; font-weight: 500; color: #202124;
@@ -308,25 +379,36 @@ function recipientsLabel(to: any[]) {
     display: flex; align-items: center; gap: 5px;
 }
 .sent-to-label { font-size: 11px; color: #9aaabb; font-weight: 600; flex-shrink: 0; }
-.thread-subject-row { min-width: 0; }
-.thread-subject {
-    font-size: 13px; color: #444;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;
+.thread-content {
+    min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.thread-subject { font-size: 13px; color: #444; }
+.thread-snippet { font-size: 13px; color: #80868b; }
+
+.thread-attach { display: flex; align-items: center; color: #9aaabb; flex-shrink: 0; }
 
 .thread-right {
     display: flex; align-items: center; gap: 6px; flex-shrink: 0;
+    transition: opacity 0.12s;
 }
+.thread-row:hover .thread-right { opacity: 0; pointer-events: none; }
 .thread-date { font-size: 12px; color: #888; white-space: nowrap; }
 
-.del-btn {
-    display: flex; align-items: center; justify-content: center;
-    width: 28px; height: 28px; border-radius: 6px;
-    border: none; background: transparent; color: #9aaabb;
-    cursor: pointer; transition: all 0.12s;
-    opacity: 0;
+/* ── Actions rapides au survol ── */
+.row-actions {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    display: flex; align-items: center; gap: 2px;
+    opacity: 0; pointer-events: none; transition: opacity 0.12s;
 }
-.del-btn:hover { background: #ffdad6; color: #ba1a1a; }
+.thread-row:hover .row-actions { opacity: 1; pointer-events: auto; }
+.row-act {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: transparent; color: #5f6368;
+    cursor: pointer; transition: all 0.12s;
+}
+.row-act:hover { background: #e0e3e5; color: #202124; }
+.row-act-danger:hover { background: #ffdad6; color: #ba1a1a; }
 
 /* ── Modale ── */
 .modal-overlay {
@@ -377,8 +459,10 @@ function recipientsLabel(to: any[]) {
     .compose-btn { border-radius: 12px; flex: 1; justify-content: center; margin-bottom: 0; }
     .sidebar-nav { flex-direction: row; flex-wrap: wrap; gap: 4px; }
     .nav-item { border-radius: 8px; margin-right: 0; padding: 7px 12px; }
-    .thread-body { grid-template-columns: 110px 1fr; }
+    .thread-body { grid-template-columns: 1fr; gap: 2px; }
+    .thread-snippet { display: none; }
     .mail-main { border-radius: 12px; }
-    .del-btn { opacity: 1; }
+    .row-actions { position: static; transform: none; opacity: 1; pointer-events: auto; }
+    .thread-row:hover .thread-right { opacity: 1; pointer-events: auto; }
 }
 </style>

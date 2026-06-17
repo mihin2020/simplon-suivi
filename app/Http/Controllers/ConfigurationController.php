@@ -8,7 +8,6 @@ use App\Models\EducationLevel;
 use App\Models\LastDiploma;
 use App\Models\TrainerProfile;
 use App\Models\Vulnerability;
-use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,45 +28,7 @@ class ConfigurationController extends Controller
                 'model'      => AppSetting::get('ai_model', ''),
                 'base_url'   => AppSetting::get('ai_base_url', ''),
             ],
-            'whatsappConfig' => WhatsAppService::getConfig(),
         ]);
     }
 
-    public function saveWhatsAppConfig(Request $request)
-    {
-        $alreadyConfigured = !empty(AppSetting::get('twilio_sid'));
-
-        $validated = $request->validate([
-            'twilio_sid'            => ($alreadyConfigured ? 'nullable' : 'required') . '|string|min:2',
-            'twilio_token'          => ($alreadyConfigured ? 'nullable' : 'required') . '|string|min:2',
-            'twilio_whatsapp_from'  => 'required|string|min:2',
-        ]);
-
-        if (!empty($validated['twilio_sid'])) {
-            AppSetting::set('twilio_sid',   $validated['twilio_sid'],   true);
-        }
-        if (!empty($validated['twilio_token'])) {
-            AppSetting::set('twilio_token', $validated['twilio_token'], true);
-        }
-        AppSetting::set('twilio_whatsapp_from', $validated['twilio_whatsapp_from'], false);
-
-        return back()->with('success', 'Configuration WhatsApp (Twilio) enregistrée.');
-    }
-
-    public function saveMetaWhatsAppConfig(Request $request)
-    {
-        $validated = $request->validate([
-            'whatsapp_meta_token'          => 'required|string|min:20',
-            'whatsapp_meta_phone_id'         => 'required|string|min:5',
-            'whatsapp_meta_business_id'      => 'nullable|string',
-            'whatsapp_provider'              => 'required|in:twilio,meta',
-        ]);
-
-        AppSetting::set('whatsapp_meta_token',          $validated['whatsapp_meta_token'],          true);
-        AppSetting::set('whatsapp_meta_phone_id',       $validated['whatsapp_meta_phone_id'],       false);
-        AppSetting::set('whatsapp_meta_business_id',    $validated['whatsapp_meta_business_id'] ?? '', false);
-        AppSetting::set('whatsapp_provider',            $validated['whatsapp_provider'],            false);
-
-        return back()->with('success', 'Configuration WhatsApp Cloud API (Meta) enregistrée.');
-    }
 }

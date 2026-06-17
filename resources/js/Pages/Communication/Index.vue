@@ -8,6 +8,7 @@ defineOptions({ layout: AdminLayout })
 const props = defineProps<{
     threads: any
     filter: string
+    search: string
     inboxCount: number
     archivedCount: number
     sentCount: number
@@ -17,10 +18,29 @@ const props = defineProps<{
 const selected  = ref<string[]>([])
 const syncing   = ref(false)
 const showConfirmDelete = ref(false)
+const searchTerm = ref(props.search ?? '')
 let intervalId: ReturnType<typeof setInterval> | null = null
+let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 const allIds = computed(() => props.threads.data.map((t: any) => t.last_email?.id).filter(Boolean))
 const allSelected = computed(() => allIds.value.length > 0 && allIds.value.every((id: string) => selected.value.includes(id)))
+
+function runSearch() {
+    router.get('/communication/emails',
+        { filter: props.filter === 'archived' ? 'archived' : undefined, search: searchTerm.value || undefined },
+        { preserveState: true, replace: true, preserveScroll: true, only: ['threads', 'search'] }
+    )
+}
+
+function onSearchInput() {
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = setTimeout(runSearch, 350)
+}
+
+function clearSearch() {
+    searchTerm.value = ''
+    runSearch()
+}
 
 function toggleAll() {
     if (allSelected.value) {
@@ -39,13 +59,37 @@ function toggleSelect(id: string) {
 }
 
 function avatarLetter(name: string | null, email: string | null) {
-    return ((name || email || '?')[0]).toUpperCase()
+    return (decodeMime(name || email || '?')[0]).toUpperCase()
 }
 
 function avatarColor(str: string | null): string {
     const colors = ['#E5004C','#1d4ed8','#15803d','#7c3aed','#b45309','#0e7490','#be185d','#1F3A4D']
     const idx = (str || '?').charCodeAt(0) % colors.length
     return colors[idx]
+}
+
+// Décode les en-têtes MIME encodés (RFC 2047 : =?utf-8?Q?...?=) pour les noms d'expéditeurs
+function decodeMime(name: string | null): string {
+    if (!name || !name.includes('=?')) return name ?? ''
+    const joined = name.replace(/\?=\s+=\?/g, '?==?')
+    return joined.replace(/=\?([^?]+)\?([BQbq])\?([^?]*)\?=/g, (_, charset, enc, text) => {
+        try {
+            if (enc.toUpperCase() === 'Q') {
+                const bytes: number[] = []
+                const s = text.replace(/_/g, ' ')
+                let i = 0
+                while (i < s.length) {
+                    if (s[i] === '=' && i + 2 < s.length) { bytes.push(parseInt(s.slice(i + 1, i + 3), 16)); i += 3 }
+                    else { bytes.push(s.charCodeAt(i)); i++ }
+                }
+                return new TextDecoder(charset).decode(new Uint8Array(bytes))
+            }
+            const bin = atob(text)
+            const bytes = new Uint8Array(bin.length)
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+            return new TextDecoder(charset).decode(bytes)
+        } catch { return text }
+    })
 }
 
 function sync(deep = false) {
@@ -74,13 +118,27 @@ function deleteSelected() {
     showConfirmDelete.value = false
 }
 
+// Actions rapides par ligne (survol)
+function quickArchive(id: string) {
+    router.patch(`/communication/emails/${id}/archive`, {}, { preserveScroll: true })
+}
+function quickRestore(id: string) {
+    router.patch(`/communication/emails/${id}/unarchive`, {}, { preserveScroll: true })
+}
+function quickDelete(id: string) {
+    router.delete(`/communication/emails/${id}`, { preserveScroll: true })
+}
+
 function fmtDate(d: string | null) {
     if (!d) return ''
     const date = new Date(d)
     const now = new Date()
     const isToday = date.toDateString() === now.toDateString()
     if (isToday) return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
-    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
+    const sameYear = date.getFullYear() === now.getFullYear()
+    return date.toLocaleDateString('fr-FR', sameYear
+        ? { day: '2-digit', month: 'short' }
+        : { day: '2-digit', month: 'short', year: '2-digit' })
 }
 
 onMounted(() => {
@@ -91,6 +149,7 @@ onMounted(() => {
 
 onUnmounted(() => {
     if (intervalId) clearInterval(intervalId)
+    if (searchTimer) clearTimeout(searchTimer)
 })
 </script>
 
@@ -167,6 +226,22 @@ onUnmounted(() => {
         <!-- ══ MAIN ══ -->
         <main class="mail-main">
 
+            <!-- ── Barre de recherche (style Gmail) ── -->
+            <div class="search-bar">
+                <span class="material-symbols-outlined search-icon">search</span>
+                <input
+                    v-model="searchTerm"
+                    type="text"
+                    class="search-input"
+                    placeholder="Rechercher dans les emails…"
+                    @input="onSearchInput"
+                    @keydown.enter="runSearch"
+                />
+                <button v-if="searchTerm" @click="clearSearch" class="search-clear" title="Effacer">
+                    <span class="material-symbols-outlined" style="font-size:18px">close</span>
+                </button>
+            </div>
+
             <!-- ── Toolbar ── -->
             <div class="mail-toolbar">
                 <div class="toolbar-left">
@@ -179,8 +254,8 @@ onUnmounted(() => {
                         title="Tout sélectionner"
                     />
                     <!-- Actions sélection (apparaissent si sélection) -->
-                    <Transition name="fade">
-                        <div v-if="selected.length > 0" class="sel-actions">
+                    <Transition name="fade" mode="out-in">
+                        <div v-if="selected.length > 0" class="sel-actions" key="sel">
                             <span class="sel-count">{{ selected.length }} sélectionné{{ selected.length > 1 ? 's' : '' }}</span>
                             <button v-if="filter !== 'archived'" @click="archiveSelected" class="sel-btn" title="Archiver">
                                 <span class="material-symbols-outlined" style="font-size:17px">archive</span>
@@ -195,19 +270,22 @@ onUnmounted(() => {
                                 Supprimer
                             </button>
                         </div>
+                        <button v-else key="refresh" @click="sync(false)" :disabled="syncing" class="refresh-btn" title="Actualiser">
+                            <span class="material-symbols-outlined" style="font-size:19px" :class="{ 'spin-icon': syncing }">refresh</span>
+                        </button>
                     </Transition>
                 </div>
                 <div class="toolbar-right">
                     <span class="pagination-info" v-if="threads.total > 0">
                         {{ (threads.current_page - 1) * threads.per_page + 1 }}–{{ Math.min(threads.current_page * threads.per_page, threads.total) }} sur {{ threads.total }}
                     </span>
-                    <Link v-if="threads.current_page > 1" :href="threads.prev_page_url" class="pag-arrow">
+                    <Link v-if="threads.current_page > 1" :href="threads.prev_page_url" class="pag-arrow" preserve-scroll>
                         <span class="material-symbols-outlined" style="font-size:20px">chevron_left</span>
                     </Link>
                     <span v-else class="pag-arrow pag-arrow-disabled">
                         <span class="material-symbols-outlined" style="font-size:20px">chevron_left</span>
                     </span>
-                    <Link v-if="threads.current_page < threads.last_page" :href="threads.next_page_url" class="pag-arrow">
+                    <Link v-if="threads.current_page < threads.last_page" :href="threads.next_page_url" class="pag-arrow" preserve-scroll>
                         <span class="material-symbols-outlined" style="font-size:20px">chevron_right</span>
                     </Link>
                     <span v-else class="pag-arrow pag-arrow-disabled">
@@ -221,12 +299,14 @@ onUnmounted(() => {
 
                 <!-- État vide -->
                 <div v-if="!threads.data.length" class="empty-state">
-                    <span class="material-symbols-outlined empty-icon">mail</span>
+                    <span class="material-symbols-outlined empty-icon">{{ search ? 'search_off' : 'mail' }}</span>
                     <p class="empty-title">
-                        {{ filter === 'archived' ? 'Aucun email archivé' : 'Aucun message reçu' }}
+                        <template v-if="search">Aucun résultat pour « {{ search }} »</template>
+                        <template v-else>{{ filter === 'archived' ? 'Aucun email archivé' : 'Aucun message reçu' }}</template>
                     </p>
                     <p class="empty-sub">
-                        {{ filter === 'archived' ? 'Les emails archivés apparaîtront ici.' : 'Vos emails entrants apparaîtront ici.' }}
+                        <template v-if="search">Essayez d'autres mots-clés.</template>
+                        <template v-else>{{ filter === 'archived' ? 'Les emails archivés apparaîtront ici.' : 'Vos emails entrants apparaîtront ici.' }}</template>
                     </p>
                 </div>
 
@@ -261,18 +341,37 @@ onUnmounted(() => {
                     <!-- Corps -->
                     <Link :href="`/communication/emails/thread/${t.thread_id}`" class="thread-body">
                         <div class="thread-sender">
-                            {{ t.last_email?.from_name || t.last_email?.from_email || '—' }}
+                            {{ decodeMime(t.last_email?.from_name) || t.last_email?.from_email || '' }}
                             <span v-if="t.reply_count > 1" class="thread-count-chip">{{ t.reply_count }}</span>
                         </div>
-                        <div class="thread-subject-row">
-                            <span class="thread-subject">{{ t.sent_subject || t.last_email?.subject || '(Sans sujet)' }}</span>
+                        <div class="thread-content">
+                            <span class="thread-subject">{{ decodeMime(t.sent_subject || t.last_email?.subject) || '(Sans sujet)' }}</span>
+                            <span v-if="t.snippet" class="thread-snippet"> {{ t.snippet }}</span>
                         </div>
                     </Link>
+
+                    <!-- Indicateur PJ -->
+                    <span v-if="t.has_attachments" class="thread-attach" title="Pièce jointe">
+                        <span class="material-symbols-outlined" style="font-size:16px">attach_file</span>
+                    </span>
 
                     <!-- Date + indicateur non-lu -->
                     <div class="thread-right">
                         <span class="thread-date">{{ fmtDate(t.last_email?.received_at || t.last_email?.created_at) }}</span>
                         <span v-if="!t.last_email?.is_read" class="unread-dot"></span>
+                    </div>
+
+                    <!-- Actions rapides au survol -->
+                    <div v-if="t.last_email?.id" class="row-actions" @click.stop>
+                        <button v-if="filter !== 'archived'" class="row-act" title="Archiver" @click.prevent="quickArchive(t.last_email.id)">
+                            <span class="material-symbols-outlined" style="font-size:18px">archive</span>
+                        </button>
+                        <button v-else class="row-act" title="Restaurer" @click.prevent="quickRestore(t.last_email.id)">
+                            <span class="material-symbols-outlined" style="font-size:18px">unarchive</span>
+                        </button>
+                        <button class="row-act row-act-danger" title="Supprimer" @click.prevent="quickDelete(t.last_email.id)">
+                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -393,19 +492,53 @@ onUnmounted(() => {
     flex-direction: column;
 }
 
+/* ── Barre de recherche ── */
+.search-bar {
+    display: flex; align-items: center; gap: 10px;
+    margin: 10px 12px 4px; padding: 0 14px;
+    height: 46px; background: #f1f3f4; border-radius: 12px;
+    transition: background 0.15s, box-shadow 0.15s;
+}
+.search-bar:focus-within {
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 0 0 1px #e0e3e5;
+}
+.search-icon { font-size: 21px; color: #5f6368; flex-shrink: 0; }
+.search-input {
+    flex: 1; border: none; outline: none; background: transparent;
+    font-size: 14px; color: #202124; min-width: 0;
+}
+.search-input::placeholder { color: #80868b; }
+.search-clear {
+    display: flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: none; background: transparent; color: #5f6368;
+    cursor: pointer; transition: background 0.12s; flex-shrink: 0;
+}
+.search-clear:hover { background: #e0e3e5; }
+
 /* ── Toolbar ── */
 .mail-toolbar {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 8px 16px; border-bottom: 1px solid #f0f1f3;
-    min-height: 48px; gap: 12px;
+    padding: 4px 16px; border-bottom: 1px solid #f0f1f3;
+    min-height: 44px; gap: 12px;
 }
-.toolbar-left { display: flex; align-items: center; gap: 10px; flex: 1; }
+.toolbar-left { display: flex; align-items: center; gap: 8px; flex: 1; }
 .toolbar-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
 
 .check-all {
     width: 16px; height: 16px; cursor: pointer; flex-shrink: 0;
     accent-color: #E5004C;
 }
+
+.refresh-btn {
+    display: flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 50%;
+    border: none; background: transparent; color: #5f6368;
+    cursor: pointer; transition: background 0.12s;
+}
+.refresh-btn:hover:not(:disabled) { background: #f0f1f3; color: #202124; }
+.refresh-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .sel-actions { display: flex; align-items: center; gap: 6px; }
 .sel-count { font-size: 13px; color: #515f74; font-weight: 500; padding: 0 4px; }
@@ -471,7 +604,7 @@ onUnmounted(() => {
     flex: 1; min-width: 0; text-decoration: none;
     display: grid;
     grid-template-columns: 180px 1fr;
-    gap: 0 8px;
+    gap: 0 12px;
     align-items: center;
 }
 .thread-sender {
@@ -485,16 +618,24 @@ onUnmounted(() => {
     border-radius: 99px; background: #e0e3e5; color: #515f74;
     font-size: 10px; font-weight: 700; flex-shrink: 0;
 }
-.thread-subject-row { min-width: 0; }
+.thread-content {
+    min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .thread-subject {
     font-size: 13px; font-weight: 400; color: #444;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;
 }
 .thread-unread .thread-subject { color: #202124; font-weight: 600; }
+.thread-snippet { font-size: 13px; color: #80868b; font-weight: 400; }
+
+.thread-attach {
+    display: flex; align-items: center; color: #9aaabb; flex-shrink: 0;
+}
 
 .thread-right {
     display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto;
+    transition: opacity 0.12s;
 }
+.thread-row:hover .thread-right { opacity: 0; pointer-events: none; }
 .thread-date { font-size: 12px; color: #888; white-space: nowrap; }
 .thread-unread .thread-date { font-weight: 700; color: #202124; }
 .unread-dot {
@@ -502,6 +643,22 @@ onUnmounted(() => {
     background: #E5004C; flex-shrink: 0;
     box-shadow: 0 0 0 2px rgba(229,0,76,0.15);
 }
+
+/* ── Actions rapides au survol ── */
+.row-actions {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    display: flex; align-items: center; gap: 2px;
+    opacity: 0; pointer-events: none; transition: opacity 0.12s;
+}
+.thread-row:hover .row-actions { opacity: 1; pointer-events: auto; }
+.row-act {
+    display: flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: transparent; color: #5f6368;
+    cursor: pointer; transition: all 0.12s;
+}
+.row-act:hover { background: #e0e3e5; color: #202124; }
+.row-act-danger:hover { background: #ffdad6; color: #ba1a1a; }
 
 /* ── Modale ── */
 .modal-overlay {
@@ -563,7 +720,11 @@ onUnmounted(() => {
     .sidebar-nav { flex-direction: row; flex-wrap: wrap; gap: 4px; }
     .nav-item { border-radius: 8px; margin-right: 0; padding: 7px 12px; }
     .sidebar-footer { flex-direction: row; margin-top: 0; }
-    .thread-body { grid-template-columns: 120px 1fr; }
+    .thread-body { grid-template-columns: 1fr; gap: 2px; }
+    .thread-snippet { display: none; }
     .mail-main { border-radius: 12px; }
+    /* Sur mobile, garder les actions visibles via la date masquée au survol off */
+    .row-actions { position: static; transform: none; opacity: 1; pointer-events: auto; }
+    .thread-row:hover .thread-right { opacity: 1; pointer-events: auto; }
 }
 </style>

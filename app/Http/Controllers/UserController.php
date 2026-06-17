@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\CreateTrainerAction;
+use App\Actions\DeleteTrainerAction;
 use App\Actions\InviteUser;
+use App\Actions\UpdateTrainerAction;
 use App\Enums\UserRole;
 use App\Http\Requests\User\StoreUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Models\Permission;
-use App\Models\Trainer;
+use App\Models\Project;
 use App\Models\TrainerProfile;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +23,7 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $users = User::with('permissions')
+        $users = User::with(['permissions', 'trainer.formations.project'])
             ->when(request('search'), function ($q, $s) {
                 $q->where('first_name', 'like', "%{$s}%")
                     ->orWhere('last_name', 'like', "%{$s}%")
@@ -31,10 +34,13 @@ class UserController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        $projects = Project::orderBy('name')->get(['id', 'name']);
+
         return Inertia::render('Users/Index', [
             'users'       => $users,
             'filters'     => request()->only('search', 'role'),
             'roles'       => collect(UserRole::cases())->map(fn ($r) => ['value' => $r->value, 'label' => $r->label()]),
+            'projects'    => $projects,
         ]);
     }
 
@@ -52,34 +58,34 @@ class UserController extends Controller
         ]);
     }
 
-    public function store(StoreUserRequest $request, InviteUser $inviteUser): RedirectResponse
-    {
+    public function store(
+        StoreUserRequest $request,
+        InviteUser $inviteUser,
+        CreateTrainerAction $createTrainer,
+    ): RedirectResponse {
         $role = UserRole::from($request->validated('role'));
 
-        $user = $inviteUser->execute(
-            firstName: $request->validated('first_name'),
-            lastName:  $request->validated('last_name'),
-            email:     $request->validated('email'),
-            role:      $role,
-        );
-
-        if ($role === UserRole::Admin && $request->filled('permissions')) {
-            $user->permissions()->sync($request->validated('permissions'));
-        }
-
         if ($role === UserRole::Trainer) {
-            $cvPath = null;
-            if ($request->hasFile('cv')) {
-                $cvPath = $request->file('cv')->store('trainers/cvs', 'public');
-            }
+            $createTrainer->execute(
+                firstName: $request->validated('first_name'),
+                lastName:  $request->validated('last_name'),
+                email:     $request->validated('email'),
+                profileId: $request->validated('profile_id'),
+                phone:     $request->validated('phone'),
+                phone2:    $request->validated('phone2'),
+                cv:        $request->file('cv'),
+            );
+        } else {
+            $user = $inviteUser->execute(
+                firstName: $request->validated('first_name'),
+                lastName:  $request->validated('last_name'),
+                email:     $request->validated('email'),
+                role:      $role,
+            );
 
-            Trainer::create([
-                'user_id'    => $user->id,
-                'profile_id' => $request->validated('profile_id'),
-                'phone'      => $request->validated('phone'),
-                'phone2'     => $request->validated('phone2'),
-                'cv_path'    => $cvPath,
-            ]);
+            if ($request->filled('permissions')) {
+                $user->permissions()->sync($request->validated('permissions'));
+            }
         }
 
         return redirect()
@@ -102,48 +108,36 @@ class UserController extends Controller
             'permissions'     => Permission::orderBy('group')->orderBy('name')->get(),
             'userPermissions' => $user->permissions->pluck('id'),
             'trainerProfiles' => TrainerProfile::orderBy('name')->get(['id', 'name']),
-            'trainerData'     => $user->trainer ? [
-                'profile_id' => $user->trainer->profile_id,
-                'phone'      => $user->trainer->phone,
-                'phone2'     => $user->trainer->phone2,
-                'cv_path'    => $user->trainer->cv_path,
-            ] : null,
+            'trainerData'     => $user->trainer,
         ]);
     }
 
-    public function update(UpdateUserRequest $request, User $user): RedirectResponse
-    {
-        $newRole = UserRole::from($request->validated('role'));
+    public function update(
+        UpdateUserRequest $request,
+        User $user,
+        UpdateTrainerAction $updateTrainer,
+    ): RedirectResponse {
+        $role = UserRole::from($request->validated('role'));
 
         $user->update([
             'first_name' => $request->validated('first_name'),
             'last_name'  => $request->validated('last_name'),
             'email'      => $request->validated('email'),
-            'role'       => $newRole,
+            'role'       => $role,
             'is_active'  => $request->validated('is_active', $user->is_active),
         ]);
 
-        if ($newRole === UserRole::Admin) {
-            $user->permissions()->sync($request->validated('permissions', []));
-        } else {
-            $user->permissions()->detach();
-        }
-
-        if ($newRole === UserRole::Trainer) {
-            $cvPath = $user->trainer?->cv_path;
-            if ($request->hasFile('cv')) {
-                $cvPath = $request->file('cv')->store('trainers/cvs', 'public');
-            }
-
-            Trainer::updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'profile_id' => $request->validated('profile_id'),
-                    'phone'      => $request->validated('phone'),
-                    'phone2'     => $request->validated('phone2'),
-                    'cv_path'    => $cvPath,
-                ]
+        if ($role === UserRole::Trainer) {
+            $updateTrainer->execute(
+                user:      $user,
+                profileId: $request->validated('profile_id'),
+                phone:     $request->validated('phone'),
+                phone2:    $request->validated('phone2'),
+                cv:        $request->file('cv'),
+                removeCv:  (bool) $request->validated('remove_cv', false),
             );
+        } else {
+            $user->permissions()->sync($request->validated('permissions', []));
         }
 
         return redirect()
@@ -166,7 +160,7 @@ class UserController extends Controller
         return back()->with('success', "Utilisateur {$state} avec succès.");
     }
 
-    public function destroy(User $user): RedirectResponse
+    public function destroy(User $user, DeleteTrainerAction $deleteTrainer): RedirectResponse
     {
         $this->authorize('delete', $user);
 
@@ -174,8 +168,11 @@ class UserController extends Controller
             abort(403, 'Impossible de supprimer le Super Administrateur.');
         }
 
-        $user->trainer?->delete();
-        $user->delete();
+        if ($user->trainer) {
+            $deleteTrainer->execute($user->trainer);
+        } else {
+            $user->delete();
+        }
 
         return redirect()
             ->route('users.index')

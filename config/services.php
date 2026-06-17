@@ -35,16 +35,8 @@ return [
         ],
     ],
 
-    'twilio' => [
-        'sid' => env('TWILIO_SID'),
-        'token' => env('TWILIO_AUTH_TOKEN'),
-        'whatsapp_from' => env('TWILIO_WHATSAPP_FROM'),
-    ],
-
-    'whatsapp_meta' => [
-        'token' => env('WHATSAPP_META_TOKEN'),
-        'phone_number_id' => env('WHATSAPP_META_PHONE_ID'),
-        'business_account_id' => env('WHATSAPP_META_BUSINESS_ID'),
+    'wwebjs' => [
+        'url' => env('WWEBJS_URL', 'http://127.0.0.1:3001'),
     ],
 
 ];

@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { Link, router, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import ConfirmModal from '@/Components/ConfirmModal.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -88,9 +89,27 @@ const toggle   = (id: string) => {
 }
 
 // ── Cancel installment ────────────────────────────────────────────────────
-const doCancel = (p: Payment) => {
-    if (!confirm(`Annuler la tranche ${p.installment_number} (${fmt(p.amount)}) ?`)) return
-    router.delete(`/campus/payments/${p.id}`, { preserveScroll: true })
+const showCancelModal  = ref(false)
+const cancelTarget     = ref<Payment | null>(null)
+const cancelLearner    = ref('')
+const cancelProcessing = ref(false)
+
+const askCancel = (p: Payment, learnerName: string) => {
+    cancelTarget.value    = p
+    cancelLearner.value   = learnerName
+    showCancelModal.value = true
+}
+const confirmCancel = () => {
+    if (!cancelTarget.value) return
+    cancelProcessing.value = true
+    router.delete(`/campus/payments/${cancelTarget.value.id}`, {
+        preserveScroll: true,
+        onFinish: () => {
+            cancelProcessing.value = false
+            showCancelModal.value  = false
+            cancelTarget.value     = null
+        },
+    })
 }
 
 // ── Mark paid modal ───────────────────────────────────────────────────────
@@ -158,18 +177,80 @@ const submitSchedule = () => {
 const hasPending = (lp: LearnerPayment) =>
     lp.payments.some(p => p.status === 'en_attente' || p.status === 'en_retard')
 
+// ── Global schedule modal ─────────────────────────────────────────────────
+const showGlobalSchedule   = ref(false)
+const globalProcessing     = ref(false)
+
+interface GlobalDraft { type: 'percentage' | 'amount'; value: number | ''; due_date: string }
+const globalDrafts = ref<GlobalDraft[]>([])
+
+const openGlobalSchedule = () => {
+    globalDrafts.value = [{ type: 'percentage', value: 100, due_date: '' }]
+    showGlobalSchedule.value = true
+}
+const addGlobalDraft    = () => globalDrafts.value.push({ type: 'percentage', value: '', due_date: '' })
+const removeGlobalDraft = (i: number) => globalDrafts.value.splice(i, 1)
+
+const globalCalcAmount = (d: GlobalDraft): number => {
+    if (!d.value) return 0
+    return d.type === 'percentage'
+        ? Math.round((Number(d.value) / 100) * props.total_cost)
+        : Number(d.value)
+}
+const globalTotal    = computed(() => globalDrafts.value.reduce((s, d) => s + globalCalcAmount(d), 0))
+const globalTotalPct = computed(() =>
+    props.total_cost > 0 ? Math.round((globalTotal.value / props.total_cost) * 100) : 0
+)
+const globalRemaining = computed(() => props.total_cost - globalTotal.value)
+const globalValid = computed(() =>
+    globalDrafts.value.length > 0 &&
+    globalDrafts.value.every(d => Number(d.value) > 0) &&
+    globalTotal.value > 0 &&
+    globalRemaining.value >= 0
+)
+
+const activeLearnerCount = computed(() =>
+    props.learnerPayments.length
+)
+const globalHasPending = computed(() =>
+    props.learnerPayments.some(lp => hasPending(lp))
+)
+
+const submitGlobalSchedule = () => {
+    if (!globalValid.value) return
+    globalProcessing.value = true
+    router.post(`/campus/cohorts/${props.cohort.id}/payments/schedule-global`, {
+        installments: globalDrafts.value.map(d => ({
+            type:     d.type,
+            value:    d.value,
+            due_date: d.due_date || null,
+        })),
+    }, {
+        preserveScroll: true,
+        onSuccess: () => { showGlobalSchedule.value = false },
+        onFinish:  () => { globalProcessing.value = false },
+    })
+}
+
 // ── Add single tranche modal ──────────────────────────────────────────────
 const showAdd   = ref(false)
 const addTarget = ref<LearnerPayment | null>(null)
-const addForm   = useForm({ learner_id: '', amount: 0 as number | '', due_date: '', notes: '' })
+const addForm   = useForm({
+    learner_id:     '',
+    amount:         0 as number | '',
+    paid_at:        '',
+    payment_method: 'especes',
+    notes:          '',
+})
 
 const openAdd = (lp: LearnerPayment) => {
-    addTarget.value   = lp
-    addForm.learner_id = lp.learner.id
-    addForm.amount    = lp.remaining_amount > 0 ? lp.remaining_amount : props.total_cost
-    addForm.due_date  = ''
-    addForm.notes     = ''
-    showAdd.value     = true
+    addTarget.value        = lp
+    addForm.learner_id     = lp.learner.id
+    addForm.amount         = lp.remaining_amount > 0 ? lp.remaining_amount : props.total_cost
+    addForm.paid_at        = today()
+    addForm.payment_method = 'especes'
+    addForm.notes          = ''
+    showAdd.value          = true
 }
 const submitAdd = () => {
     addForm.post(`/campus/cohorts/${props.cohort.id}/payments`, {
@@ -189,7 +270,7 @@ const submitAdd = () => {
             </Link>
             <div>
                 <p class="text-body-sm text-secondary font-medium">{{ cohort.campus_formation.name }}</p>
-                <h1 class="text-h1 font-bold text-on-surface">Paiements — {{ cohort.name }}</h1>
+                <h1 class="text-h1 font-bold text-on-surface">Paiements {{ cohort.name }}</h1>
                 <p class="text-body-sm text-secondary mt-xs">
                     Frais de formation :
                     <strong class="text-on-surface">{{ fmt(total_cost) }}</strong> par apprenant
@@ -227,6 +308,20 @@ const submitAdd = () => {
                     <p class="sval rose">{{ stats.overdue_count }} apprenant(s)</p>
                 </div>
             </div>
+        </div>
+
+        <!-- ── Action globale ─────────────────────────────────────────────── -->
+        <div class="global-action-bar">
+            <div class="global-bar-info">
+                <span class="material-symbols-outlined" style="font-size:18px;color:#1F3A4D">groups</span>
+                <span class="text-body-sm text-on-surface">
+                    <strong>{{ activeLearnerCount }}</strong> apprenant(s) actif(s)
+                </span>
+            </div>
+            <button class="btn-global-schedule" type="button" @click="openGlobalSchedule">
+                <span class="material-symbols-outlined" style="font-size:16px">calendar_month</span>
+                Définir l'échéancier de la cohorte
+            </button>
         </div>
 
         <!-- ── Liste apprenants ────────────────────────────────────────────── -->
@@ -329,6 +424,24 @@ const submitAdd = () => {
 
                                 <!-- Actions -->
                                 <div class="iactions">
+                                    <a
+                                        v-if="p.status === 'paye'"
+                                        :href="`/campus/payments/${p.id}/receipt`"
+                                        target="_blank"
+                                        class="btn-receipt"
+                                        title="Voir le reçu"
+                                    >
+                                        <span class="material-symbols-outlined" style="font-size:14px">receipt_long</span>
+                                        Reçu
+                                    </a>
+                                    <a
+                                        v-if="p.status === 'paye'"
+                                        :href="`/campus/payments/${p.id}/receipt/download`"
+                                        class="btn-dl-receipt"
+                                        title="Télécharger le reçu PDF"
+                                    >
+                                        <span class="material-symbols-outlined" style="font-size:15px">download</span>
+                                    </a>
                                     <button
                                         v-if="p.status !== 'paye'"
                                         class="btn-encaisser"
@@ -341,7 +454,7 @@ const submitAdd = () => {
                                     <button
                                         v-if="p.status !== 'paye'"
                                         class="btn-del"
-                                        @click.stop="doCancel(p)"
+                                        @click.stop="askCancel(p, `${lp.learner.last_name} ${lp.learner.first_name}`)"
                                         type="button"
                                         title="Annuler cette tranche"
                                     >
@@ -363,9 +476,14 @@ const submitAdd = () => {
                                 </span>
                             </div>
                             <div class="footer-right">
-                                <button class="btn-add-t" @click.stop="openAdd(lp)" type="button">
+                                <button
+                                    v-if="lp.remaining_amount > 0"
+                                    class="btn-add-t"
+                                    @click.stop="openAdd(lp)"
+                                    type="button"
+                                >
                                     <span class="material-symbols-outlined" style="font-size:14px">add</span>
-                                    Ajouter une tranche
+                                    Enregistrer un versement
                                 </button>
                                 <button
                                     v-if="lp.progress < 100"
@@ -392,7 +510,7 @@ const submitAdd = () => {
                     <div>
                         <h3 class="mtitle">Encaisser le paiement</h3>
                         <p class="msub" v-if="paidTarget">
-                            {{ paidLearner }} — Tranche {{ paidTarget.installment_number }} ·
+                            {{ paidLearner }} · Tranche {{ paidTarget.installment_number }} ·
                             <strong>{{ fmt(paidTarget.amount) }}</strong>
                         </p>
                     </div>
@@ -450,7 +568,7 @@ const submitAdd = () => {
                     <div>
                         <h3 class="mtitle">Planifier les paiements</h3>
                         <p class="msub" v-if="scheTarget">
-                            {{ scheTarget.learner.last_name }} {{ scheTarget.learner.first_name }} —
+                            {{ scheTarget.learner.last_name }} {{ scheTarget.learner.first_name }} ·
                             Total formation : <strong>{{ fmt(total_cost) }}</strong>
                             <template v-if="scheTarget.paid_amount > 0">
                                 · Déjà encaissé : <strong class="text-emerald">{{ fmt(scheTarget.paid_amount) }}</strong>
@@ -568,16 +686,16 @@ const submitAdd = () => {
         </div>
     </Teleport>
 
-    <!-- ══ Modal : Ajouter une tranche ════════════════════════════════════ -->
+    <!-- ══ Modal : Enregistrer un versement ═════════════════════════════════ -->
     <Teleport to="body">
         <div v-if="showAdd" class="backdrop" @click.self="showAdd = false">
-            <div class="modal" style="max-width:400px">
+            <div class="modal" style="max-width:420px">
                 <div class="mhd">
                     <div>
-                        <h3 class="mtitle">Ajouter une tranche</h3>
+                        <h3 class="mtitle">Enregistrer un versement</h3>
                         <p class="msub" v-if="addTarget">
                             {{ addTarget.learner.last_name }} {{ addTarget.learner.first_name }}
-                            — Restant : <strong>{{ fmt(addTarget.remaining_amount) }}</strong>
+                            · Restant : <strong>{{ fmt(addTarget.remaining_amount) }}</strong>
                         </p>
                     </div>
                     <button @click="showAdd = false" class="close-btn" type="button">
@@ -587,17 +705,42 @@ const submitAdd = () => {
                 <form @submit.prevent="submitAdd">
                     <div class="mbody">
                         <div class="field">
-                            <label class="label">Montant (FCFA) *</label>
-                            <input v-model.number="addForm.amount" type="number" min="1" class="input"
-                                :class="{ 'input-err': addForm.errors.amount }" />
+                            <label class="label">
+                                Montant versé (FCFA) *
+                                <span v-if="addTarget" class="opt-lbl">(max {{ fmt(addTarget.remaining_amount) }})</span>
+                            </label>
+                            <input
+                                v-model.number="addForm.amount"
+                                type="number"
+                                min="1"
+                                :max="addTarget?.remaining_amount"
+                                class="input"
+                                :class="{ 'input-err': addForm.errors.amount }"
+                            />
                             <p v-if="addForm.errors.amount" class="err-msg">{{ addForm.errors.amount }}</p>
                         </div>
                         <div class="field">
                             <label class="label">
-                                Date prévue
+                                Date du versement
                                 <span class="opt-lbl">(optionnel)</span>
                             </label>
-                            <input v-model="addForm.due_date" type="date" class="input" />
+                            <input v-model="addForm.paid_at" type="date" class="input" />
+                        </div>
+                        <div class="field">
+                            <label class="label">Mode de paiement *</label>
+                            <div class="method-selector">
+                                <button
+                                    v-for="m in paymentMethods"
+                                    :key="m.value"
+                                    type="button"
+                                    :class="['method-opt', addForm.payment_method === m.value ? 'method-active' : '']"
+                                    @click="addForm.payment_method = m.value"
+                                >
+                                    <span class="material-symbols-outlined" style="font-size:22px">{{ m.icon }}</span>
+                                    <span>{{ m.label }}</span>
+                                </button>
+                            </div>
+                            <p v-if="addForm.errors.payment_method" class="err-msg">{{ addForm.errors.payment_method }}</p>
                         </div>
                         <div class="field">
                             <label class="label">Notes <span class="opt-lbl">(optionnel)</span></label>
@@ -608,24 +751,216 @@ const submitAdd = () => {
                         <button @click="showAdd = false" type="button" class="btn-secondary">Annuler</button>
                         <button type="submit" class="btn-primary" :disabled="addForm.processing">
                             <span class="spinner" v-if="addForm.processing" />
-                            <span v-else class="material-symbols-outlined" style="font-size:15px">add</span>
-                            Enregistrer
+                            <span v-else class="material-symbols-outlined" style="font-size:15px">check_circle</span>
+                            Confirmer le versement
                         </button>
                     </div>
                 </form>
             </div>
         </div>
     </Teleport>
+
+    <!-- ══ Modal : Échéancier global de la cohorte ═══════════════════════════ -->
+    <Teleport to="body">
+        <div v-if="showGlobalSchedule" class="backdrop" @click.self="showGlobalSchedule = false">
+            <div class="modal" style="max-width:620px">
+                <div class="mhd">
+                    <div>
+                        <h3 class="mtitle">Échéancier global {{ cohort.name }}</h3>
+                        <p class="msub">
+                            Applicable à <strong>{{ activeLearnerCount }}</strong> apprenant(s) actif(s) ·
+                            Frais : <strong>{{ fmt(total_cost) }}</strong> / apprenant
+                        </p>
+                    </div>
+                    <button @click="showGlobalSchedule = false" class="close-btn" type="button">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <div class="mbody">
+                    <p class="help-txt">
+                        Définissez les tranches en <strong>pourcentage (%)</strong> du coût total ou en <strong>montant fixe (FCFA)</strong>.
+                        Cet échéancier sera appliqué à tous les apprenants actifs.
+                    </p>
+
+                    <!-- Colonnes entête -->
+                    <div class="draft-head" style="grid-template-columns:28px 120px 1fr 160px 32px">
+                        <span>#</span>
+                        <span>Type</span>
+                        <span>Valeur</span>
+                        <span>Date prévue <span class="opt-lbl">(optionnel)</span></span>
+                        <span></span>
+                    </div>
+
+                    <!-- Lignes -->
+                    <div v-for="(d, i) in globalDrafts" :key="i" class="global-draft-row">
+                        <span class="dnum">{{ i + 1 }}</span>
+
+                        <!-- Type toggle -->
+                        <div class="type-toggle">
+                            <button
+                                type="button"
+                                :class="['type-btn', d.type === 'percentage' ? 'type-active' : '']"
+                                @click="d.type = 'percentage'"
+                            >%</button>
+                            <button
+                                type="button"
+                                :class="['type-btn', d.type === 'amount' ? 'type-active' : '']"
+                                @click="d.type = 'amount'"
+                            >FCFA</button>
+                        </div>
+
+                        <!-- Valeur + aperçu -->
+                        <div class="value-wrap">
+                            <input
+                                v-model.number="d.value"
+                                type="number"
+                                min="1"
+                                :max="d.type === 'percentage' ? 100 : undefined"
+                                class="dinput"
+                                :placeholder="d.type === 'percentage' ? 'Ex: 30' : 'Ex: 75000'"
+                            />
+                            <span v-if="d.type === 'percentage' && d.value" class="calc-preview">
+                                = {{ new Intl.NumberFormat('fr-FR').format(globalCalcAmount(d)) }} FCFA
+                            </span>
+                        </div>
+
+                        <input
+                            v-model="d.due_date"
+                            type="date"
+                            class="dinput"
+                            style="width:160px"
+                        />
+
+                        <button
+                            v-if="globalDrafts.length > 1"
+                            type="button"
+                            class="del-draft"
+                            @click="removeGlobalDraft(i)"
+                        >
+                            <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                        </button>
+                    </div>
+
+                    <!-- Ajouter tranche -->
+                    <button class="btn-add-draft" type="button" @click="addGlobalDraft">
+                        <span class="material-symbols-outlined" style="font-size:15px">add</span>
+                        Ajouter une tranche
+                    </button>
+
+                    <!-- Résumé -->
+                    <div class="total-summary">
+                        <div class="ts-row">
+                            <span class="ts-lbl">Frais de formation par apprenant</span>
+                            <span class="ts-val">{{ fmt(total_cost) }}</span>
+                        </div>
+                        <div class="ts-row">
+                            <span class="ts-lbl">Total planifié</span>
+                            <span class="ts-val">{{ fmt(globalTotal) }} ({{ globalTotalPct }}%)</span>
+                        </div>
+                        <div v-if="globalRemaining < 0" class="ts-row ts-final ts-ko">
+                            <span>
+                                <span class="material-symbols-outlined" style="font-size:15px;vertical-align:-3px">error</span>
+                                Montant dépassé de {{ fmt(Math.abs(globalRemaining)) }}
+                            </span>
+                        </div>
+                        <div v-else-if="globalRemaining > 0" class="ts-row ts-final ts-info">
+                            <span>
+                                <span class="material-symbols-outlined" style="font-size:15px;vertical-align:-3px">info</span>
+                                {{ fmt(globalRemaining) }} restant à planifier ultérieurement
+                            </span>
+                        </div>
+                        <div v-else class="ts-row ts-final ts-ok">
+                            <span>
+                                <span class="material-symbols-outlined" style="font-size:15px;vertical-align:-3px">check_circle</span>
+                                Frais entièrement couverts par l'échéancier
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Avertissement si des tranches en attente vont être écrasées -->
+                    <div v-if="globalHasPending" class="info-box" style="margin-top:12px">
+                        <span class="material-symbols-outlined" style="font-size:15px;flex-shrink:0">warning</span>
+                        Les tranches <strong>en attente / en retard</strong> de certains apprenants seront remplacées.
+                        Les paiements déjà encaissés sont conservés.
+                    </div>
+                </div>
+
+                <div class="mft">
+                    <button @click="showGlobalSchedule = false" class="btn-secondary" type="button">Annuler</button>
+                    <button
+                        class="btn-primary"
+                        type="button"
+                        :disabled="!globalValid || globalProcessing"
+                        @click="submitGlobalSchedule"
+                    >
+                        <span class="spinner" v-if="globalProcessing" />
+                        <span v-else class="material-symbols-outlined" style="font-size:15px">groups</span>
+                        Appliquer à {{ activeLearnerCount }} apprenant(s)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- ══ Modal : Annuler une tranche ══════════════════════════════════════ -->
+    <ConfirmModal
+        :show="showCancelModal"
+        title="Annuler la tranche"
+        :message="cancelTarget
+            ? `Annuler la tranche n° ${cancelTarget.installment_number} de ${cancelLearner} (${fmt(cancelTarget.amount)}) ? Cette action est irréversible.`
+            : ''"
+        confirm-label="Annuler la tranche"
+        :loading="cancelProcessing"
+        @confirm="confirmCancel"
+        @cancel="showCancelModal = false"
+    />
 </template>
 
 <style scoped>
+/* ── Global action bar ── */
+.global-action-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #f0f4f8; border: 1.5px solid #c7d4df; border-radius: 12px;
+    padding: 14px 20px; gap: 12px;
+}
+.global-bar-info { display: flex; align-items: center; gap: 8px; }
+.btn-global-schedule {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 18px;
+    background: #1F3A4D; color: #fff;
+    border-radius: 8px; border: none; cursor: pointer;
+    font-size: 13px; font-weight: 600;
+    transition: background 0.15s;
+}
+.btn-global-schedule:hover { background: #162d3c; }
+
+/* ── Global draft rows ── */
+.global-draft-row {
+    display: grid;
+    grid-template-columns: 28px 120px 1fr 160px 32px;
+    gap: 8px; align-items: center; padding: 6px 0;
+}
+.type-toggle { display: flex; border: 1px solid #d1d9e0; border-radius: 6px; overflow: hidden; }
+.type-btn {
+    flex: 1; padding: 5px 8px; font-size: 12px; font-weight: 600;
+    background: transparent; color: #515f74; border: none; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.type-active { background: #1F3A4D; color: #fff; }
+.value-wrap { display: flex; align-items: center; gap: 8px; }
+.calc-preview {
+    font-size: 11px; color: #059669; font-weight: 600; white-space: nowrap;
+}
+
 /* ── Layout ── */
 .icon-back {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 40px; height: 40px; border-radius: 50%; color: #515f74;
-    transition: background 0.15s; flex-shrink: 0; text-decoration: none;
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent;
+    transition: background 0.15s, color 0.15s; flex-shrink: 0; text-decoration: none;
 }
-.icon-back:hover { background: #eceef0; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
 
 /* ── Stat cards ── */
 .stat-card {
@@ -742,6 +1077,24 @@ const submitAdd = () => {
 }
 
 .iactions { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+
+.btn-receipt {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 10px; border-radius: 6px;
+    background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe;
+    font-size: 12px; font-weight: 600; cursor: pointer;
+    text-decoration: none; transition: background 0.15s;
+}
+.btn-receipt:hover { background: #dbeafe; }
+
+.btn-dl-receipt {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 6px;
+    background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0;
+    cursor: pointer; text-decoration: none; transition: background 0.15s;
+    flex-shrink: 0;
+}
+.btn-dl-receipt:hover { background: #dcfce7; }
 
 .btn-encaisser {
     display: inline-flex; align-items: center; gap: 4px;

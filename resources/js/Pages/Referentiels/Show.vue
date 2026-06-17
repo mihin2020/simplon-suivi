@@ -71,10 +71,12 @@ const save = () => {
         })
 }
 
+const showDeleteModal = ref(false)
+
 const confirmDelete = () => {
-    if (confirm(`Supprimer le référentiel "${props.referentiel.name}" ? Cette action est irréversible.`)) {
-        router.delete(`/referentiels/${props.referentiel.id}`)
-    }
+    router.delete(`/referentiels/${props.referentiel.id}`, {
+        onFinish: () => { showDeleteModal.value = false },
+    })
 }
 </script>
 
@@ -93,11 +95,11 @@ const confirmDelete = () => {
                 </div>
             </div>
             <div class="flex items-center gap-sm">
-                <button v-if="!editing" @click="editing = true" class="btn-secondary">
+                <button v-if="!editing" @click="editing = true" class="btn-navy">
                     <span class="material-symbols-outlined" style="font-size:18px">edit</span>
                     Modifier
                 </button>
-                <button v-if="!editing" @click="confirmDelete" class="btn-danger">
+                <button v-if="!editing" @click="showDeleteModal = true" class="btn-danger">
                     <span class="material-symbols-outlined" style="font-size:18px">delete</span>
                     Supprimer
                 </button>
@@ -220,15 +222,45 @@ const confirmDelete = () => {
         </div>
 
     </div>
+
+    <!-- Modal de confirmation de suppression -->
+    <Teleport to="body">
+        <div v-if="showDeleteModal" class="modal-backdrop" @click.self="showDeleteModal = false">
+            <div class="modal-box">
+                <div class="modal-icon">
+                    <span class="material-symbols-outlined" style="font-size:32px;color:#E5004C">delete</span>
+                </div>
+                <h3 class="modal-title">Supprimer le référentiel</h3>
+                <p class="modal-body">
+                    Voulez-vous vraiment supprimer <strong>« {{ referentiel.name }} »</strong> ?
+                    Cette action est irréversible.
+                </p>
+                <div class="modal-actions">
+                    <button class="btn-cancel" @click="showDeleteModal = false">Annuler</button>
+                    <button class="btn-confirm-danger" @click="confirmDelete">Supprimer</button>
+                </div>
+            </div>
+        </div>
+    </Teleport>
+
 </template>
 
 <style scoped>
 .icon-back {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 40px; height: 40px; border-radius: 50%; color: #515f74;
-    transition: background 0.15s; flex-shrink: 0; text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid #1F3A4D;
+    color: #1F3A4D;
+    background: transparent;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+    text-decoration: none;
 }
-.icon-back:hover { background: #eceef0; color: #191c1e; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
 
 .card { background: #fff; border: 1px solid #e0e3e5; border-radius: 12px; padding: 24px; }
 
@@ -322,21 +354,56 @@ textarea.input { resize: vertical; width: 100%; }
 .btn-primary:hover:not(:disabled) { background: #c0003e; }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
+.btn-navy {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; background: transparent; color: #1F3A4D;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 1.5px solid #1F3A4D; transition: background 0.15s, color 0.15s; text-decoration: none; cursor: pointer;
+}
+.btn-navy:hover { background: #1F3A4D; color: #fff; }
+
 .btn-secondary {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 16px; background: transparent; color: #515f74;
-    border-radius: 8px; font-size: 13px; font-weight: 500;
-    border: 1px solid #e0e3e5; transition: background 0.15s; text-decoration: none; cursor: pointer;
+    padding: 8px 16px; background: transparent; color: #1F3A4D;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 1.5px solid #1F3A4D; transition: background 0.15s, color 0.15s; text-decoration: none; cursor: pointer;
 }
-.btn-secondary:hover { background: #f2f4f6; }
+.btn-secondary:hover { background: #1F3A4D; color: #fff; }
 
 .btn-danger {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 16px; background: transparent; color: #ba1a1a;
-    border-radius: 8px; font-size: 13px; font-weight: 500;
-    border: 1px solid #fecaca; transition: background 0.15s; cursor: pointer;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 1.5px solid #fca5a5; transition: background 0.15s, color 0.15s; cursor: pointer;
 }
-.btn-danger:hover { background: #fee2e2; }
+.btn-danger:hover { background: #ba1a1a; color: #fff; border-color: #ba1a1a; }
+
+/* Modal */
+.modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center; z-index: 1000;
+}
+.modal-box {
+    background: #fff; border-radius: 16px; padding: 32px 28px;
+    width: 100%; max-width: 400px; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.modal-icon { margin-bottom: 12px; }
+.modal-title { font-size: 18px; font-weight: 700; color: #191c1e; margin-bottom: 8px; }
+.modal-body { font-size: 14px; color: #515f74; line-height: 1.6; margin-bottom: 24px; }
+.modal-actions { display: flex; gap: 12px; justify-content: center; }
+.btn-cancel {
+    padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    border: 1.5px solid #d0d3d5; color: #515f74; background: #fff; cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-cancel:hover { background: #f4f5f6; }
+.btn-confirm-danger {
+    padding: 8px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+    background: #E5004C; color: #fff; border: none; cursor: pointer;
+    transition: background 0.15s;
+}
+.btn-confirm-danger:hover { background: #c0003e; }
 
 .spinner {
     display: inline-block; width: 14px; height: 14px;

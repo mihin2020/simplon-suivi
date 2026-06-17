@@ -41,7 +41,7 @@ const submit = () => {
 
         <!-- En-tête -->
         <div class="flex items-center gap-md">
-            <Link href="/campus/cohorts" class="icon-back">
+            <Link :href="`/campus/cohorts/${cohort.id}`" class="icon-back">
                 <span class="material-symbols-outlined">arrow_back</span>
             </Link>
             <div>
@@ -116,15 +116,17 @@ const submit = () => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     border-radius: 50%;
-    color: #515f74;
-    transition: background 0.15s;
+    border: 1.5px solid #1F3A4D;
+    color: #1F3A4D;
+    background: transparent;
+    transition: background 0.15s, color 0.15s;
     flex-shrink: 0;
     text-decoration: none;
 }
-.icon-back:hover { background: #eceef0; color: #191c1e; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
 
 .card {
     background: #fff;

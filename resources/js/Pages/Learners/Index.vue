@@ -22,7 +22,9 @@ interface Learner {
 interface Paginated {
     data: Learner[]
     links: Array<{ url: string | null; label: string; active: boolean }>
-    meta: { from: number; to: number; total: number }
+    total: number
+    from: number
+    to: number
 }
 
 const props = defineProps<{
@@ -79,12 +81,17 @@ const photoUrl = (path: string | null) =>
     <div class="max-w-[1600px] mx-auto space-y-xl">
 
         <!-- En-tête -->
-        <div class="flex justify-between items-end flex-wrap gap-sm">
-            <div>
-                <h1 class="text-h1 font-bold text-on-surface">Annuaire des Apprenants</h1>
-                <p class="text-body-md text-secondary mt-xs">
-                    {{ learners.meta?.total ?? 0 }} apprenants enregistrés.
-                </p>
+        <div class="flex justify-between items-center flex-wrap gap-sm">
+            <div class="flex items-center gap-md">
+                <div class="page-header-icon">
+                    <span class="material-symbols-outlined" style="font-size:24px">contacts</span>
+                </div>
+                <div>
+                    <h1 class="text-h1 font-bold text-on-surface">Annuaire des Apprenants</h1>
+                    <p class="text-body-md text-secondary mt-xs">
+                        {{ learners.total ?? 0 }} apprenants enregistrés.
+                    </p>
+                </div>
             </div>
             <div class="flex items-center gap-sm">
                 <Link href="/learners/import" class="btn-secondary">
@@ -131,7 +138,7 @@ const photoUrl = (path: string | null) =>
                 Filtrer
             </button>
 
-            <span class="text-body-sm text-secondary ml-auto">{{ learners.meta?.total ?? 0 }} résultat(s)</span>
+            <span class="text-body-sm text-secondary ml-auto">{{ learners.total ?? 0 }} résultat(s)</span>
         </form>
 
         <!-- Tableau -->
@@ -216,7 +223,7 @@ const photoUrl = (path: string | null) =>
             <!-- Pagination -->
             <div class="px-md py-sm border-t border-surface-container-highest bg-surface-bright flex items-center justify-between">
                 <span class="text-body-sm text-on-surface-variant">
-                    {{ learners.meta?.from }}–{{ learners.meta?.to }} sur {{ learners.meta?.total }} apprenants
+                    {{ learners.from }}–{{ learners.to }} sur {{ learners.total }} apprenants
                 </span>
                 <div class="flex items-center gap-xs">
                     <template v-for="link in learners.links" :key="link.label">
@@ -231,6 +238,18 @@ const photoUrl = (path: string | null) =>
 </template>
 
 <style scoped>
+.page-header-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
 .btn-primary {
     display: inline-flex;
     align-items: center;

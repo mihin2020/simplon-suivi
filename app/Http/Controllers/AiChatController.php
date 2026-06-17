@@ -49,6 +49,16 @@ class AiChatController extends Controller
         return back()->with('success', 'Configuration IA enregistrée.');
     }
 
+    public function removeApiKey(): RedirectResponse
+    {
+        AppSetting::set('ai_api_key', '');
+        AppSetting::set('ai_provider', '');
+        AppSetting::set('ai_model', '');
+        AppSetting::set('ai_base_url', '');
+
+        return back()->with('success', 'Assistant IA désactivé.');
+    }
+
     public function status(): JsonResponse
     {
         return response()->json([

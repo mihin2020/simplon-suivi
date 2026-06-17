@@ -121,7 +121,7 @@ const confirmDelete = () => {
                     Cohortes
                     <span class="count-badge ml-sm">{{ formation.cohorts.length }}</span>
                 </h2>
-                <Link href="/campus/cohorts/create" class="btn-primary">
+                <Link :href="`/campus/cohorts/create?formation=${formation.id}`" class="btn-primary">
                     <span class="material-symbols-outlined" style="font-size:16px">add</span>
                     Nouvelle cohorte
                 </Link>
@@ -183,10 +183,11 @@ const confirmDelete = () => {
 <style scoped>
 .icon-back {
     display: inline-flex; align-items: center; justify-content: center;
-    width: 40px; height: 40px; border-radius: 50%; color: #515f74;
-    transition: background 0.15s; flex-shrink: 0; text-decoration: none;
+    width: 36px; height: 36px; border-radius: 50%;
+    border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent;
+    transition: background 0.15s, color 0.15s; flex-shrink: 0; text-decoration: none;
 }
-.icon-back:hover { background: #eceef0; color: #191c1e; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
 
 .mode-badge {
     display: inline-flex; align-items: center; gap: 4px;
@@ -242,9 +243,9 @@ const confirmDelete = () => {
 
 .btn-secondary {
     display: inline-flex; align-items: center; gap: 6px;
-    padding: 8px 16px; background: transparent; color: #515f74;
-    border-radius: 8px; font-size: 13px; font-weight: 500;
-    border: 1px solid #e0e3e5; transition: background 0.15s; text-decoration: none;
+    padding: 8px 16px; background: transparent; color: #1F3A4D;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 1.5px solid #1F3A4D; transition: background 0.15s, color 0.15s; text-decoration: none;
 }
-.btn-secondary:hover { background: #f2f4f6; }
+.btn-secondary:hover { background: #1F3A4D; color: #fff; }
 </style>

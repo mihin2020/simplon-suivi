@@ -2,20 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\InviteUser;
-use App\Enums\UserRole;
-use App\Http\Requests\Trainer\StoreTrainerRequest;
-use App\Http\Requests\Trainer\UpdateTrainerRequest;
 use App\Mail\UserInvitation;
 use App\Models\ActivationToken;
 use App\Models\Formation;
 use App\Models\Project;
 use App\Models\Trainer;
 use Illuminate\Http\Request;
-use App\Models\TrainerProfile;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -47,42 +41,6 @@ class TrainerController extends Controller
         ]);
     }
 
-    public function create(): Response
-    {
-        $this->authorize('create', Trainer::class);
-
-        return Inertia::render('Trainers/Create', [
-            'profiles' => TrainerProfile::orderBy('name')->get(['id', 'name']),
-        ]);
-    }
-
-    public function store(StoreTrainerRequest $request, InviteUser $inviteUser): RedirectResponse
-    {
-        $user = $inviteUser->execute(
-            firstName: $request->validated('first_name'),
-            lastName:  $request->validated('last_name'),
-            email:     $request->validated('email'),
-            role:      UserRole::Trainer,
-        );
-
-        $cvPath = null;
-        if ($request->hasFile('cv')) {
-            $cvPath = $request->file('cv')->store('trainers/cvs', 'public');
-        }
-
-        Trainer::create([
-            'user_id'    => $user->id,
-            'profile_id' => $request->validated('profile_id'),
-            'phone'      => $request->validated('phone'),
-            'phone2'     => $request->validated('phone2'),
-            'cv_path'    => $cvPath,
-        ]);
-
-        return redirect()
-            ->route('trainers.index')
-            ->with('success', 'Formateur invité avec succès. Un email d\'activation a été envoyé.');
-    }
-
     public function show(Trainer $trainer): Response
     {
         $this->authorize('view', $trainer);
@@ -92,53 +50,6 @@ class TrainerController extends Controller
         return Inertia::render('Trainers/Show', [
             'trainer' => $trainer,
         ]);
-    }
-
-    public function edit(Trainer $trainer): Response
-    {
-        $this->authorize('update', $trainer);
-
-        return Inertia::render('Trainers/Edit', [
-            'trainer'  => $trainer->load(['user', 'profile']),
-            'profiles' => TrainerProfile::orderBy('name')->get(['id', 'name']),
-        ]);
-    }
-
-    public function update(UpdateTrainerRequest $request, Trainer $trainer): RedirectResponse
-    {
-        $data = $request->validated();
-
-        // Gestion du CV
-        if ($request->hasFile('cv')) {
-            // Nouveau CV uploadé
-            if ($trainer->cv_path) {
-                Storage::disk('public')->delete($trainer->cv_path);
-            }
-            $data['cv_path'] = $request->file('cv')->store('trainers/cvs', 'public');
-        } elseif (!empty($data['remove_cv']) && $trainer->cv_path) {
-            // Suppression du CV existant demandée
-            Storage::disk('public')->delete($trainer->cv_path);
-            $data['cv_path'] = null;
-        }
-
-        unset($data['cv'], $data['remove_cv']);
-
-        $trainer->update($data);
-
-        return redirect()
-            ->route('trainers.show', $trainer)
-            ->with('success', 'Formateur mis à jour avec succès.');
-    }
-
-    public function destroy(Trainer $trainer): RedirectResponse
-    {
-        $this->authorize('delete', $trainer);
-
-        $trainer->delete();
-
-        return redirect()
-            ->route('trainers.index')
-            ->with('success', 'Formateur supprimé.');
     }
 
     /**

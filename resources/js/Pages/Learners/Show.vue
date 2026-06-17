@@ -120,12 +120,13 @@ const form = useForm<FormData>({
     employment_position: '',
 })
 
-const deleteRecord = (recordId: string) => {
-    if (confirm('Confirmer la suppression ?')) {
-        router.delete(`/learners/${props.learner.id}/insertion/${recordId}`, {
-            preserveScroll: true,
-        })
-    }
+const deleteTargetId = ref<string | null>(null)
+const confirmDeleteRecord = () => {
+    if (!deleteTargetId.value) return
+    router.delete(`/learners/${props.learner.id}/insertion/${deleteTargetId.value}`, {
+        preserveScroll: true,
+        onFinish: () => { deleteTargetId.value = null },
+    })
 }
 
 const editingRecord = ref<InsertionRecord | null>(null)
@@ -249,8 +250,8 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                 </div>
             </div>
             <div class="flex items-center gap-sm">
-                <Link :href="`/learners/${learner.id}/edit`" class="btn-secondary"><span class="material-symbols-outlined" style="font-size:18px">edit</span>Modifier</Link>
-                <Link :href="`/learners/${learner.id}/move`" class="btn-secondary"><span class="material-symbols-outlined" style="font-size:18px">swap_horiz</span>Déplacer</Link>
+                <Link :href="`/learners/${learner.id}/move`" class="btn-move"><span class="material-symbols-outlined" style="font-size:18px">swap_horiz</span>Déplacer</Link>
+                <Link :href="`/learners/${learner.id}/edit`" class="btn-navy"><span class="material-symbols-outlined" style="font-size:18px">edit</span>Modifier</Link>
             </div>
         </div>
 
@@ -352,31 +353,36 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
 
             <!-- Tab: Stage -->
             <div v-if="activeTab === 'stage'" class="space-y-lg">
-                <!-- Stage en cours - Carte visuelle -->
-                <div v-if="latestStage" class="card stage-current-card">
-                    <div class="current-header">
-                        <div class="current-icon stage-icon-bg">
-                            <span class="material-symbols-outlined">business_center</span>
+
+                <!-- Stage en cours -->
+                <div v-if="latestStage" class="stage-active-card">
+                    <div class="stage-active-accent"></div>
+                    <div class="stage-active-body">
+                        <div class="stage-active-top">
+                            <div class="stage-active-icon">
+                                <span class="material-symbols-outlined" style="font-size:22px">business_center</span>
+                            </div>
+                            <div class="stage-active-info">
+                                <p class="stage-active-label">Stage en cours</p>
+                                <p class="stage-active-company">{{ latestStage.internship_company || 'Entreprise non spécifiée' }}</p>
+                            </div>
+                            <div class="stage-active-chips">
+                                <span v-if="latestStage.internship_paid" class="chip chip-paid">
+                                    <span class="material-symbols-outlined" style="font-size:13px">payments</span> Rémunéré
+                                </span>
+                                <span v-if="latestStage.internship_contract_type" class="chip chip-contract">{{ latestStage.internship_contract_type }}</span>
+                            </div>
                         </div>
-                        <div class="current-info">
-                            <div class="current-label">Stage en cours</div>
-                            <div class="current-company">{{ latestStage.internship_company || 'Entreprise non spécifiée' }}</div>
+                        <div v-if="latestStage.internship_start_date" class="stage-active-dates">
+                            <span class="material-symbols-outlined" style="font-size:15px;color:#E5004C">calendar_month</span>
+                            Du {{ fmt(latestStage.internship_start_date) }}
+                            <template v-if="latestStage.internship_end_date"> au {{ fmt(latestStage.internship_end_date) }}</template>
                         </div>
-                        <span v-if="latestStage.internship_paid" class="paid-badge">
-                            <span class="material-symbols-outlined" style="font-size:14px">payments</span>
-                            Rémunéré
-                        </span>
-                    </div>
-                    <div v-if="latestStage.internship_start_date || latestStage.internship_end_date" class="current-dates">
-                        <span class="material-symbols-outlined" style="font-size:16px">calendar_month</span>
-                        <span>Du {{ fmt(latestStage.internship_start_date) }} au {{ fmt(latestStage.internship_end_date) }}</span>
-                    </div>
-                    <div v-if="latestStage.internship_contract_type" class="contract-type">
-                        {{ latestStage.internship_contract_type }}
+                        <div v-if="latestStage.status_notes" class="stage-active-notes">{{ latestStage.status_notes }}</div>
                     </div>
                 </div>
 
-                <!-- Empty state Stage -->
+                <!-- Empty state -->
                 <div v-else class="card empty-state">
                     <div class="empty-icon stage-icon-bg">
                         <span class="material-symbols-outlined">work_off</span>
@@ -397,17 +403,11 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                     <form v-show="showStageForm" @submit.prevent="submitForm" class="form-content">
                         <div class="form-grid">
                             <div class="form-group">
-                                <label class="form-label">
-                                    <span class="material-symbols-outlined label-icon">business</span>
-                                    Entreprise de stage
-                                </label>
+                                <label class="form-label">Entreprise de stage</label>
                                 <input type="text" v-model="form.internship_company" class="form-input" placeholder="Nom de l'entreprise" required>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">
-                                    <span class="material-symbols-outlined label-icon">description</span>
-                                    Type de contrat
-                                </label>
+                                <label class="form-label">Type de contrat</label>
                                 <select v-model="form.internship_contract_type" class="form-input" required>
                                     <option value="">Choisir...</option>
                                     <option value="Contrat de stage">Contrat de stage</option>
@@ -416,17 +416,11 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">
-                                    <span class="material-symbols-outlined label-icon">event</span>
-                                    Date de début
-                                </label>
+                                <label class="form-label">Date de début</label>
                                 <input type="date" v-model="form.internship_start_date" class="form-input" required>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">
-                                    <span class="material-symbols-outlined label-icon">event_busy</span>
-                                    Date de fin
-                                </label>
+                                <label class="form-label">Date de fin</label>
                                 <input type="date" v-model="form.internship_end_date" class="form-input">
                             </div>
                         </div>
@@ -438,60 +432,54 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                             </label>
                         </div>
                         <div class="form-group full-width">
-                            <label class="form-label">
-                                <span class="material-symbols-outlined label-icon">notes</span>
-                                Notes
-                            </label>
+                            <label class="form-label">Notes</label>
                             <textarea v-model="form.status_notes" class="form-textarea" rows="2" placeholder="Commentaires sur le stage..."></textarea>
                         </div>
                         <div class="form-actions">
                             <button type="button" class="btn-secondary" @click="cancelEdit">Annuler</button>
                             <button type="submit" class="btn-primary" :disabled="form.processing" @click="form.status = 'internship'">
-                                <span class="material-symbols-outlined">save</span>
                                 {{ form.processing ? 'Enregistrement...' : (editingRecord?.status === 'internship' ? 'Modifier le stage' : 'Enregistrer le stage') }}
                             </button>
                         </div>
                     </form>
                 </div>
 
-                <!-- Timeline des stages -->
-                <div v-if="stageRecords.length > 0" class="timeline-card">
-                    <h3 class="timeline-title">
-                        <span class="material-symbols-outlined">history</span>
-                        Historique des stages
-                        <span class="timeline-count">{{ stageRecords.length }}</span>
-                    </h3>
-                    <div class="timeline">
-                        <div v-for="(record, index) in stageRecords" :key="record.id" class="timeline-item" :class="{ 'first': index === 0 }">
-                            <div class="timeline-dot stage-dot"></div>
-                            <div class="timeline-content">
-                                <div class="timeline-header">
-                                    <span class="timeline-badge stage-badge">Stage</span>
-                                    <span class="timeline-date">{{ fmt(record.status_changed_at) }}</span>
+                <!-- Historique des stages -->
+                <div v-if="stageRecords.length > 0" class="history-card">
+                    <div class="history-header">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:#9aaabb">history</span>
+                        <span class="history-title">Historique des stages</span>
+                        <span class="history-count">{{ stageRecords.length }}</span>
+                    </div>
+                    <div class="history-list">
+                        <div v-for="record in stageRecords" :key="record.id" class="history-item">
+                            <div class="history-item-left">
+                                <div class="history-dot stage-dot-sm"></div>
+                            </div>
+                            <div class="history-item-body">
+                                <div class="history-item-top">
+                                    <span class="history-company">{{ record.internship_company || 'Entreprise non spécifiée' }}</span>
+                                    <span class="history-item-date">{{ fmt(record.status_changed_at) }}</span>
                                 </div>
-                                <div class="timeline-company">
-                                    <span class="material-symbols-outlined company-icon">business</span>
-                                    {{ record.internship_company || 'Entreprise non spécifiée' }}
+                                <div class="history-item-meta">
+                                    <span v-if="record.internship_start_date" class="history-chip chip-date">
+                                        <span class="material-symbols-outlined" style="font-size:12px">calendar_today</span>
+                                        {{ fmt(record.internship_start_date) }}{{ record.internship_end_date ? ' → ' + fmt(record.internship_end_date) : ' · En cours' }}
+                                    </span>
+                                    <span v-if="record.internship_contract_type" class="history-chip chip-contract-sm">{{ record.internship_contract_type }}</span>
+                                    <span v-if="record.internship_paid" class="history-chip chip-paid-sm">Rémunéré</span>
                                 </div>
-                                <div v-if="record.internship_start_date" class="timeline-dates">
-                                    <span class="material-symbols-outlined">calendar_today</span>
-                                    {{ fmt(record.internship_start_date) }} - {{ record.internship_end_date ? fmt(record.internship_end_date) : 'En cours' }}
-                                </div>
-                                <div v-if="record.internship_contract_type" class="timeline-detail">
-                                    <span class="material-symbols-outlined">description</span>
-                                    {{ record.internship_contract_type }}
-                                </div>
-                                <div v-if="record.status_notes" class="timeline-notes">{{ record.status_notes }}</div>
-                                <div class="timeline-meta">
-                                    <span class="recorder">
-                                        <span class="material-symbols-outlined">person</span>
+                                <div v-if="record.status_notes" class="history-notes">{{ record.status_notes }}</div>
+                                <div class="history-item-footer">
+                                    <span class="history-recorder">
+                                        <span class="material-symbols-outlined" style="font-size:13px">person</span>
                                         {{ record.recorder.first_name }} {{ record.recorder.last_name }}
                                     </span>
-                                    <div class="timeline-actions">
+                                    <div class="history-actions">
                                         <button type="button" @click="editRecord(record)" class="edit-btn" title="Modifier">
                                             <span class="material-symbols-outlined">edit</span>
                                         </button>
-                                        <button type="button" @click="deleteRecord(record.id)" class="delete-btn" title="Supprimer">
+                                        <button type="button" @click="deleteTargetId = record.id" class="delete-btn" title="Supprimer">
                                             <span class="material-symbols-outlined">delete_outline</span>
                                         </button>
                                     </div>
@@ -504,24 +492,28 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
 
             <!-- Tab: Emploi -->
             <div v-if="activeTab === 'employment'" class="space-y-lg">
-                <!-- Emploi en cours - Carte visuelle -->
-                <div v-if="latestEmployment" class="card employment-current-card">
-                    <div class="current-header">
-                        <div class="current-icon employment-icon-bg">
-                            <span class="material-symbols-outlined">work</span>
+
+                <!-- Emploi en cours -->
+                <div v-if="latestEmployment" class="stage-active-card">
+                    <div class="stage-active-body">
+                        <div class="stage-active-top">
+                            <div class="stage-active-icon">
+                                <span class="material-symbols-outlined" style="font-size:22px">work</span>
+                            </div>
+                            <div class="stage-active-info">
+                                <p class="stage-active-label">Emploi actuel</p>
+                                <p class="stage-active-company">{{ latestEmployment.employment_company || 'Entreprise non spécifiée' }}</p>
+                                <p v-if="latestEmployment.employment_position" class="stage-active-position">{{ latestEmployment.employment_position }}</p>
+                            </div>
+                            <div class="stage-active-chips">
+                                <span v-if="latestEmployment.employment_contract_type" class="chip chip-contract">{{ latestEmployment.employment_contract_type }}</span>
+                            </div>
                         </div>
-                        <div class="current-info">
-                            <div class="current-label">Emploi actuel</div>
-                            <div class="current-company">{{ latestEmployment.employment_company || 'Entreprise non spécifiée' }}</div>
-                            <div v-if="latestEmployment.employment_position" class="current-position">{{ latestEmployment.employment_position }}</div>
+                        <div v-if="latestEmployment.employment_start_date" class="stage-active-dates">
+                            <span class="material-symbols-outlined" style="font-size:15px;color:#E5004C">calendar_month</span>
+                            Début le {{ fmt(latestEmployment.employment_start_date) }}
                         </div>
-                        <span v-if="latestEmployment.employment_contract_type" class="contract-badge">
-                            {{ latestEmployment.employment_contract_type }}
-                        </span>
-                    </div>
-                    <div v-if="latestEmployment.employment_start_date" class="current-dates">
-                        <span class="material-symbols-outlined" style="font-size:16px">calendar_month</span>
-                        <span>Début le {{ fmt(latestEmployment.employment_start_date) }}</span>
+                        <div v-if="latestEmployment.status_notes" class="stage-active-notes">{{ latestEmployment.status_notes }}</div>
                     </div>
                 </div>
 
@@ -546,24 +538,15 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                     <form v-show="showEmploymentForm" @submit.prevent="submitForm" class="form-content">
                         <div class="form-grid">
                             <div class="form-group">
-                                <label class="form-label">
-                                    <span class="material-symbols-outlined label-icon">business</span>
-                                    Entreprise
-                                </label>
+                                <label class="form-label">Entreprise</label>
                                 <input type="text" v-model="form.employment_company" class="form-input" placeholder="Nom de l'entreprise" required>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">
-                                    <span class="material-symbols-outlined label-icon">badge</span>
-                                    Poste
-                                </label>
+                                <label class="form-label">Poste</label>
                                 <input type="text" v-model="form.employment_position" class="form-input" placeholder="Titre du poste">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">
-                                    <span class="material-symbols-outlined label-icon">contract</span>
-                                    Type de contrat
-                                </label>
+                                <label class="form-label">Type de contrat</label>
                                 <select v-model="form.employment_contract_type" class="form-input">
                                     <option value="">Choisir...</option>
                                     <option value="CDI">CDI</option>
@@ -573,72 +556,59 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label class="form-label">
-                                    <span class="material-symbols-outlined label-icon">event</span>
-                                    Date de début
-                                </label>
+                                <label class="form-label">Date de début</label>
                                 <input type="date" v-model="form.employment_start_date" class="form-input">
                             </div>
                         </div>
                         <div class="form-group full-width">
-                            <label class="form-label">
-                                <span class="material-symbols-outlined label-icon">notes</span>
-                                Notes
-                            </label>
+                            <label class="form-label">Notes</label>
                             <textarea v-model="form.status_notes" class="form-textarea" rows="2" placeholder="Commentaires sur l'emploi..."></textarea>
                         </div>
                         <div class="form-actions">
                             <button type="button" class="btn-secondary" @click="cancelEdit">Annuler</button>
                             <button type="submit" class="btn-primary" :disabled="form.processing" @click="form.status = 'employed'">
-                                <span class="material-symbols-outlined">save</span>
                                 {{ form.processing ? 'Enregistrement...' : (editingRecord?.status === 'employed' ? 'Modifier l\'emploi' : 'Enregistrer l\'emploi') }}
                             </button>
                         </div>
                     </form>
                 </div>
 
-                <!-- Timeline des emplois -->
-                <div v-if="employmentRecords.length > 0" class="timeline-card">
-                    <h3 class="timeline-title">
-                        <span class="material-symbols-outlined">history</span>
-                        Historique des emplois
-                        <span class="timeline-count">{{ employmentRecords.length }}</span>
-                    </h3>
-                    <div class="timeline">
-                        <div v-for="(record, index) in employmentRecords" :key="record.id" class="timeline-item" :class="{ 'first': index === 0 }">
-                            <div class="timeline-dot employment-dot"></div>
-                            <div class="timeline-content">
-                                <div class="timeline-header">
-                                    <span class="timeline-badge employment-badge">Emploi</span>
-                                    <span class="timeline-date">{{ fmt(record.status_changed_at) }}</span>
+                <!-- Historique des emplois -->
+                <div v-if="employmentRecords.length > 0" class="history-card">
+                    <div class="history-header">
+                        <span class="material-symbols-outlined" style="font-size:18px;color:#9aaabb">history</span>
+                        <span class="history-title">Historique des emplois</span>
+                        <span class="history-count">{{ employmentRecords.length }}</span>
+                    </div>
+                    <div class="history-list">
+                        <div v-for="record in employmentRecords" :key="record.id" class="history-item">
+                            <div class="history-item-left">
+                                <div class="history-dot employment-dot-sm"></div>
+                            </div>
+                            <div class="history-item-body">
+                                <div class="history-item-top">
+                                    <span class="history-company">{{ record.employment_company || 'Entreprise non spécifiée' }}</span>
+                                    <span class="history-item-date">{{ fmt(record.status_changed_at) }}</span>
                                 </div>
-                                <div class="timeline-company">
-                                    <span class="material-symbols-outlined company-icon">business</span>
-                                    {{ record.employment_company || 'Entreprise non spécifiée' }}
+                                <div v-if="record.employment_position" class="history-position">{{ record.employment_position }}</div>
+                                <div class="history-item-meta">
+                                    <span v-if="record.employment_start_date" class="history-chip chip-date">
+                                        <span class="material-symbols-outlined" style="font-size:12px">calendar_today</span>
+                                        Début le {{ fmt(record.employment_start_date) }}
+                                    </span>
+                                    <span v-if="record.employment_contract_type" class="history-chip chip-contract-sm">{{ record.employment_contract_type }}</span>
                                 </div>
-                                <div v-if="record.employment_position" class="timeline-position">
-                                    <span class="material-symbols-outlined">badge</span>
-                                    {{ record.employment_position }}
-                                </div>
-                                <div v-if="record.employment_start_date" class="timeline-dates">
-                                    <span class="material-symbols-outlined">calendar_today</span>
-                                    Début le {{ fmt(record.employment_start_date) }}
-                                </div>
-                                <div v-if="record.employment_contract_type" class="timeline-detail">
-                                    <span class="material-symbols-outlined">contract</span>
-                                    Contrat : {{ record.employment_contract_type }}
-                                </div>
-                                <div v-if="record.status_notes" class="timeline-notes">{{ record.status_notes }}</div>
-                                <div class="timeline-meta">
-                                    <span class="recorder">
-                                        <span class="material-symbols-outlined">person</span>
+                                <div v-if="record.status_notes" class="history-notes">{{ record.status_notes }}</div>
+                                <div class="history-item-footer">
+                                    <span class="history-recorder">
+                                        <span class="material-symbols-outlined" style="font-size:13px">person</span>
                                         {{ record.recorder.first_name }} {{ record.recorder.last_name }}
                                     </span>
-                                    <div class="timeline-actions">
+                                    <div class="history-actions">
                                         <button type="button" @click="editRecord(record)" class="edit-btn" title="Modifier">
                                             <span class="material-symbols-outlined">edit</span>
                                         </button>
-                                        <button type="button" @click="deleteRecord(record.id)" class="delete-btn" title="Supprimer">
+                                        <button type="button" @click="deleteTargetId = record.id" class="delete-btn" title="Supprimer">
                                             <span class="material-symbols-outlined">delete_outline</span>
                                         </button>
                                     </div>
@@ -650,12 +620,33 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
             </div>
         </div>
     </div>
+
+    <!-- Modal suppression enregistrement insertion -->
+    <Teleport to="body">
+        <Transition name="modal">
+            <div v-if="deleteTargetId" class="modal-overlay" @click.self="deleteTargetId = null">
+                <div class="modal-box">
+                    <div class="modal-box-head">
+                        <div class="modal-warn-icon">
+                            <span class="material-symbols-outlined" style="font-size:20px">warning</span>
+                        </div>
+                        <h3 class="modal-box-title">Supprimer cet enregistrement ?</h3>
+                    </div>
+                    <p class="modal-box-msg">Cette action est irréversible. L'enregistrement sera définitivement supprimé.</p>
+                    <div class="modal-box-foot">
+                        <button class="modal-cancel" @click="deleteTargetId = null">Annuler</button>
+                        <button class="modal-delete" @click="confirmDeleteRecord">Supprimer</button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+    </Teleport>
 </template>
 
 <style scoped>
 /* ===== BASE STYLES ===== */
-.icon-back { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; color: #515f74; transition: background 0.15s; flex-shrink: 0; text-decoration: none; }
-.icon-back:hover { background: #eceef0; color: #191c1e; }
+.icon-back { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 50%; border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent; flex-shrink: 0; text-decoration: none; transition: background 0.15s, color 0.15s; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
 .avatar-lg { width: 56px; height: 56px; border-radius: 50%; background: #E5004C; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; flex-shrink: 0; text-transform: uppercase; overflow: hidden; }
 .avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .card { background: #fff; border: 1px solid #e0e3e5; border-radius: 12px; padding: 24px; }
@@ -669,8 +660,8 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
 .doc-card { display: flex; align-items: center; gap: 12px; padding: 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; text-decoration: none; transition: all 0.2s; }
 .doc-card:hover { background: #f1f5f9; border-color: #cbd5e1; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
 .doc-icon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 10px; flex-shrink: 0; }
-.doc-id { background: #dbeafe; color: #1e40af; }
-.doc-cv { background: #dcfce7; color: #166534; }
+.doc-id { background: #fff0f4; color: #E5004C; }
+.doc-cv { background: #fff0f4; color: #E5004C; }
 .doc-icon .material-symbols-outlined { font-size: 22px; }
 .doc-info { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .doc-title { font-size: 13px; font-weight: 600; color: #1e293b; }
@@ -679,6 +670,10 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
 .doc-card:hover .doc-arrow { color: #64748b; }
 .btn-secondary { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: transparent; color: #515f74; border-radius: 8px; font-size: 13px; font-weight: 500; border: 1px solid #e0e3e5; transition: all 0.15s; text-decoration: none; cursor: pointer; }
 .btn-secondary:hover { background: #f2f4f6; }
+.btn-navy { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: transparent; color: #1F3A4D; border-radius: 8px; font-size: 13px; font-weight: 600; border: 1.5px solid #1F3A4D; transition: background 0.15s, color 0.15s; text-decoration: none; }
+.btn-navy:hover { background: #1F3A4D; color: #fff; }
+.btn-move { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; background: transparent; color: #E5004C; border-radius: 8px; font-size: 13px; font-weight: 600; border: 1.5px solid #E5004C; transition: background 0.15s, color 0.15s; text-decoration: none; }
+.btn-move:hover { background: #E5004C; color: #fff; }
 .count-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 6px; background: #f2f4f6; border-radius: 99px; font-size: 12px; font-weight: 600; color: #515f74; }
 .enrollment-badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; white-space: nowrap; flex-shrink: 0; }
 .enrollment-in_progress { background: #d1fae5; color: #065f46; }
@@ -730,14 +725,84 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
 }
 
 /* ===== CURRENT STATUS CARDS ===== */
-.stage-current-card, .employment-current-card {
-    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-    border: 1px solid #bfdbfe;
-    padding: 20px;
+/* ===== STAGE ACTIF ===== */
+.stage-active-card {
+    background: #fff;
+    border: 1px solid #e0e3e5;
+    border-radius: 12px;
 }
+.stage-active-accent { display: none; }
+.stage-active-body {
+    padding: 18px 20px;
+}
+.stage-active-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 10px;
+}
+.stage-active-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: #fff0f4;
+    color: #E5004C;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.stage-active-info { flex: 1; }
+.stage-active-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: #E5004C;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+.stage-active-company {
+    font-size: 17px;
+    font-weight: 700;
+    color: #191c1e;
+    margin-top: 2px;
+}
+.stage-active-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 600;
+}
+.chip-paid { background: #fff0f4; color: #E5004C; }
+.chip-contract { background: #e8edf2; color: #1F3A4D; }
+.stage-active-dates {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #515f74;
+    margin-bottom: 6px;
+}
+.stage-active-position {
+    font-size: 13px;
+    color: #515f74;
+    margin-top: 2px;
+}
+.stage-active-notes {
+    font-size: 12px;
+    color: #9aaabb;
+    font-style: italic;
+    margin-top: 4px;
+}
+.history-position {
+    font-size: 12px;
+    color: #515f74;
+    margin-bottom: 6px;
+}
+
+/* ===== EMPLOI ACTIF (conservé) ===== */
 .employment-current-card {
     background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
     border: 1px solid #bbf7d0;
+    padding: 20px;
 }
 .current-header {
     display: flex;
@@ -753,20 +818,10 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
     align-items: center;
     justify-content: center;
 }
-.stage-icon-bg {
-    background: #3b82f6;
-    color: white;
-}
-.employment-icon-bg {
-    background: #22c55e;
-    color: white;
-}
-.current-icon .material-symbols-outlined {
-    font-size: 24px;
-}
-.current-info {
-    flex: 1;
-}
+.stage-icon-bg { background: #E5004C; color: white; }
+.employment-icon-bg { background: #22c55e; color: white; }
+.current-icon .material-symbols-outlined { font-size: 24px; }
+.current-info { flex: 1; }
 .current-label {
     font-size: 12px;
     font-weight: 600;
@@ -780,44 +835,20 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
     color: #1f2937;
     margin-top: 2px;
 }
-.current-position {
-    font-size: 14px;
-    color: #4b5563;
-    margin-top: 4px;
-}
+.current-position { font-size: 14px; color: #4b5563; margin-top: 4px; }
 .paid-badge, .contract-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
 }
-.paid-badge {
-    background: #fef3c7;
-    color: #92400e;
-}
-.contract-badge {
-    background: #e0e7ff;
-    color: #4338ca;
-}
+.paid-badge { background: #fef3c7; color: #92400e; }
+.contract-badge { background: #e0e7ff; color: #4338ca; }
 .current-dates {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: #4b5563;
-    margin-top: 8px;
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; color: #4b5563; margin-top: 8px;
 }
 .contract-type {
-    display: inline-block;
-    font-size: 13px;
-    color: #4b5563;
-    background: rgba(255,255,255,0.6);
-    padding: 4px 10px;
-    border-radius: 6px;
-    margin-top: 8px;
+    display: inline-block; font-size: 13px; color: #4b5563;
+    background: rgba(255,255,255,0.6); padding: 4px 10px; border-radius: 6px; margin-top: 8px;
 }
 
 /* ===== EMPTY STATE ===== */
@@ -1014,26 +1045,26 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
 }
 
 /* ===== TIMELINE ===== */
-.timeline-card {
+/* ===== HISTORIQUE (remplace timeline) ===== */
+.history-card {
     background: #fff;
     border: 1px solid #e0e3e5;
     border-radius: 12px;
     padding: 20px;
 }
-.timeline-title {
+.history-header {
     display: flex;
     align-items: center;
     gap: 8px;
+    margin-bottom: 16px;
+}
+.history-title {
     font-size: 14px;
     font-weight: 600;
     color: #374151;
-    margin-bottom: 20px;
+    flex: 1;
 }
-.timeline-title .material-symbols-outlined {
-    color: #9ca3af;
-}
-.timeline-count {
-    margin-left: auto;
+.history-count {
     background: #f3f4f6;
     color: #6b7280;
     padding: 2px 10px;
@@ -1041,77 +1072,126 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
     font-size: 12px;
     font-weight: 600;
 }
-.timeline {
-    position: relative;
-    padding-left: 24px;
+.history-list { display: flex; flex-direction: column; gap: 0; }
+.history-item {
+    display: flex;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid #f2f4f6;
 }
-.timeline::before {
-    content: '';
-    position: absolute;
-    left: 8px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: #e5e7eb;
+.history-item:last-child { border-bottom: none; padding-bottom: 0; }
+.history-item-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 5px;
 }
-.timeline-item {
-    position: relative;
-    padding-bottom: 24px;
-}
-.timeline-item:last-child {
-    padding-bottom: 0;
-}
-.timeline-dot {
-    position: absolute;
-    left: -20px;
-    top: 4px;
-    width: 12px;
-    height: 12px;
+.history-dot-sm, .stage-dot-sm {
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 2px currentColor;
+    flex-shrink: 0;
 }
-.stage-dot {
-    background: #3b82f6;
-    color: #3b82f6;
-}
-.employment-dot {
-    background: #22c55e;
-    color: #22c55e;
-}
-.timeline-item.first .timeline-dot {
-    box-shadow: 0 0 0 3px currentColor;
-    transform: scale(1.1);
-}
-.timeline-content {
-    background: #f9fafb;
-    border-radius: 10px;
-    padding: 16px;
-}
-.timeline-header {
+.stage-dot-sm { background: #E5004C; }
+.employment-dot-sm { background: #1F3A4D; }
+.history-item-body { flex: 1; min-width: 0; }
+.history-item-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
+    gap: 8px;
+    margin-bottom: 6px;
 }
-.timeline-badge {
-    padding: 4px 10px;
-    border-radius: 99px;
+.history-company {
+    font-size: 14px;
+    font-weight: 700;
+    color: #191c1e;
+}
+.history-item-date {
     font-size: 11px;
-    font-weight: 600;
+    color: #9aaabb;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
-.stage-badge {
-    background: #dbeafe;
-    color: #1e40af;
+.history-item-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
 }
-.employment-badge {
-    background: #d1fae5;
-    color: #065f46;
+.history-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 99px;
+    font-size: 11px; font-weight: 500;
 }
-.timeline-date {
+.chip-date { background: #eef2f5; color: #1F3A4D; }
+.chip-contract-sm { background: #e8edf2; color: #1F3A4D; }
+.chip-paid-sm { background: #fff0f4; color: #E5004C; }
+.history-notes {
     font-size: 12px;
-    color: #9ca3af;
+    color: #9aaabb;
+    font-style: italic;
+    margin-top: 4px;
+    margin-bottom: 6px;
 }
+.history-item-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+}
+.history-recorder {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: #9aaabb;
+}
+.history-actions {
+    display: flex;
+    gap: 4px;
+}
+
+/* conservé pour emploi timeline */
+.timeline-card {
+    background: #fff;
+    border: 1px solid #e0e3e5;
+    border-radius: 12px;
+    padding: 20px;
+}
+.timeline-title {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 20px;
+}
+.timeline-title .material-symbols-outlined { color: #9ca3af; }
+.timeline-count {
+    margin-left: auto; background: #f3f4f6; color: #6b7280;
+    padding: 2px 10px; border-radius: 99px; font-size: 12px; font-weight: 600;
+}
+.timeline { position: relative; padding-left: 24px; }
+.timeline::before {
+    content: ''; position: absolute; left: 8px; top: 0; bottom: 0;
+    width: 2px; background: #e5e7eb;
+}
+.timeline-item { position: relative; padding-bottom: 24px; }
+.timeline-item:last-child { padding-bottom: 0; }
+.timeline-dot {
+    position: absolute; left: -20px; top: 4px;
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid #fff; box-shadow: 0 0 0 2px currentColor;
+}
+.stage-dot { background: #E5004C; color: #E5004C; }
+.employment-dot { background: #22c55e; color: #22c55e; }
+.timeline-item.first .timeline-dot { box-shadow: 0 0 0 3px currentColor; transform: scale(1.1); }
+.timeline-content { background: #f9fafb; border-radius: 10px; padding: 16px; }
+.timeline-header {
+    display: flex; align-items: center;
+    justify-content: space-between; margin-bottom: 10px;
+}
+.timeline-badge { padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+.stage-badge { background: #fff0f4; color: #E5004C; }
+.employment-badge { background: #d1fae5; color: #065f46; }
+.timeline-date { font-size: 12px; color: #9ca3af; }
 .timeline-company {
     display: flex;
     align-items: center;
@@ -1211,7 +1291,38 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
     transition: all 0.15s;
 }
 .edit-btn:hover {
-    color: #3b82f6;
-    background: #dbeafe;
+    color: #1F3A4D;
+    background: #e8edf2;
 }
+
+/* ===== MODAL ===== */
+.modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    display: flex; align-items: center; justify-content: center; z-index: 9999;
+}
+.modal-box {
+    background: #fff; border-radius: 14px; padding: 28px 28px 22px;
+    width: 100%; max-width: 400px; box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+}
+.modal-box-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.modal-warn-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: #fff0f4; color: #E5004C;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.modal-box-title { font-size: 15px; font-weight: 700; color: #191c1e; }
+.modal-box-msg { font-size: 13px; color: #515f74; margin-bottom: 20px; line-height: 1.5; }
+.modal-box-foot { display: flex; justify-content: flex-end; gap: 10px; }
+.modal-cancel {
+    padding: 8px 18px; background: #f2f4f6; color: #515f74;
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.modal-cancel:hover { background: #e0e3e5; }
+.modal-delete {
+    padding: 8px 18px; background: #E5004C; color: #fff;
+    border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.modal-delete:hover { background: #c0003e; }
+.modal-enter-active, .modal-leave-active { transition: opacity 0.2s; }
+.modal-enter-from, .modal-leave-to { opacity: 0; }
 </style>

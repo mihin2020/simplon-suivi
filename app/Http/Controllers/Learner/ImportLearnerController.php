@@ -19,7 +19,7 @@ class ImportLearnerController extends Controller
     {
         $formation = null;
         if ($request->query('formation')) {
-            $formation = Formation::find($request->query('formation'));
+            $formation = Formation::with('project')->find($request->query('formation'));
         }
 
         return Inertia::render('Learners/Import', [

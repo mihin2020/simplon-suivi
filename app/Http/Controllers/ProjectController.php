@@ -12,6 +12,7 @@ use App\Models\Partner;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -73,7 +74,8 @@ class ProjectController extends Controller
         ]);
 
         return Inertia::render('Projects/Show', [
-            'project' => $project,
+            'project'     => $project,
+            'allPartners' => Partner::orderBy('name')->get(['id', 'name', 'logo_path']),
         ]);
     }
 
@@ -94,6 +96,20 @@ class ProjectController extends Controller
             ]),
             'partners' => Partner::orderBy('name')->get(['id', 'name']),
         ]);
+    }
+
+    public function syncPartners(Request $request, Project $project): RedirectResponse
+    {
+        $this->authorize('update', $project);
+
+        $request->validate([
+            'partner_ids'   => ['nullable', 'array'],
+            'partner_ids.*' => ['uuid', 'exists:partners,id'],
+        ]);
+
+        $project->partners()->sync($request->input('partner_ids', []));
+
+        return back()->with('success', 'Partenaires mis à jour.');
     }
 
     public function update(UpdateProjectRequest $request, Project $project): RedirectResponse

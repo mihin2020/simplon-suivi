@@ -13,6 +13,7 @@ interface Formation {
 }
 
 interface User {
+    id: string
     first_name: string
     last_name: string
     email: string
@@ -60,10 +61,10 @@ const statusLabels: Record<string, string> = {
     <div class="max-w-[1400px] mx-auto space-y-xl">
 
         <!-- En-tête -->
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between gap-md flex-wrap">
             <div class="flex items-center gap-md">
-                <Link href="/trainers" class="icon-back">
-                    <span class="material-symbols-outlined">arrow_back</span>
+                <Link href="/trainers" class="btn-back">
+                    <span class="material-symbols-outlined" style="font-size:20px">arrow_back</span>
                 </Link>
                 <div class="flex items-center gap-md">
                     <div class="avatar-lg">
@@ -88,7 +89,7 @@ const statusLabels: Record<string, string> = {
                     </div>
                 </div>
             </div>
-            <Link :href="`/trainers/${trainer.id}/edit`" class="btn-secondary">
+            <Link :href="`/users/${trainer.user.id}/edit`" class="btn-navy">
                 <span class="material-symbols-outlined" style="font-size:18px">edit</span>
                 Modifier
             </Link>
@@ -97,7 +98,7 @@ const statusLabels: Record<string, string> = {
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-xl">
 
             <!-- Infos -->
-            <div class="space-y-xl">
+            <div class="space-y-md">
                 <div class="card">
                     <h2 class="section-title">Informations</h2>
                     <dl class="info-list">
@@ -117,20 +118,30 @@ const statusLabels: Record<string, string> = {
                             <dt>Profil</dt>
                             <dd>{{ trainer.profile?.name ?? '' }}</dd>
                         </div>
-                        <div class="info-row" v-if="trainer.cv_path">
-                            <dt>CV</dt>
-                            <dd>
-                                <a :href="`/storage/${trainer.cv_path}`" target="_blank" class="cv-link">
-                                    <span class="material-symbols-outlined" style="font-size:16px">description</span>
-                                    Voir le CV
-                                </a>
-                            </dd>
-                        </div>
                         <div class="info-row">
                             <dt>Dernière connexion</dt>
-                            <dd>{{ fmt(trainer.user.last_login_at) }}</dd>
+                            <dd>{{ fmt(trainer.user.last_login_at) || '' }}</dd>
                         </div>
                     </dl>
+                </div>
+
+                <!-- Bloc CV -->
+                <div v-if="trainer.cv_path" class="cv-card">
+                    <div class="cv-icon-wrap">
+                        <span class="material-symbols-outlined" style="font-size:28px;color:#E5004C">description</span>
+                    </div>
+                    <div class="cv-info">
+                        <p class="cv-label">Curriculum Vitæ</p>
+                        <p class="cv-hint">Document joint au profil</p>
+                    </div>
+                    <a :href="`/storage/${trainer.cv_path}`" target="_blank" class="cv-btn">
+                        <span class="material-symbols-outlined" style="font-size:16px">open_in_new</span>
+                        Ouvrir
+                    </a>
+                </div>
+                <div v-else class="cv-empty">
+                    <span class="material-symbols-outlined" style="font-size:22px;color:#d0d5db">description</span>
+                    <span>Aucun CV joint</span>
                 </div>
             </div>
 
@@ -183,18 +194,22 @@ const statusLabels: Record<string, string> = {
 </template>
 
 <style scoped>
-.icon-back {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    color: #515f74;
-    transition: background 0.15s;
-    flex-shrink: 0;
+.btn-back {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent;
+    text-decoration: none; flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
 }
-.icon-back:hover { background: #eceef0; color: #191c1e; }
+.btn-back:hover { background: #1F3A4D; color: #fff; }
+
+.btn-navy {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; background: transparent; color: #1F3A4D;
+    border-radius: 8px; font-size: 13px; font-weight: 600;
+    border: 1.5px solid #1F3A4D; transition: background 0.15s, color 0.15s; text-decoration: none;
+}
+.btn-navy:hover { background: #1F3A4D; color: #fff; }
 
 .avatar-lg {
     width: 56px;
@@ -238,16 +253,36 @@ const statusLabels: Record<string, string> = {
 .info-row dt { font-size: 11px; font-weight: 600; color: #9aaabb; text-transform: uppercase; letter-spacing: 0.04em; }
 .info-row dd { font-size: 14px; color: #191c1e; }
 
-.cv-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #E5004C;
-    text-decoration: none;
-    font-weight: 500;
-    transition: color 0.15s;
+/* Bloc CV */
+.cv-card {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 18px; background: #fff;
+    border: 1px solid #e0e3e5; border-radius: 12px;
+    transition: border-color 0.15s, box-shadow 0.15s;
 }
-.cv-link:hover { color: #c0003e; text-decoration: underline; }
+.cv-card:hover { border-color: #E5004C; box-shadow: 0 2px 10px rgba(229,0,76,0.08); }
+.cv-icon-wrap {
+    width: 48px; height: 48px; border-radius: 10px;
+    background: #fff0f4; border: 1px solid #ffc8d8;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.cv-info { flex: 1; min-width: 0; }
+.cv-label { font-size: 13px; font-weight: 700; color: #191c1e; }
+.cv-hint  { font-size: 11px; color: #9aaabb; margin-top: 2px; }
+.cv-btn {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 7px 14px; border-radius: 8px;
+    background: #E5004C; color: #fff;
+    font-size: 12px; font-weight: 600; text-decoration: none;
+    white-space: nowrap; transition: background 0.15s; flex-shrink: 0;
+}
+.cv-btn:hover { background: #c0003e; }
+.cv-empty {
+    display: flex; align-items: center; gap: 8px;
+    padding: 14px 18px; background: #fafbfc;
+    border: 1px dashed #e0e3e5; border-radius: 12px;
+    font-size: 13px; color: #9aaabb;
+}
 
 .count-badge {
     display: inline-flex;
@@ -296,21 +331,6 @@ const statusLabels: Record<string, string> = {
 .status-completed { background: #dbeafe; color: #1e40af; }
 .status-archived  { background: #f3f4f6; color: #6b7280; }
 
-.btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: transparent;
-    color: #515f74;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    border: 1px solid #e0e3e5;
-    transition: background 0.15s;
-    text-decoration: none;
-}
-.btn-secondary:hover { background: #f2f4f6; }
 
 .btn-resend { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
 .btn-resend:hover { background: #bfdbfe; border-color: #60a5fa; }

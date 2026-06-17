@@ -62,16 +62,7 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
 <template>
     <div class="page-wrapper">
 
-        <!-- Fil d'Ariane -->
-        <div class="page-header">
-            <Link href="/partners" class="breadcrumb-link">
-                <span class="material-symbols-outlined" style="font-size:18px">handshake</span>
-                Partenaires
-            </Link>
-            <span class="material-symbols-outlined breadcrumb-sep">chevron_right</span>
-            <span class="breadcrumb-current">Modifier · {{ partner.name }}</span>
-        </div>
-
+        <!-- Titre -->
         <div class="page-title-row">
             <Link href="/partners" class="icon-back">
                 <span class="material-symbols-outlined">arrow_back</span>
@@ -158,7 +149,6 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
                             <span class="required">*</span>
                         </label>
                         <div class="input-wrap">
-                            <span class="material-symbols-outlined input-icon">badge</span>
                             <input
                                 v-model="form.name"
                                 type="text"
@@ -181,27 +171,10 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
                         </div>
 
                         <div class="contact-grid">
-                            <!-- Prénom -->
-                            <div class="field">
-                                <label class="label">Prénom</label>
-                                <div class="input-wrap">
-                                    <span class="material-symbols-outlined input-icon">person_outline</span>
-                                    <input
-                                        v-model="form.contact_first_name"
-                                        type="text"
-                                        class="input"
-                                        :class="{ 'input-error': form.errors.contact_first_name }"
-                                        placeholder="Prénom du contact"
-                                    />
-                                </div>
-                                <p v-if="form.errors.contact_first_name" class="error-msg">{{ form.errors.contact_first_name }}</p>
-                            </div>
-
                             <!-- Nom -->
                             <div class="field">
                                 <label class="label">Nom</label>
                                 <div class="input-wrap">
-                                    <span class="material-symbols-outlined input-icon">person</span>
                                     <input
                                         v-model="form.contact_last_name"
                                         type="text"
@@ -213,11 +186,25 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
                                 <p v-if="form.errors.contact_last_name" class="error-msg">{{ form.errors.contact_last_name }}</p>
                             </div>
 
+                            <!-- Prénom -->
+                            <div class="field">
+                                <label class="label">Prénom</label>
+                                <div class="input-wrap">
+                                    <input
+                                        v-model="form.contact_first_name"
+                                        type="text"
+                                        class="input"
+                                        :class="{ 'input-error': form.errors.contact_first_name }"
+                                        placeholder="Prénom du contact"
+                                    />
+                                </div>
+                                <p v-if="form.errors.contact_first_name" class="error-msg">{{ form.errors.contact_first_name }}</p>
+                            </div>
+
                             <!-- Email -->
                             <div class="field">
                                 <label class="label">Email</label>
                                 <div class="input-wrap">
-                                    <span class="material-symbols-outlined input-icon">email</span>
                                     <input
                                         v-model="form.contact_email"
                                         type="email"
@@ -233,7 +220,6 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
                             <div class="field">
                                 <label class="label">Téléphone</label>
                                 <div class="input-wrap">
-                                    <span class="material-symbols-outlined input-icon">phone</span>
                                     <input
                                         v-model="form.contact_phone"
                                         type="tel"
@@ -249,7 +235,6 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
                             <div class="field">
                                 <label class="label">Profil</label>
                                 <div class="input-wrap">
-                                    <span class="material-symbols-outlined input-icon">badge</span>
                                     <input
                                         v-model="form.contact_profile"
                                         type="text"
@@ -265,7 +250,6 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
                             <div class="field">
                                 <label class="label">Poste</label>
                                 <div class="input-wrap">
-                                    <span class="material-symbols-outlined input-icon">work</span>
                                     <input
                                         v-model="form.contact_position"
                                         type="text"
@@ -316,22 +300,22 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
 <style scoped>
 .page-wrapper { max-width: 960px; margin: 0 auto; display: flex; flex-direction: column; gap: 24px; }
 
-.page-header { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #adb5bd; }
-.breadcrumb-link {
-    display: inline-flex; align-items: center; gap: 4px;
-    color: #515f74; text-decoration: none; font-weight: 500; transition: color 0.15s;
-}
-.breadcrumb-link:hover { color: #E5004C; }
-.breadcrumb-sep { font-size: 16px; color: #d0d3d5; }
-.breadcrumb-current { color: #191c1e; font-weight: 600; }
-
 .page-title-row { display: flex; align-items: center; gap: 16px; }
 .icon-back {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 44px; height: 44px; border-radius: 50%;
-    color: #515f74; transition: background 0.15s; flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1.5px solid #1F3A4D;
+    color: #1F3A4D;
+    background: transparent;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+    text-decoration: none;
 }
-.icon-back:hover { background: #eceef0; color: #191c1e; }
+.icon-back:hover { background: #1F3A4D; color: #fff; }
 .page-title { font-size: 24px; font-weight: 700; color: #191c1e; line-height: 1.2; }
 .page-subtitle { font-size: 14px; color: #515f74; margin-top: 2px; }
 
@@ -406,9 +390,8 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
 .required { color: #E5004C; }
 
 .input-wrap { position: relative; display: flex; align-items: center; }
-.input-icon { position: absolute; left: 12px; font-size: 18px; color: #adb5bd; pointer-events: none; }
 .input {
-    width: 100%; padding: 12px 14px 12px 42px;
+    width: 100%; padding: 12px 14px;
     border: 1.5px solid #e0e3e5; border-radius: 10px;
     font-size: 14px; color: #191c1e; background: #fafbfc;
     outline: none; transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;

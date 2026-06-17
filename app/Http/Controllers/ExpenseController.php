@@ -17,6 +17,8 @@ class ExpenseController extends Controller
 {
     public function index(Formation $formation): Response
     {
+        $this->authorize('viewAny', Expense::class);
+
         $formation->load('project:id,name,budget');
 
         $expenses = Expense::where('formation_id', $formation->id)
@@ -48,6 +50,8 @@ class ExpenseController extends Controller
 
     public function store(StoreExpenseRequest $request, Formation $formation): RedirectResponse
     {
+        $this->authorize('create', Expense::class);
+
         $data = $request->validated();
         $files = $request->file('files', []);
         unset($data['files']);
@@ -71,6 +75,8 @@ class ExpenseController extends Controller
 
     public function update(UpdateExpenseRequest $request, Expense $expense): RedirectResponse
     {
+        $this->authorize('update', $expense);
+
         $data = $request->validated();
         $files = $request->file('files', []);
         unset($data['files']);
@@ -92,6 +98,8 @@ class ExpenseController extends Controller
 
     public function destroy(Expense $expense): RedirectResponse
     {
+        $this->authorize('delete', $expense);
+
         // Soft delete (les fichiers restent en cas de restauration)
         $expense->delete();
 
@@ -100,6 +108,8 @@ class ExpenseController extends Controller
 
     public function destroyAttachment(ExpenseAttachment $attachment): RedirectResponse
     {
+        $this->authorize('delete', $attachment->expense);
+
         Storage::disk('public')->delete($attachment->file_path);
         $attachment->delete();
 

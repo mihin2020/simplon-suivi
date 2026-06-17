@@ -102,40 +102,76 @@ Route::middleware("auth")->group(function () {
         "toggleActive",
     ])->name("users.toggle-active");
 
-    // ── Campus Workforce ────────────────────────────────────────────────────
+    // ── Campus ──────────────────────────────────────────────────────────────
     Route::prefix('campus')->name('campus.')->group(function () {
-        // Catalogue de formations
-        Route::resource('formations', CampusFormationController::class)
-            ->names('formations')
-            ->parameters(['formations' => 'campusFormation']);
 
-        // Cohortes — routes statiques AVANT le resource pour éviter que {cohort} capture ces segments
-        Route::get('cohorts/create', [CohortController::class, 'create'])->name('cohorts.create');
-        Route::get('cohorts/import/template', [CohortController::class, 'downloadImportTemplate'])->name('cohorts.import.template');
-        Route::resource('cohorts', CohortController::class)
-            ->except(['create'])
-            ->names('cohorts');
-        Route::post('cohorts/{cohort}/enroll', [CohortController::class, 'enrollLearners'])->name('cohorts.enroll');
-        Route::post('cohorts/{cohort}/learners', [CohortController::class, 'storeLearner'])->name('cohorts.learners.store');
-        Route::post('cohorts/{cohort}/import', [CohortController::class, 'importLearners'])->name('cohorts.import');
-        Route::post('cohorts/{cohort}/learners/{learner}', [CohortController::class, 'updateLearner'])->name('cohorts.learners.update');
-        Route::delete('cohorts/{cohort}/learners/{learner}', [CohortController::class, 'removeLearner'])->name('cohorts.learners.remove');
-        Route::delete('cohorts/{cohort}/learners', [CohortController::class, 'removeLearners'])->name('cohorts.learners.remove-bulk');
-        Route::patch('cohorts/{cohort}/close', [CohortController::class, 'close'])->name('cohorts.close');
+        // ── Formations (catalogue) ──────────────────────────────────────────
+        Route::middleware('permission:campus.formations.view,campus.formations.create,campus.formations.update,campus.formations.delete')
+            ->group(function () {
+                Route::resource('formations', CampusFormationController::class)
+                    ->names('formations')
+                    ->parameters(['formations' => 'campusFormation']);
+            });
 
-        // Finance — tableau de bord global
-        Route::get('finance', [CampusFinanceController::class, 'index'])->name('finance.index');
+        // ── Cohortes — routes littérales SANS paramètre (doivent précéder {cohort}) ──
+        // Règle Laravel : les routes statiques ('create', 'import/template') doivent être
+        // enregistrées avant les routes paramétrées ({cohort}) pour éviter le conflit.
+        Route::middleware('permission:campus.cohorts.create,campus.cohorts.update,campus.cohorts.delete,campus.cohorts.close')
+            ->group(function () {
+                Route::get('cohorts/create', [CohortController::class, 'create'])->name('cohorts.create');
+                Route::get('cohorts/import/template', [CohortController::class, 'downloadImportTemplate'])->name('cohorts.import.template');
+                Route::post('cohorts', [CohortController::class, 'store'])->name('cohorts.store');
+            });
 
-        // Paiements par cohorte
-        Route::get('cohorts/{cohort}/payments', [PaymentController::class, 'index'])->name('payments.index');
-        Route::post('cohorts/{cohort}/payments/schedule', [PaymentController::class, 'generateSchedule'])->name('payments.schedule');
-        Route::post('cohorts/{cohort}/payments', [PaymentController::class, 'store'])->name('payments.store');
-        Route::patch('payments/{payment}/mark-paid', [PaymentController::class, 'markPaid'])->name('payments.mark-paid');
-        Route::delete('payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
+        // ── Cohortes — consultation (cohort managers + workforce managers) ─────
+        // Les deux profils ont besoin de voir la liste et le détail des cohortes
+        Route::middleware('permission:campus.cohorts.view,campus.cohorts.create,campus.cohorts.update,campus.cohorts.close,campus.cohorts.delete')
+            ->group(function () {
+                Route::get('cohorts', [CohortController::class, 'index'])->name('cohorts.index');
+                Route::get('cohorts/{cohort}', [CohortController::class, 'show'])->name('cohorts.show');
+            });
+
+        // ── Cohortes — gestion CRUD paramétrée ──────────────────────────────────────
+        Route::middleware('permission:campus.cohorts.create,campus.cohorts.update,campus.cohorts.delete,campus.cohorts.close')
+            ->group(function () {
+                Route::get('cohorts/{cohort}/edit', [CohortController::class, 'edit'])->name('cohorts.edit');
+                Route::put('cohorts/{cohort}', [CohortController::class, 'update'])->name('cohorts.update');
+                Route::patch('cohorts/{cohort}', [CohortController::class, 'update']);
+                Route::delete('cohorts/{cohort}', [CohortController::class, 'destroy'])->name('cohorts.destroy');
+                Route::patch('cohorts/{cohort}/close', [CohortController::class, 'close'])->name('cohorts.close');
+                Route::post('cohorts/{cohort}/import', [CohortController::class, 'importLearners'])->name('cohorts.import');
+            });
+
+        // ── Workforce — gestion des apprenants dans les cohortes ─────────────
+        // Séparé : avoir workforce ne donne PAS accès à la gestion des cohortes
+        Route::middleware('permission:campus.workforce.view,campus.workforce.enroll,campus.workforce.remove,campus.workforce.move')
+            ->group(function () {
+                Route::post('cohorts/{cohort}/enroll', [CohortController::class, 'enrollLearners'])->name('cohorts.enroll');
+                Route::post('cohorts/{cohort}/learners', [CohortController::class, 'storeLearner'])->name('cohorts.learners.store');
+                Route::post('cohorts/{cohort}/learners/{learner}', [CohortController::class, 'updateLearner'])->name('cohorts.learners.update');
+                Route::delete('cohorts/{cohort}/learners/{learner}', [CohortController::class, 'removeLearner'])->name('cohorts.learners.remove');
+                Route::delete('cohorts/{cohort}/learners', [CohortController::class, 'removeLearners'])->name('cohorts.learners.remove-bulk');
+                Route::post('cohorts/{cohort}/learners/{learner}/move', [CohortController::class, 'moveLearner'])->name('cohorts.learners.move');
+            });
+
+        // ── Finance ─────────────────────────────────────────────────────────
+        Route::middleware('permission:campus.finance.view,campus.finance.collect,campus.finance.manage,campus.finance.dashboard')
+            ->group(function () {
+                Route::get('finance', [CampusFinanceController::class, 'index'])->name('finance.index');
+                Route::get('cohorts/{cohort}/payments', [PaymentController::class, 'index'])->name('payments.index');
+                Route::post('cohorts/{cohort}/payments/schedule', [PaymentController::class, 'generateSchedule'])->name('payments.schedule');
+                Route::post('cohorts/{cohort}/payments/schedule-global', [PaymentController::class, 'generateGlobalSchedule'])->name('payments.schedule-global');
+                Route::post('cohorts/{cohort}/payments', [PaymentController::class, 'store'])->name('payments.store');
+                Route::patch('payments/{payment}/mark-paid', [PaymentController::class, 'markPaid'])->name('payments.mark-paid');
+                Route::get('payments/{payment}/receipt', [PaymentController::class, 'receipt'])->name('payments.receipt');
+                Route::get('payments/{payment}/receipt/download', [PaymentController::class, 'receiptDownload'])->name('payments.receipt.download');
+                Route::delete('payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
+            });
     });
 
     // Projects
     Route::resource("projects", ProjectController::class);
+    Route::patch("projects/{project}/partners", [ProjectController::class, "syncPartners"])->name("projects.partners.sync");
 
     // Partners (configuration)
     Route::resource("partners", PartnerController::class)->except(["show"]);
@@ -145,6 +181,7 @@ Route::middleware("auth")->group(function () {
         "projects.formations",
         FormationController::class,
     )->shallow();
+    Route::patch("formations/{formation}/referentiel", [FormationController::class, "assignReferentiel"])->name("formations.referentiel.assign");
 
     // Import Excel — must be declared BEFORE Route::resource('learners') to avoid
     // the {learner} wildcard swallowing /learners/import and /learners/import/template
@@ -221,8 +258,11 @@ Route::middleware("auth")->group(function () {
         "edit",
     ]);
 
-    // Trainers
-    Route::resource("trainers", TrainerController::class);
+    // Trainers (lecture + gestion des affectations ; création/édition/suppression du compte via Utilisateurs)
+    Route::resource("trainers", TrainerController::class)->only([
+        "index",
+        "show",
+    ]);
     Route::post("trainers/{trainer}/assign-formation", [
         TrainerController::class,
         "assignFormation",
@@ -241,44 +281,58 @@ Route::middleware("auth")->group(function () {
     );
 
     // Configuration hub
-    Route::get("configuration", [
-        ConfigurationController::class,
-        "index",
-    ])->name("configuration");
+    Route::middleware('permission:configuration.view,configuration.manage')->group(function () {
+        Route::get("configuration", [
+            ConfigurationController::class,
+            "index",
+        ])->name("configuration");
+    });
 
-    Route::resource(
-        "trainer-profiles",
-        TrainerProfileController::class,
-    )->except(["create", "edit", "show"]);
+    Route::middleware('permission:configuration.manage')->group(function () {
+        Route::resource(
+            "trainer-profiles",
+            TrainerProfileController::class,
+        )->except(["create", "edit", "show"]);
 
-    Route::resource(
-        "education-levels",
-        EducationLevelController::class,
-    )->except(["create", "edit", "show"]);
+        Route::resource(
+            "education-levels",
+            EducationLevelController::class,
+        )->except(["create", "edit", "show"]);
 
-    Route::resource(
-        "age-ranges",
-        AgeRangeController::class,
-    )->except(["create", "edit", "show"]);
+        Route::resource(
+            "age-ranges",
+            AgeRangeController::class,
+        )->except(["create", "edit", "show"]);
 
-    Route::resource(
-        "vulnerabilities",
-        VulnerabilityController::class,
-    )->except(["create", "edit", "show"]);
+        Route::resource(
+            "vulnerabilities",
+            VulnerabilityController::class,
+        )->except(["create", "edit", "show"]);
 
-    Route::resource(
-        "last-diplomas",
-        LastDiplomaController::class,
-    )->except(["create", "edit", "show"]);
+        Route::resource(
+            "last-diplomas",
+            LastDiplomaController::class,
+        )->except(["create", "edit", "show"]);
+    });
 
     // Statistics
-    Route::get("statistics", [StatisticsController::class, "index"])->name(
-        "statistics.index",
-    );
-    Route::get("api/statistics/formation/{formation}/learners", [
-        StatisticsController::class,
-        "learners",
-    ])->name("api.statistics.learners");
+    Route::middleware('permission:statistics.view')->group(function () {
+        Route::get("statistics", [StatisticsController::class, "index"])->name(
+            "statistics.index",
+        );
+        Route::get("api/statistics/formation/{formation}/learners", [
+            StatisticsController::class,
+            "learners",
+        ])->name("api.statistics.learners");
+        Route::get("statistics/projects/{project}/export", [
+            StatisticsController::class,
+            "exportProject",
+        ])->name("statistics.projects.export");
+        Route::get("statistics/formations/{formation}/export", [
+            StatisticsController::class,
+            "exportFormation",
+        ])->name("statistics.formations.export");
+    });
 
     // API pour récupérer les formations d'un projet (JSON)
     Route::get("api/projects/{project}/formations", [
@@ -417,66 +471,92 @@ Route::middleware("auth")->group(function () {
 
     // Communication - Emails & WhatsApp
     Route::prefix("communication")->group(function () {
-        Route::get("/emails", [EmailController::class, "index"])->name(
-            "emails.index",
-        );
-        Route::get("/emails/sent", [EmailController::class, "sent"])->name(
-            "emails.sent",
-        );
-        Route::get("/emails/compose", [
-            EmailController::class,
-            "compose",
-        ])->name("emails.compose");
-        Route::post("/emails", [EmailController::class, "store"])->name(
-            "emails.store",
-        );
-        Route::get("/emails/sent/{email}", [
-            EmailController::class,
-            "showSent",
-        ])->name("emails.sent.show");
-        Route::get("/emails/thread/{threadId}", [
-            EmailController::class,
-            "show",
-        ])->name("emails.show");
-        Route::post("/emails/{email}/reply", [
-            EmailController::class,
-            "reply",
-        ])->name("emails.reply");
-        Route::post("/emails/{email}/forward", [
-            EmailController::class,
-            "forward",
-        ])->name("emails.forward");
-        Route::post("/emails/sync", [EmailController::class, "sync"])->name(
-            "emails.sync",
-        );
-        Route::patch("/emails/{email}/archive", [
-            EmailController::class,
-            "archive",
-        ])->name("emails.archive");
-        Route::patch("/emails/{email}/unarchive", [
-            EmailController::class,
-            "unarchive",
-        ])->name("emails.unarchive");
-        Route::delete("/emails/{email}", [
-            EmailController::class,
-            "destroy",
-        ])->name("emails.destroy");
-        Route::get("/emails/attachments/{attachment}/download", [
-            EmailController::class,
-            "downloadAttachment",
-        ])->name("emails.attachments.download");
-        // WhatsApp
-        Route::get("/whatsapp", [EmailController::class, "whatsapp"])->name(
-            "whatsapp.index",
-        );
-        Route::post("/whatsapp/send", [
-            EmailController::class,
-            "sendWhatsAppBulk",
-        ])->name("whatsapp.send");
-        Route::get("/whatsapp/history", [
-            EmailController::class,
-            "whatsappHistory",
-        ])->name("whatsapp.history");
+        // ── Emails — consultation ──
+        Route::middleware('permission:communication.view,communication.send,communication.manage')->group(function () {
+            Route::get("/emails", [EmailController::class, "index"])->name(
+                "emails.index",
+            );
+            Route::get("/emails/sent", [EmailController::class, "sent"])->name(
+                "emails.sent",
+            );
+            Route::get("/emails/sent/{email}", [
+                EmailController::class,
+                "showSent",
+            ])->name("emails.sent.show");
+            Route::get("/emails/thread/{threadId}", [
+                EmailController::class,
+                "show",
+            ])->name("emails.show");
+            Route::get("/emails/attachments/{attachment}/download", [
+                EmailController::class,
+                "downloadAttachment",
+            ])->name("emails.attachments.download");
+        });
+
+        // ── Emails — envoi ──
+        Route::middleware('permission:communication.send,communication.manage')->group(function () {
+            Route::get("/emails/compose", [
+                EmailController::class,
+                "compose",
+            ])->name("emails.compose");
+            Route::post("/emails", [EmailController::class, "store"])->name(
+                "emails.store",
+            );
+            Route::post("/emails/{email}/reply", [
+                EmailController::class,
+                "reply",
+            ])->name("emails.reply");
+            Route::post("/emails/{email}/forward", [
+                EmailController::class,
+                "forward",
+            ])->name("emails.forward");
+        });
+
+        // ── Emails — gestion ──
+        Route::middleware('permission:communication.manage')->group(function () {
+            Route::post("/emails/sync", [EmailController::class, "sync"])->name(
+                "emails.sync",
+            );
+            Route::patch("/emails/{email}/archive", [
+                EmailController::class,
+                "archive",
+            ])->name("emails.archive");
+            Route::patch("/emails/{email}/unarchive", [
+                EmailController::class,
+                "unarchive",
+            ])->name("emails.unarchive");
+            Route::delete("/emails/{email}", [
+                EmailController::class,
+                "destroy",
+            ])->name("emails.destroy");
+        });
+
+        // ── WhatsApp — consultation ──
+        Route::middleware('permission:whatsapp.view,whatsapp.send,whatsapp.manage')->group(function () {
+            Route::get("/whatsapp", [EmailController::class, "whatsapp"])->name("whatsapp.index");
+            Route::get("/whatsapp/status", [EmailController::class, "whatsappStatus"])->name("whatsapp.status");
+            Route::get("/whatsapp/messages", [EmailController::class, "whatsappMessages"])->name("whatsapp.messages");
+            Route::get("/whatsapp/broadcasts", [EmailController::class, "whatsappBroadcasts"])->name("whatsapp.broadcasts");
+            Route::get("/whatsapp/broadcasts/{broadcastId}/recipients", [EmailController::class, "whatsappBroadcastRecipients"])->name("whatsapp.broadcast.recipients");
+            Route::get("/whatsapp/thread/{learnerId}", [EmailController::class, "whatsappThread"])->name("whatsapp.thread");
+            Route::post("/whatsapp/thread/{learnerId}/read", [EmailController::class, "markThreadRead"])->name("whatsapp.thread.read");
+            Route::get("/whatsapp/media/{filename}", [EmailController::class, "serveWhatsAppMedia"])->name("whatsapp.media")->where('filename', '.+');
+            Route::get("/whatsapp/diag", [EmailController::class, "whatsappDiag"])->name("whatsapp.diag");
+        });
+
+        // ── WhatsApp — envoi ──
+        Route::middleware('permission:whatsapp.send,whatsapp.manage')->group(function () {
+            Route::post("/whatsapp/send", [EmailController::class, "sendWhatsAppBulk"])->name("whatsapp.send");
+            Route::post("/whatsapp/reply", [EmailController::class, "replyWhatsApp"])->name("whatsapp.reply");
+        });
+
+        // ── WhatsApp — gestion ──
+        Route::middleware('permission:whatsapp.manage')->group(function () {
+            Route::post("/whatsapp/sync-replies", [EmailController::class, "whatsappSyncReplies"])->name("whatsapp.sync");
+            Route::post("/whatsapp/logout", [EmailController::class, "whatsappLogout"])->name("whatsapp.logout");
+            Route::delete("/whatsapp/broadcasts/{broadcastId}", [EmailController::class, "deleteWhatsAppBroadcast"])->name("whatsapp.broadcast.delete");
+            Route::delete("/whatsapp/messages/{id}", [EmailController::class, "deleteWhatsAppMessage"])->name("whatsapp.message.delete");
+        });
     });
 
     // Notifications
@@ -502,7 +582,8 @@ Route::middleware("auth")->group(function () {
         Route::post('/chatbot/message', [AiChatController::class, 'message'])->name('chatbot.message');
         Route::get('/chatbot/status', [AiChatController::class, 'status'])->name('chatbot.status');
     });
-    Route::post('/configuration/ai-key', [AiChatController::class, 'saveApiKey'])->name('configuration.ai-key');
-    Route::post('/configuration/whatsapp', [ConfigurationController::class, 'saveWhatsAppConfig'])->name('configuration.whatsapp');
-    Route::post('/configuration/whatsapp-meta', [ConfigurationController::class, 'saveMetaWhatsAppConfig'])->name('configuration.whatsapp-meta');
+    Route::middleware('permission:configuration.manage')->group(function () {
+        Route::post('/configuration/ai-key', [AiChatController::class, 'saveApiKey'])->name('configuration.ai-key');
+        Route::delete('/configuration/ai-key', [AiChatController::class, 'removeApiKey'])->name('configuration.ai-key.remove');
+    });
 });

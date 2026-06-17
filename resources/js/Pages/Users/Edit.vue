@@ -2,6 +2,7 @@
 import { useForm, Link } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import PermissionPicker from '@/Components/PermissionPicker.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -33,10 +34,11 @@ interface TrainerProfile {
 }
 
 interface TrainerData {
-    profile_id: string | null
+    id: string
     phone: string | null
     phone2: string | null
     cv_path: string | null
+    profile_id: string | null
 }
 
 const props = defineProps<{
@@ -59,48 +61,35 @@ const form = useForm({
     phone:       props.trainerData?.phone ?? '',
     phone2:      props.trainerData?.phone2 ?? '',
     cv:          null as File | null,
+    remove_cv:   false,
 })
 
-const showPermissions = computed(() => form.role === 'admin')
-const showTrainer     = computed(() => form.role === 'trainer')
+const showPermissions    = computed(() => form.role === 'admin')
+const showTrainerFields  = computed(() => form.role === 'trainer')
+
+const cvFileName = ref<string | null>(null)
+const existingCv = ref(props.trainerData?.cv_path ?? null)
 
 const onCvChange = (e: Event) => {
-    form.cv = (e.target as HTMLInputElement).files?.[0] ?? null
+    const file = (e.target as HTMLInputElement).files?.[0] ?? null
+    form.cv = file
+    cvFileName.value = file?.name ?? null
+}
+
+const removeCv = () => {
+    form.cv = null
+    cvFileName.value = null
+}
+
+const removeExistingCv = () => {
+    existingCv.value = null
+    form.remove_cv = true
 }
 
 const submit = () => {
-    form.transform(data => ({ ...data, _method: 'PUT' }))
-        .post(`/users/${props.user.id}`, { forceFormData: true })
+    form.post(`/users/${props.user.id}?_method=PUT`, { forceFormData: true })
 }
 
-const groupedPermissions = computed(() => {
-    const groups: Record<string, Permission[]> = {}
-    for (const p of props.permissions) {
-        const g = p.group ?? 'Autres'
-        if (!groups[g]) groups[g] = []
-        groups[g].push(p)
-    }
-    return groups
-})
-
-const isSelected = (id: number) => form.permissions.includes(id)
-
-const togglePermission = (id: number) => {
-    const idx = form.permissions.indexOf(id)
-    if (idx === -1) {
-        form.permissions = [...form.permissions, id]
-    } else {
-        form.permissions = form.permissions.filter(p => p !== id)
-    }
-}
-
-const selectAllPermissions = () => {
-    form.permissions = props.permissions.map(p => p.id)
-}
-
-const deselectAllPermissions = () => {
-    form.permissions = []
-}
 
 </script>
 
@@ -108,15 +97,16 @@ const deselectAllPermissions = () => {
     <div class="max-w-3xl mx-auto space-y-xl">
 
         <!-- En-tête -->
-        <div>
-            <Link href="/users" class="back-link">
-                <span class="material-symbols-outlined" style="font-size:16px">arrow_back</span>
-                Retour à la liste
+        <div class="flex items-center gap-md">
+            <Link href="/users" class="icon-back">
+                <span class="material-symbols-outlined">arrow_back</span>
             </Link>
-            <h1 class="text-h1 font-bold text-on-surface mt-sm">Modifier l'utilisateur</h1>
-            <p class="text-body-md text-secondary mt-xs">
-                {{ user.last_name }} {{ user.first_name }} · {{ user.email }}
-            </p>
+            <div>
+                <h1 class="text-h1 font-bold text-on-surface">Modifier l'utilisateur</h1>
+                <p class="text-body-md text-secondary mt-xs">
+                    {{ user.last_name }} {{ user.first_name }} · {{ user.email }}
+                </p>
+            </div>
         </div>
 
         <!-- Formulaire -->
@@ -171,94 +161,94 @@ const deselectAllPermissions = () => {
                     <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">info</span>
                     Définissez les permissions de cet Administrateur ci-dessous.
                 </div>
-                <div v-if="form.role === 'trainer'" class="hint mt-sm">
-                    <span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">info</span>
-                    Complétez les informations du formateur ci-dessous.
-                </div>
             </div>
 
-            <!-- Informations Formateur -->
-            <div v-if="showTrainer" class="section">
-                <h2 class="section-title">Informations Formateur</h2>
-                <div class="grid-2">
-                    <div class="field">
-                        <label class="label">Téléphone principal</label>
-                        <input v-model="form.phone" type="text" class="input" placeholder="+226 XX XX XX XX"
-                            :class="{ 'input-error': form.errors.phone }" />
-                        <p v-if="form.errors.phone" class="error-msg">{{ form.errors.phone }}</p>
+            <!-- Champs Formateur -->
+            <div v-if="showTrainerFields" class="section space-y-md">
+                <h2 class="section-title">Informations du formateur</h2>
+
+                <!-- Profil -->
+                <div class="field">
+                    <div class="flex items-center justify-between">
+                        <label class="label">Profil</label>
+                        <Link href="/trainer-profiles" class="config-link" target="_blank">
+                            <span class="material-symbols-outlined" style="font-size:14px">settings</span>
+                            Configurer les profils
+                        </Link>
                     </div>
-                    <div class="field">
-                        <label class="label">Téléphone secondaire</label>
-                        <input v-model="form.phone2" type="text" class="input" placeholder="+226 XX XX XX XX" />
+                    <select v-model="form.profile_id" class="input" :class="{ 'input-error': form.errors.profile_id }">
+                        <option value="">Sélectionner un profil</option>
+                        <option v-for="p in props.trainerProfiles" :key="p.id" :value="p.id">{{ p.name }}</option>
+                    </select>
+                    <p v-if="form.errors.profile_id" class="error-msg">{{ form.errors.profile_id }}</p>
+                </div>
+
+                <!-- Téléphones -->
+                <div>
+                    <p class="section-label">Contacts</p>
+                    <div class="grid-2 mt-sm">
+                        <div class="field">
+                            <label class="label">Téléphone 1</label>
+                            <input v-model="form.phone" type="tel" class="input" :class="{ 'input-error': form.errors.phone }" placeholder="+226 XX XX XX XX" />
+                            <p v-if="form.errors.phone" class="error-msg">{{ form.errors.phone }}</p>
+                        </div>
+                        <div class="field">
+                            <label class="label">Téléphone 2</label>
+                            <input v-model="form.phone2" type="tel" class="input" :class="{ 'input-error': form.errors.phone2 }" placeholder="+226 XX XX XX XX" />
+                            <p v-if="form.errors.phone2" class="error-msg">{{ form.errors.phone2 }}</p>
+                        </div>
                     </div>
                 </div>
-                <div class="grid-2 mt-md">
-                    <div class="field">
-                        <div class="flex items-center justify-between">
-                            <label class="label">Profil / Spécialité</label>
-                            <a href="/configuration" target="_blank" class="config-link">
-                                <span class="material-symbols-outlined" style="font-size:13px">settings</span>
-                                Configurer
-                            </a>
-                        </div>
-                        <select v-model="form.profile_id" class="input" :class="{ 'input-error': form.errors.profile_id }">
-                            <option value="">Sélectionner</option>
-                            <option v-for="p in trainerProfiles" :key="p.id" :value="p.id">{{ p.name }}</option>
-                        </select>
-                        <p v-if="form.errors.profile_id" class="error-msg">{{ form.errors.profile_id }}</p>
+
+                <!-- CV -->
+                <div class="field">
+                    <label class="label">CV</label>
+
+                    <!-- CV existant -->
+                    <div v-if="existingCv && !cvFileName" class="cv-selected">
+                        <span class="material-symbols-outlined cv-icon">description</span>
+                        <span class="cv-name">CV existant</span>
+                        <a :href="`/storage/${existingCv}`" target="_blank" class="cv-view" title="Voir">
+                            <span class="material-symbols-outlined" style="font-size:16px">visibility</span>
+                        </a>
+                        <button type="button" class="cv-remove" @click="removeExistingCv" title="Supprimer">
+                            <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                        </button>
                     </div>
-                    <div class="field">
-                        <label class="label">CV (PDF, Word)</label>
-                        <div v-if="trainerData?.cv_path" class="cv-existing">
-                            <span class="material-symbols-outlined" style="font-size:16px;color:#E5004C">picture_as_pdf</span>
-                            <a :href="`/storage/${trainerData.cv_path}`" target="_blank" class="cv-link">
-                                Voir le CV actuel
-                            </a>
-                            <span class="cv-replace-hint"> pour remplacer, sélectionnez un nouveau fichier ci-dessous</span>
-                        </div>
-                        <input type="file" accept=".pdf,.doc,.docx" @change="onCvChange" class="input file-input" />
-                        <p v-if="form.errors.cv" class="error-msg">{{ form.errors.cv }}</p>
+
+                    <!-- Nouveau CV sélectionné -->
+                    <div v-else-if="cvFileName" class="cv-selected">
+                        <span class="material-symbols-outlined cv-icon">description</span>
+                        <span class="cv-name">{{ cvFileName }}</span>
+                        <button type="button" class="cv-remove" @click="removeCv" title="Retirer">
+                            <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                        </button>
                     </div>
+
+                    <!-- Upload nouveau CV -->
+                    <label v-else class="cv-upload" :class="{ 'upload-error': form.errors.cv }">
+                        <span class="material-symbols-outlined" style="font-size:28px;color:#adb5bd">upload_file</span>
+                        <span class="cv-upload-text">Cliquer pour uploader un nouveau CV</span>
+                        <span class="cv-upload-hint">PDF, DOC, DOCX · 5 Mo max</span>
+                        <input type="file" accept=".pdf,.doc,.docx" class="sr-only" @change="onCvChange" />
+                    </label>
+
+                    <p v-if="form.errors.cv" class="error-msg">{{ form.errors.cv }}</p>
+                </div>
+
+                <!-- Notice -->
+                <div class="notice">
+                    <span class="material-symbols-outlined" style="font-size:18px;color:#2563eb">info</span>
+                    <p class="text-body-sm" style="color:#1d4ed8">
+                        Le formateur n'a accès qu'à la saisie des présences pour les formations qui lui sont assignées.
+                    </p>
                 </div>
             </div>
 
             <!-- Permissions (Admin uniquement) -->
             <div v-if="showPermissions" class="section">
-                <div class="perm-panel">
-                    <div class="perm-panel-header">
-                        <div>
-                            <h2 class="section-title" style="margin-bottom:0">Permissions</h2>
-                            <p class="perm-count">{{ form.permissions.length }} / {{ props.permissions.length }} sélectionnée{{ form.permissions.length > 1 ? 's' : '' }}</p>
-                        </div>
-                        <div class="perm-bulk-actions">
-                            <button type="button" @click="selectAllPermissions" class="perm-bulk-btn">Tout cocher</button>
-                            <button type="button" @click="deselectAllPermissions" class="perm-bulk-btn">Tout décocher</button>
-                        </div>
-                    </div>
-                    <div class="perm-groups">
-                        <div v-for="(perms, group) in groupedPermissions" :key="group" class="perm-group-card">
-                            <div class="perm-group-card-header">
-                                <h3 class="perm-group-card-title">{{ group }}</h3>
-                                <span class="perm-group-badge">{{ perms.filter(p => isSelected(p.id)).length }} / {{ perms.length }}</span>
-                            </div>
-                            <div class="perm-chips">
-                                <div
-                                    v-for="p in perms"
-                                    :key="p.id"
-                                    class="perm-chip"
-                                    :class="{ 'perm-chip-selected': isSelected(p.id) }"
-                                    @click.prevent="togglePermission(p.id)"
-                                >
-                                    <span class="perm-chip-check">
-                                        <span v-if="isSelected(p.id)" class="material-symbols-outlined" style="font-size:12px">check</span>
-                                    </span>
-                                    <span class="perm-chip-name">{{ p.name }}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <p v-if="form.errors.permissions" class="error-msg">{{ form.errors.permissions }}</p>
-                </div>
+                <PermissionPicker v-model="form.permissions" :permissions="permissions" />
+                <p v-if="form.errors.permissions" class="error-msg mt-sm">{{ form.errors.permissions }}</p>
             </div>
 
             <!-- Actions -->
@@ -276,6 +266,22 @@ const deselectAllPermissions = () => {
 </template>
 
 <style scoped>
+.icon-back {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1.5px solid #1F3A4D; color: #1F3A4D; background: transparent;
+    text-decoration: none; flex-shrink: 0; transition: background 0.15s, color 0.15s;
+}
+.icon-back:hover { background: #1F3A4D; color: #fff; }
+
+.page-header-icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+    background: linear-gradient(135deg, #1F3A4D 0%, #2d5a7b 100%);
+    color: #fff;
+}
+.page-header-icon .material-symbols-outlined { font-size: 24px; }
+
 .back-link {
     display: inline-flex;
     align-items: center;
@@ -526,48 +532,59 @@ select.input {
 
 .mt-sm { margin-top: 8px; }
 .mt-md { margin-top: 16px; }
+.space-y-md > * + * { margin-top: 16px; }
 
-.file-input {
-    padding: 7px 14px;
-    cursor: pointer;
-    color: #515f74;
+.section-label {
+    font-size: 11px; font-weight: 700; color: #adb5bd;
+    text-transform: uppercase; letter-spacing: 0.06em;
 }
 
 .config-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 3px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #515f74;
-    text-decoration: none;
-    transition: color 0.15s;
+    display: inline-flex; align-items: center; gap: 3px;
+    font-size: 11px; font-weight: 600; color: #515f74;
+    text-decoration: none; transition: color 0.15s;
 }
 .config-link:hover { color: #E5004C; }
 
-.cv-existing {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    background: #fff5f7;
-    border: 1px solid #fcd5e0;
-    padding: 6px 10px;
-    border-radius: 6px;
-    margin-bottom: 6px;
-    flex-wrap: wrap;
+.cv-upload {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px; padding: 24px 20px;
+    border: 2px dashed #e0e3e5; border-radius: 10px;
+    cursor: pointer; transition: border-color 0.2s, background 0.2s; background: #fafafa;
 }
-.cv-link {
-    color: #E5004C;
-    font-weight: 600;
-    text-decoration: none;
-    font-size: 12px;
+.cv-upload:hover { border-color: #E5004C; background: #fff5f8; }
+.upload-error { border-color: #ba1a1a; }
+.cv-upload-text { font-size: 14px; font-weight: 500; color: #515f74; }
+.cv-upload-hint { font-size: 12px; color: #adb5bd; }
+
+.cv-selected {
+    display: flex; align-items: center; gap: 10px;
+    padding: 12px 14px; border: 1px solid #d1fae5;
+    border-radius: 8px; background: #f0fdf4;
 }
-.cv-link:hover { text-decoration: underline; }
-.cv-replace-hint {
-    color: #6b7280;
-    font-size: 12px;
+.cv-icon { font-size: 22px; color: #059669; flex-shrink: 0; }
+.cv-name { flex: 1; font-size: 13px; font-weight: 500; color: #065f46; word-break: break-all; }
+.cv-view {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: rgba(5,150,105,0.12); border: none; cursor: pointer;
+    color: #059669; transition: background 0.15s; flex-shrink: 0; text-decoration: none;
 }
+.cv-view:hover { background: rgba(5,150,105,0.20); }
+.cv-remove {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: rgba(186,26,26,0.08); border: none; cursor: pointer;
+    color: #ba1a1a; transition: background 0.15s; flex-shrink: 0;
+}
+.cv-remove:hover { background: rgba(186,26,26,0.16); }
+
+.notice {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px 16px; background: #eff6ff;
+    border: 1px solid #bfdbfe; border-radius: 8px;
+}
+
 .sr-only {
     position: absolute;
     width: 1px;

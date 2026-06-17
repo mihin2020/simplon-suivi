@@ -131,6 +131,38 @@ function forward() {
     })
 }
 
+function decodeMimeFilename(name: string): string {
+    if (!name || !name.includes('=?')) return name
+    // Coller les mots encodés consécutifs (RFC 2047 : espace entre mots ignoré)
+    const joined = name.replace(/\?=\s+=\?/g, '?==?')
+    return joined.replace(/=\?([^?]+)\?([BQbq])\?([^?]*)\?=/g, (_, charset, enc, text) => {
+        try {
+            if (enc.toUpperCase() === 'Q') {
+                const bytes: number[] = []
+                const s = text.replace(/_/g, ' ')
+                let i = 0
+                while (i < s.length) {
+                    if (s[i] === '=' && i + 2 < s.length) {
+                        bytes.push(parseInt(s.slice(i + 1, i + 3), 16))
+                        i += 3
+                    } else {
+                        bytes.push(s.charCodeAt(i))
+                        i++
+                    }
+                }
+                return new TextDecoder(charset).decode(new Uint8Array(bytes))
+            }
+            if (enc.toUpperCase() === 'B') {
+                const bin = atob(text)
+                const bytes = new Uint8Array(bin.length)
+                for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+                return new TextDecoder(charset).decode(bytes)
+            }
+        } catch { /* nom brut en fallback */ }
+        return text
+    })
+}
+
 function openDownload(id: string) {
     window.location.href = downloadUrl(id)
 }
@@ -217,14 +249,14 @@ function archive(email: any) {
                                 :href="downloadUrl(a.id)"
                                 download
                                 class="attach-card"
-                                :title="`Télécharger ${a.filename}`"
-                                @click.prevent="isImage(a.mime_type) ? (imgPreview = { src: downloadUrl(a.id), name: a.filename }) : openDownload(a.id)"
+                                :title="`Télécharger ${decodeMimeFilename(a.filename)}`"
+                                @click.prevent="isImage(a.mime_type) ? (imgPreview = { src: downloadUrl(a.id), name: decodeMimeFilename(a.filename) }) : openDownload(a.id)"
                             >
                                 <span class="attach-icon material-symbols-outlined" :style="{ color: fileColor(a.mime_type) }">
                                     {{ fileIcon(a.mime_type) }}
                                 </span>
                                 <div class="attach-info">
-                                    <span class="attach-name">{{ a.filename }}</span>
+                                    <span class="attach-name">{{ decodeMimeFilename(a.filename) }}</span>
                                     <span class="attach-size">{{ fmtSize(a.size) }}</span>
                                 </div>
                                 <span class="attach-dl material-symbols-outlined">download</span>
@@ -458,7 +490,12 @@ function archive(email: any) {
 
 .attach-icon { font-size: 22px; flex-shrink: 0; }
 .attach-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.attach-name { font-size: 13px; font-weight: 600; color: #191c1e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.attach-name {
+    font-size: 13px; font-weight: 600; color: #191c1e;
+    overflow: hidden; text-overflow: ellipsis;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    word-break: break-all;
+}
 .attach-size { font-size: 11px; color: #9aaabb; }
 .attach-dl   { font-size: 18px; color: #c7cdd4; opacity: 0; transition: all 0.15s; flex-shrink: 0; }
 
