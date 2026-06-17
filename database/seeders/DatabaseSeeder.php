@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             EducationLevelSeeder::class,
             PermissionSeeder::class,
+            AgeRangeSeeder::class
         ]);
 
         User::firstOrCreate(
