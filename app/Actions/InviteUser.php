@@ -6,7 +6,6 @@ use App\Enums\UserRole;
 use App\Mail\UserInvitation;
 use App\Models\ActivationToken;
 use App\Models\User;
-use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
@@ -47,20 +46,7 @@ class InviteUser
             'expires_at' => now()->addHours(72),
         ]);
 
-        // Envoi de l'email en queue (non bloquant)
-        Mail::to($email)->queue(
-            (new UserInvitation($user, $plainToken))->onConnection('database')
-        );
-
-        // Traite les jobs en attente après l'envoi de la réponse HTTP
-        dispatch(function () {
-            Artisan::call('queue:work', [
-                '--once'           => true,
-                '--queue'          => 'default',
-                '--tries'          => 3,
-                '--no-interaction' => true,
-            ]);
-        })->afterResponse();
+        Mail::to($email)->send(new UserInvitation($user, $plainToken));
 
         return $user;
     }

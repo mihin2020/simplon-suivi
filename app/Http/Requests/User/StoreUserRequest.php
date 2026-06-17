@@ -25,10 +25,10 @@ class StoreUserRequest extends FormRequest
             'role'          => ['required', Rule::enum(UserRole::class)->only([UserRole::Admin, UserRole::Trainer])],
             'permissions'   => ['nullable', 'array'],
             'permissions.*' => ['integer', 'exists:permissions,id'],
-            'profile_id'    => [$isTrainer ? 'nullable' : 'prohibited', 'uuid', 'exists:trainer_profiles,id'],
-            'phone'         => [$isTrainer ? 'nullable' : 'prohibited', 'string', 'max:20'],
-            'phone2'        => [$isTrainer ? 'nullable' : 'prohibited', 'string', 'max:20'],
-            'cv'            => [$isTrainer ? 'nullable' : 'prohibited', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
+            'profile_id'    => $isTrainer ? ['nullable', 'uuid', 'exists:trainer_profiles,id'] : ['nullable', 'prohibited'],
+            'phone'         => $isTrainer ? ['nullable', 'string', 'max:20'] : ['nullable', 'prohibited'],
+            'phone2'        => $isTrainer ? ['nullable', 'string', 'max:20'] : ['nullable', 'prohibited'],
+            'cv'            => $isTrainer ? ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'] : ['nullable', 'prohibited'],
         ];
     }
 
