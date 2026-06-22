@@ -125,6 +125,8 @@
         height: 30px;
     }
     table.att-table tr:nth-child(even) td { background: #fafbfc; }
+    table.att-table tr.row-alert td { background: #fee2e2 !important; }
+    table.att-table tr.row-alert td.td-name { color: #991b1b; }
 
     .code-badge {
         display: inline-block;
@@ -259,7 +261,11 @@
             </thead>
             <tbody>
                 @foreach($rows as $idx => $row)
-                    <tr>
+                    @php
+                        $isAlert = $absenceAlertThreshold
+                            && ($row['absences'] ?? 0) >= $absenceAlertThreshold;
+                    @endphp
+                    <tr @class(['row-alert' => $isAlert])>
                         <td class="td-num">{{ str_pad($idx + 1, 2, '0', STR_PAD_LEFT) }}</td>
                         <td class="td-name">{{ $row['full_name'] }}</td>
                         @foreach($chunkDates as $day)

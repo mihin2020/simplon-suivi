@@ -2,12 +2,14 @@
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { computed, ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import PartnerCategoryBadge from '@/Components/PartnerCategoryBadge.vue'
 
 defineOptions({ layout: AdminLayout })
 
 interface Partner {
     id: string
     name: string
+    category: string
 }
 
 const props = defineProps<{
@@ -160,6 +162,7 @@ const submit = () => form.post('/projects')
                     >
                         <span class="material-symbols-outlined chip-icon">handshake</span>
                         {{ p.name }}
+                        <PartnerCategoryBadge :category="p.category" size="sm" />
                         <button type="button" class="chip-remove" @click="removePartner(p.id)" title="Retirer">
                             <span class="material-symbols-outlined" style="font-size:14px">close</span>
                         </button>
@@ -205,6 +208,7 @@ const submit = () => form.post('/projects')
                                 </div>
                                 <div>
                                     <div class="partner-option-name">{{ p.name }}</div>
+                                    <PartnerCategoryBadge :category="p.category" size="sm" />
                                 </div>
                             </div>
                             <span v-if="isSelected(p.id)" class="material-symbols-outlined check-icon">check_circle</span>

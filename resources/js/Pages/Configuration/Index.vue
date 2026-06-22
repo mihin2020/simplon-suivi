@@ -10,14 +10,19 @@ interface EducationLevel { id: string; name: string }
 interface AgeRange { id: number; name: string; age_min: number; age_max: number; order: number }
 interface Vulnerability { id: string; name: string }
 interface LastDiploma { id: string; name: string }
+interface ContractTypeItem { id: string; name: string }
 interface AiConfig { provider: string; model: string; base_url: string; configured: boolean }
+interface AttendanceSettings { absenceAlertThreshold: number | null }
 const props = defineProps<{
     trainerProfiles: Profile[]
     educationLevels: EducationLevel[]
     ageRanges: AgeRange[]
     vulnerabilities: Vulnerability[]
     lastDiplomas: LastDiploma[]
+    internshipContractTypes: ContractTypeItem[]
+    employmentContractTypes: ContractTypeItem[]
     aiConfig: AiConfig
+    attendanceSettings: AttendanceSettings
 }>()
 
 // ── Navigation par onglets ──
@@ -208,6 +213,80 @@ const destroyDipl = (d: LastDiploma) => {
             onSuccess: () => showToast('Diplôme supprimé'),
             onError: (errors) => { if (errors.message) showError(errors.message) }
         })
+    })
+}
+
+// ── Types de contrat stage ──
+const stageTypeCreateForm = useForm({ name: '', context: 'internship' })
+const stageTypeEditingId = ref<string | null>(null)
+const stageTypeEditForm = useForm({ name: '' })
+
+const startStageTypeEdit = (item: ContractTypeItem) => { stageTypeEditingId.value = item.id; stageTypeEditForm.name = item.name }
+const cancelStageTypeEdit = () => { stageTypeEditingId.value = null; stageTypeEditForm.reset() }
+const submitStageTypeCreate = () => {
+    stageTypeCreateForm.post('/contract-types', {
+        onSuccess: () => { stageTypeCreateForm.reset(); stageTypeCreateForm.context = 'internship'; showToast('Type de stage ajouté') },
+        onError: (errors) => { if (errors.message) showError(errors.message) }
+    })
+}
+const submitStageTypeEdit = (id: string) => {
+    stageTypeEditForm.put(`/contract-types/${id}`, {
+        onSuccess: () => { cancelStageTypeEdit(); showToast('Type de stage modifié') },
+        onError: (errors) => { if (errors.message) showError(errors.message) }
+    })
+}
+const destroyStageType = (item: ContractTypeItem) => {
+    askConfirm('Supprimer le type', `Supprimer « ${item.name} » ?`, () => {
+        router.delete(`/contract-types/${item.id}`, {
+            preserveState: true, preserveScroll: true,
+            onSuccess: () => showToast('Type de stage supprimé'),
+            onError: (errors) => { if (errors.message) showError(errors.message) }
+        })
+    })
+}
+
+// ── Types de contrat emploi ──
+const employmentTypeCreateForm = useForm({ name: '', context: 'employment' })
+const employmentTypeEditingId = ref<string | null>(null)
+const employmentTypeEditForm = useForm({ name: '' })
+
+const startEmploymentTypeEdit = (item: ContractTypeItem) => { employmentTypeEditingId.value = item.id; employmentTypeEditForm.name = item.name }
+const cancelEmploymentTypeEdit = () => { employmentTypeEditingId.value = null; employmentTypeEditForm.reset() }
+const submitEmploymentTypeCreate = () => {
+    employmentTypeCreateForm.post('/contract-types', {
+        onSuccess: () => { employmentTypeCreateForm.reset(); employmentTypeCreateForm.context = 'employment'; showToast('Type d\'emploi ajouté') },
+        onError: (errors) => { if (errors.message) showError(errors.message) }
+    })
+}
+const submitEmploymentTypeEdit = (id: string) => {
+    employmentTypeEditForm.put(`/contract-types/${id}`, {
+        onSuccess: () => { cancelEmploymentTypeEdit(); showToast('Type d\'emploi modifié') },
+        onError: (errors) => { if (errors.message) showError(errors.message) }
+    })
+}
+const destroyEmploymentType = (item: ContractTypeItem) => {
+    askConfirm('Supprimer le type', `Supprimer « ${item.name} » ?`, () => {
+        router.delete(`/contract-types/${item.id}`, {
+            preserveState: true, preserveScroll: true,
+            onSuccess: () => showToast('Type d\'emploi supprimé'),
+            onError: (errors) => { if (errors.message) showError(errors.message) }
+        })
+    })
+}
+
+// ── Présences ──
+const attendanceSettingsForm = useForm({
+    absence_alert_threshold: props.attendanceSettings.absenceAlertThreshold ?? '' as number | '',
+})
+const submitAttendanceSettings = () => {
+    attendanceSettingsForm.transform(data => ({
+        absence_alert_threshold: data.absence_alert_threshold === '' ? null : Number(data.absence_alert_threshold),
+    })).post('/configuration/attendance-settings', {
+        onSuccess: () => showToast('Paramètres de présences enregistrés'),
+        onError: (errors) => {
+            const first = Object.values(errors)[0]
+            if (typeof first === 'string') showError(first)
+        },
     })
 }
 </script>
@@ -491,6 +570,126 @@ const destroyDipl = (d: LastDiploma) => {
                 </div>
             </div>
 
+            <!-- Présences -->
+            <div class="cfg-card">
+                <div class="cfg-card-head">
+                    <div class="cfg-card-icon" style="background:#fee2e2;color:#991b1b">
+                        <span class="material-symbols-outlined">fact_check</span>
+                    </div>
+                    <div class="cfg-card-info">
+                        <h2 class="cfg-card-title">Présences</h2>
+                        <p class="cfg-card-sub">Alerte visuelle dans le récapitulatif des absences (AJ + AN).</p>
+                    </div>
+                </div>
+                <div class="cfg-card-body">
+                    <form @submit.prevent="submitAttendanceSettings" class="attendance-settings-form">
+                        <label class="cfg-field-label" for="absence-threshold">Seuil d'alerte (nombre d'absences)</label>
+                        <div class="add-row">
+                            <input
+                                id="absence-threshold"
+                                v-model="attendanceSettingsForm.absence_alert_threshold"
+                                type="number"
+                                min="1"
+                                max="999"
+                                class="add-input"
+                                :class="{ 'input-error': attendanceSettingsForm.errors.absence_alert_threshold }"
+                                placeholder="Ex : 5 — laisser vide pour désactiver"
+                            />
+                            <button type="submit" class="add-btn" :disabled="attendanceSettingsForm.processing">
+                                <span class="material-symbols-outlined" style="font-size:17px">save</span>
+                                Enregistrer
+                            </button>
+                        </div>
+                        <p v-if="attendanceSettingsForm.errors.absence_alert_threshold" class="err">
+                            {{ attendanceSettingsForm.errors.absence_alert_threshold }}
+                        </p>
+                        <p class="cfg-hint">
+                            À partir de ce seuil, la ligne de l'apprenant apparaît en rouge dans le récapitulatif complet des présences.
+                        </p>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Types de contrat de stage -->
+            <div class="cfg-card">
+                <div class="cfg-card-head">
+                    <div class="cfg-card-icon" style="background:#fff0f4;color:#E5004C">
+                        <span class="material-symbols-outlined">business_center</span>
+                    </div>
+                    <div class="cfg-card-info">
+                        <h2 class="cfg-card-title">Types de contrat de stage</h2>
+                        <p class="cfg-card-sub">Options disponibles lors de l'ajout d'un stage.</p>
+                    </div>
+                    <span class="count-pill">{{ internshipContractTypes.length }}</span>
+                </div>
+                <div class="cfg-card-body">
+                    <form @submit.prevent="submitStageTypeCreate" class="add-row">
+                        <input v-model="stageTypeCreateForm.name" type="text" class="add-input" placeholder="Ex : Contrat de stage, Stage étudiant..." />
+                        <button type="submit" class="add-btn" :disabled="stageTypeCreateForm.processing || !stageTypeCreateForm.name.trim()">
+                            <span class="material-symbols-outlined" style="font-size:17px">add</span> Ajouter
+                        </button>
+                    </form>
+                    <ul v-if="internshipContractTypes.length" class="ref-list">
+                        <li v-for="item in internshipContractTypes" :key="item.id" class="ref-item">
+                            <form v-if="stageTypeEditingId === item.id" @submit.prevent="submitStageTypeEdit(item.id)" class="edit-row">
+                                <input v-model="stageTypeEditForm.name" type="text" class="add-input" autofocus />
+                                <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
+                                <button type="button" class="btn-cancel" @click="cancelStageTypeEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
+                            </form>
+                            <template v-else>
+                                <span class="ref-dot"></span>
+                                <span class="ref-name">{{ item.name }}</span>
+                                <div class="ref-actions">
+                                    <button class="ref-btn" title="Modifier" @click="startStageTypeEdit(item)"><span class="material-symbols-outlined" style="font-size:16px">edit</span></button>
+                                    <button class="ref-btn danger" title="Supprimer" @click="destroyStageType(item)"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+                                </div>
+                            </template>
+                        </li>
+                    </ul>
+                    <div v-else class="empty-inline">Aucun type — ajoutez-en un ci-dessus.</div>
+                </div>
+            </div>
+
+            <!-- Types de contrat d'emploi -->
+            <div class="cfg-card">
+                <div class="cfg-card-head">
+                    <div class="cfg-card-icon" style="background:#dbeafe;color:#1d4ed8">
+                        <span class="material-symbols-outlined">work</span>
+                    </div>
+                    <div class="cfg-card-info">
+                        <h2 class="cfg-card-title">Types de contrat d'emploi</h2>
+                        <p class="cfg-card-sub">Options disponibles lors de l'ajout d'un emploi.</p>
+                    </div>
+                    <span class="count-pill">{{ employmentContractTypes.length }}</span>
+                </div>
+                <div class="cfg-card-body">
+                    <form @submit.prevent="submitEmploymentTypeCreate" class="add-row">
+                        <input v-model="employmentTypeCreateForm.name" type="text" class="add-input" placeholder="Ex : CDI, CDD, Freelance..." />
+                        <button type="submit" class="add-btn" :disabled="employmentTypeCreateForm.processing || !employmentTypeCreateForm.name.trim()">
+                            <span class="material-symbols-outlined" style="font-size:17px">add</span> Ajouter
+                        </button>
+                    </form>
+                    <ul v-if="employmentContractTypes.length" class="ref-list">
+                        <li v-for="item in employmentContractTypes" :key="item.id" class="ref-item">
+                            <form v-if="employmentTypeEditingId === item.id" @submit.prevent="submitEmploymentTypeEdit(item.id)" class="edit-row">
+                                <input v-model="employmentTypeEditForm.name" type="text" class="add-input" autofocus />
+                                <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
+                                <button type="button" class="btn-cancel" @click="cancelEmploymentTypeEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
+                            </form>
+                            <template v-else>
+                                <span class="ref-dot"></span>
+                                <span class="ref-name">{{ item.name }}</span>
+                                <div class="ref-actions">
+                                    <button class="ref-btn" title="Modifier" @click="startEmploymentTypeEdit(item)"><span class="material-symbols-outlined" style="font-size:16px">edit</span></button>
+                                    <button class="ref-btn danger" title="Supprimer" @click="destroyEmploymentType(item)"><span class="material-symbols-outlined" style="font-size:16px">delete</span></button>
+                                </div>
+                            </template>
+                        </li>
+                    </ul>
+                    <div v-else class="empty-inline">Aucun type — ajoutez-en un ci-dessus.</div>
+                </div>
+            </div>
+
         </div>
 
         <!-- ══════════ ONGLET IA ══════════ -->
@@ -741,6 +940,17 @@ const destroyDipl = (d: LastDiploma) => {
 }
 
 .cfg-card-body { padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; }
+.cfg-field-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #515f74;
+}
+.cfg-hint {
+    font-size: 12px;
+    color: #9aaabb;
+    line-height: 1.45;
+    margin: 0;
+}
 
 /* ── Add row ─────────────────────────────────────────────────────────────── */
 .add-row { display: flex; gap: 8px; align-items: center; }

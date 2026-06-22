@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import ContractTypeModal from '@/Components/ContractTypeModal.vue'
+import InsertionRecordForm from '@/Components/InsertionRecordForm.vue'
 
 interface FormData {
     status: string
@@ -12,9 +14,15 @@ interface FormData {
     internship_company: string
     internship_paid: boolean
     internship_contract_type: string
+    internship_work_mode: string
+    internship_contract_file: File | null
+    remove_internship_contract: boolean
     employment_company: string
     employment_start_date: string
     employment_contract_type: string
+    employment_work_mode: string
+    employment_contract_file: File | null
+    remove_employment_contract: boolean
     employment_position: string
 }
 
@@ -48,9 +56,15 @@ interface InsertionRecord {
     internship_company: string | null
     internship_paid: boolean | null
     internship_contract_type: string | null
+    internship_work_mode: string | null
+    internship_contract_path: string | null
+    internship_contract_original_name: string | null
     employment_company: string | null
     employment_start_date: string | null
     employment_contract_type: string | null
+    employment_work_mode: string | null
+    employment_contract_path: string | null
+    employment_contract_original_name: string | null
     employment_position: string | null
     recorder: Recorder
 }
@@ -96,11 +110,18 @@ interface Learner {
     formations: Formation[]
 }
 
+interface ContractTypeItem { id: string; name: string }
+interface WorkModeOption { value: string; label: string; icon: string }
+
 const props = defineProps<{
     learner: Learner
     insertionRecords: InsertionRecord[]
     latestInsertion: InsertionRecord | null
     insertionStatuses: InsertionStatus[]
+    internshipContractTypes: ContractTypeItem[]
+    employmentContractTypes: ContractTypeItem[]
+    workModes: WorkModeOption[]
+    canManageContractTypes: boolean
 }>()
 
 const today = new Date().toISOString().split('T')[0]
@@ -114,9 +135,15 @@ const form = useForm<FormData>({
     internship_company: '',
     internship_paid: false,
     internship_contract_type: '',
+    internship_work_mode: '',
+    internship_contract_file: null as File | null,
+    remove_internship_contract: false,
     employment_company: '',
     employment_start_date: '',
     employment_contract_type: '',
+    employment_work_mode: '',
+    employment_contract_file: null as File | null,
+    remove_employment_contract: false,
     employment_position: '',
 })
 
@@ -131,6 +158,34 @@ const confirmDeleteRecord = () => {
 
 const editingRecord = ref<InsertionRecord | null>(null)
 
+const resetFileInputs = () => {
+    form.internship_contract_file = null
+    form.employment_contract_file = null
+    form.remove_internship_contract = false
+    form.remove_employment_contract = false
+}
+
+const contractUrl = (path: string | null) => path ? `/storage/${path}` : null
+
+const showExistingInternshipContract = computed(() =>
+    editingRecord.value?.internship_contract_path
+    && !form.remove_internship_contract
+    && !form.internship_contract_file,
+)
+
+const showExistingEmploymentContract = computed(() =>
+    editingRecord.value?.employment_contract_path
+    && !form.remove_employment_contract
+    && !form.employment_contract_file,
+)
+
+watch(() => form.internship_contract_file, (file) => {
+    if (file) form.remove_internship_contract = false
+})
+watch(() => form.employment_contract_file, (file) => {
+    if (file) form.remove_employment_contract = false
+})
+
 // Convertir date ISO en YYYY-MM-DD pour input type="date"
 const toDateInput = (d: string | null) => d ? d.split('T')[0] : ''
 
@@ -144,10 +199,13 @@ const editRecord = (record: InsertionRecord) => {
     form.internship_company = record.internship_company ?? ''
     form.internship_paid = record.internship_paid ?? false
     form.internship_contract_type = record.internship_contract_type ?? ''
+    form.internship_work_mode = record.internship_work_mode ?? ''
     form.employment_company = record.employment_company ?? ''
     form.employment_start_date = toDateInput(record.employment_start_date)
     form.employment_contract_type = record.employment_contract_type ?? ''
+    form.employment_work_mode = record.employment_work_mode ?? ''
     form.employment_position = record.employment_position ?? ''
+    resetFileInputs()
 
     if (record.status === 'internship') {
         showStageForm.value = true
@@ -162,40 +220,74 @@ const cancelEdit = () => {
     editingRecord.value = null
     form.reset()
     form.status_changed_at = today
+    resetFileInputs()
     showStageForm.value = false
     showEmploymentForm.value = false
 }
 
+const openStageForm = () => {
+    if (editingRecord.value?.status !== 'internship') {
+        editingRecord.value = null
+        form.reset()
+        form.status_changed_at = today
+        resetFileInputs()
+    }
+    showEmploymentForm.value = false
+    showStageForm.value = true
+}
+
+const openEmploymentForm = () => {
+    if (editingRecord.value?.status !== 'employed') {
+        editingRecord.value = null
+        form.reset()
+        form.status_changed_at = today
+        resetFileInputs()
+    }
+    showStageForm.value = false
+    showEmploymentForm.value = true
+}
+
+const submitStageForm = () => {
+    form.status = 'internship'
+    submitForm()
+}
+
+const submitEmploymentForm = () => {
+    form.status = 'employed'
+    submitForm()
+}
+
 const submitForm = () => {
+    const options = {
+        preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            editingRecord.value = null
+            form.reset()
+            form.status_changed_at = today
+            resetFileInputs()
+            showStageForm.value = false
+            showEmploymentForm.value = false
+        },
+    }
+
     if (editingRecord.value) {
-        // Mode update
-        form.put(`/learners/${props.learner.id}/insertion/${editingRecord.value.id}`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                editingRecord.value = null
-                form.reset()
-                form.status_changed_at = today
-                showStageForm.value = false
-                showEmploymentForm.value = false
-            },
-        })
+        form.post(`/learners/${props.learner.id}/insertion/${editingRecord.value.id}?_method=PUT`, options)
     } else {
-        // Mode create
-        form.post(`/learners/${props.learner.id}/insertion`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                form.reset()
-                form.status_changed_at = today
-                showStageForm.value = false
-                showEmploymentForm.value = false
-            },
-        })
+        form.post(`/learners/${props.learner.id}/insertion`, options)
     }
 }
 
 const activeTab = ref<'info' | 'formations' | 'stage' | 'employment'>('info')
 const showStageForm = ref(false)
 const showEmploymentForm = ref(false)
+const contractTypeModal = ref<'internship' | 'employment' | null>(null)
+
+const workModeLabel = (value: string | null) =>
+    props.workModes.find(m => m.value === value)?.label ?? value ?? ''
+
+const workModeIcon = (value: string | null) =>
+    props.workModes.find(m => m.value === value)?.icon ?? 'location_on'
 
 const fmt = (d: string | null) => d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }) : ''
 const genderLabel = (g: string | null) => ({ male: 'Masculin', female: 'Féminin' }[g ?? ''] ?? '')
@@ -353,7 +445,23 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
             </div>
 
             <!-- Tab: Stage -->
-            <div v-if="activeTab === 'stage'" class="space-y-lg">
+            <div v-if="activeTab === 'stage'" class="insertion-tab">
+
+                <div class="tab-toolbar">
+                    <div class="tab-toolbar-text">
+                        <h2 class="tab-toolbar-title">Suivi des stages</h2>
+                        <p class="tab-toolbar-desc">{{ stageRecords.length }} enregistrement(s) · stage en cours affiché en premier</p>
+                    </div>
+                    <button
+                        v-if="!showStageForm"
+                        type="button"
+                        class="btn-add-record btn-add-stage"
+                        @click="openStageForm"
+                    >
+                        <span class="material-symbols-outlined" style="font-size:18px">add</span>
+                        Ajouter un stage
+                    </button>
+                </div>
 
                 <!-- Stage en cours -->
                 <div v-if="latestStage" class="stage-active-card">
@@ -367,12 +475,22 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                                 <p class="stage-active-label">Stage en cours</p>
                                 <p class="stage-active-company">{{ latestStage.internship_company || 'Entreprise non spécifiée' }}</p>
                             </div>
-                            <div class="stage-active-chips">
-                                <span v-if="latestStage.internship_paid" class="chip chip-paid">
-                                    <span class="material-symbols-outlined" style="font-size:13px">payments</span> Rémunéré
-                                </span>
-                                <span v-if="latestStage.internship_contract_type" class="chip chip-contract">{{ latestStage.internship_contract_type }}</span>
+                            <div class="stage-active-actions">
+                                <button type="button" class="card-action-btn" @click="editRecord(latestStage)">
+                                    <span class="material-symbols-outlined" style="font-size:16px">edit</span>
+                                    Modifier
+                                </button>
                             </div>
+                        </div>
+                        <div class="stage-active-chips">
+                            <span v-if="latestStage.internship_paid" class="chip chip-paid">
+                                <span class="material-symbols-outlined" style="font-size:13px">payments</span> Rémunéré
+                            </span>
+                            <span v-if="latestStage.internship_contract_type" class="chip chip-contract">{{ latestStage.internship_contract_type }}</span>
+                            <span v-if="latestStage.internship_work_mode" class="chip chip-mode">
+                                <span class="material-symbols-outlined" style="font-size:14px">{{ workModeIcon(latestStage.internship_work_mode) }}</span>
+                                {{ workModeLabel(latestStage.internship_work_mode) }}
+                            </span>
                         </div>
                         <div v-if="latestStage.internship_start_date" class="stage-active-dates">
                             <span class="material-symbols-outlined" style="font-size:15px;color:#E5004C">calendar_month</span>
@@ -380,70 +498,48 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                             <template v-if="latestStage.internship_end_date"> au {{ fmt(latestStage.internship_end_date) }}</template>
                         </div>
                         <div v-if="latestStage.status_notes" class="stage-active-notes">{{ latestStage.status_notes }}</div>
+                        <a
+                            v-if="latestStage.internship_contract_path"
+                            :href="contractUrl(latestStage.internship_contract_path)!"
+                            target="_blank"
+                            class="contract-link"
+                        >
+                            <span class="material-symbols-outlined" style="font-size:16px">description</span>
+                            {{ latestStage.internship_contract_original_name || 'Contrat / convention de stage' }}
+                        </a>
                     </div>
                 </div>
 
                 <!-- Empty state -->
-                <div v-else class="card empty-state">
-                    <div class="empty-icon stage-icon-bg">
+                <div v-else-if="!showStageForm" class="insertion-empty">
+                    <div class="insertion-empty-icon stage-empty-icon">
                         <span class="material-symbols-outlined">work_off</span>
                     </div>
-                    <h3 class="empty-title">Aucun stage en cours</h3>
-                    <p class="empty-desc">Ajoutez un stage pour suivre le parcours professionnel de l'apprenant.</p>
+                    <h3 class="insertion-empty-title">Aucun stage enregistré</h3>
+                    <p class="insertion-empty-desc">Documentez le stage de l'apprenant : entreprise, dates, modalité et convention.</p>
+                    <button type="button" class="btn-add-record btn-add-stage" @click="openStageForm">
+                        <span class="material-symbols-outlined" style="font-size:18px">add</span>
+                        Ajouter un stage
+                    </button>
                 </div>
 
                 <!-- Formulaire Stage -->
-                <div class="card form-card">
-                    <div class="form-header" @click="showStageForm = !showStageForm">
-                        <div class="form-title">
-                            <span class="material-symbols-outlined form-icon">{{ editingRecord?.status === 'internship' ? 'edit' : 'add_circle' }}</span>
-                            <span>{{ editingRecord?.status === 'internship' ? 'Modifier le stage' : 'Ajouter un stage' }}</span>
-                        </div>
-                        <span class="material-symbols-outlined toggle-icon" :class="{ 'rotated': showStageForm }">expand_more</span>
-                    </div>
-                    <form v-show="showStageForm" @submit.prevent="submitForm" class="form-content">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label">Entreprise de stage</label>
-                                <input type="text" v-model="form.internship_company" class="form-input" placeholder="Nom de l'entreprise" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Type de contrat</label>
-                                <select v-model="form.internship_contract_type" class="form-input" required>
-                                    <option value="">Choisir...</option>
-                                    <option value="Contrat de stage">Contrat de stage</option>
-                                    <option value="Stage étudiant">Stage étudiant</option>
-                                    <option value="Contrat d'apprentissage">Contrat d'apprentissage</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Date de début</label>
-                                <input type="date" v-model="form.internship_start_date" class="form-input" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Date de fin</label>
-                                <input type="date" v-model="form.internship_end_date" class="form-input">
-                            </div>
-                        </div>
-                        <div class="form-group full-width">
-                            <label class="checkbox-label">
-                                <input type="checkbox" v-model="form.internship_paid" :true-value="true" :false-value="false" class="styled-checkbox">
-                                <span class="checkmark"></span>
-                                <span>Stage rémunéré</span>
-                            </label>
-                        </div>
-                        <div class="form-group full-width">
-                            <label class="form-label">Notes</label>
-                            <textarea v-model="form.status_notes" class="form-textarea" rows="2" placeholder="Commentaires sur le stage..."></textarea>
-                        </div>
-                        <div class="form-actions">
-                            <button type="button" class="btn-secondary" @click="cancelEdit">Annuler</button>
-                            <button type="submit" class="btn-primary" :disabled="form.processing" @click="form.status = 'internship'">
-                                {{ form.processing ? 'Enregistrement...' : (editingRecord?.status === 'internship' ? 'Modifier le stage' : 'Enregistrer le stage') }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                <InsertionRecordForm
+                    kind="internship"
+                    :form="form"
+                    :visible="showStageForm"
+                    :is-editing="editingRecord?.status === 'internship'"
+                    :contract-types="internshipContractTypes"
+                    :work-modes="workModes"
+                    :can-manage-contract-types="canManageContractTypes"
+                    :existing-contract-url="contractUrl(editingRecord?.internship_contract_path ?? null)"
+                    :existing-contract-name="editingRecord?.internship_contract_original_name"
+                    :show-existing-contract="showExistingInternshipContract"
+                    @submit="submitStageForm"
+                    @cancel="cancelEdit"
+                    @manage-types="contractTypeModal = 'internship'"
+                    @remove-existing="form.remove_internship_contract = true; form.internship_contract_file = null"
+                />
 
                 <!-- Historique des stages -->
                 <div v-if="stageRecords.length > 0" class="history-card">
@@ -468,6 +564,16 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                                         {{ fmt(record.internship_start_date) }}{{ record.internship_end_date ? ' → ' + fmt(record.internship_end_date) : ' · En cours' }}
                                     </span>
                                     <span v-if="record.internship_contract_type" class="history-chip chip-contract-sm">{{ record.internship_contract_type }}</span>
+                                    <span v-if="record.internship_work_mode" class="history-chip chip-mode-sm">{{ workModeLabel(record.internship_work_mode) }}</span>
+                                    <a
+                                        v-if="record.internship_contract_path"
+                                        :href="contractUrl(record.internship_contract_path)!"
+                                        target="_blank"
+                                        class="history-chip chip-file-sm"
+                                    >
+                                        <span class="material-symbols-outlined" style="font-size:12px">description</span>
+                                        Contrat
+                                    </a>
                                     <span v-if="record.internship_paid" class="history-chip chip-paid-sm">Rémunéré</span>
                                 </div>
                                 <div v-if="record.status_notes" class="history-notes">{{ record.status_notes }}</div>
@@ -492,87 +598,97 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
             </div>
 
             <!-- Tab: Emploi -->
-            <div v-if="activeTab === 'employment'" class="space-y-lg">
+            <div v-if="activeTab === 'employment'" class="insertion-tab">
+
+                <div class="tab-toolbar">
+                    <div class="tab-toolbar-text">
+                        <h2 class="tab-toolbar-title">Suivi de l'emploi</h2>
+                        <p class="tab-toolbar-desc">{{ employmentRecords.length }} enregistrement(s) · emploi actuel affiché en premier</p>
+                    </div>
+                    <button
+                        v-if="!showEmploymentForm"
+                        type="button"
+                        class="btn-add-record btn-add-employment"
+                        @click="openEmploymentForm"
+                    >
+                        <span class="material-symbols-outlined" style="font-size:18px">add</span>
+                        Ajouter un emploi
+                    </button>
+                </div>
 
                 <!-- Emploi en cours -->
-                <div v-if="latestEmployment" class="stage-active-card">
+                <div v-if="latestEmployment" class="stage-active-card employment-active-card">
                     <div class="stage-active-body">
                         <div class="stage-active-top">
-                            <div class="stage-active-icon">
+                            <div class="stage-active-icon employment-active-icon">
                                 <span class="material-symbols-outlined" style="font-size:22px">work</span>
                             </div>
                             <div class="stage-active-info">
-                                <p class="stage-active-label">Emploi actuel</p>
+                                <p class="stage-active-label employment-active-label">Emploi actuel</p>
                                 <p class="stage-active-company">{{ latestEmployment.employment_company || 'Entreprise non spécifiée' }}</p>
                                 <p v-if="latestEmployment.employment_position" class="stage-active-position">{{ latestEmployment.employment_position }}</p>
                             </div>
-                            <div class="stage-active-chips">
-                                <span v-if="latestEmployment.employment_contract_type" class="chip chip-contract">{{ latestEmployment.employment_contract_type }}</span>
+                            <div class="stage-active-actions">
+                                <button type="button" class="card-action-btn card-action-btn-navy" @click="editRecord(latestEmployment)">
+                                    <span class="material-symbols-outlined" style="font-size:16px">edit</span>
+                                    Modifier
+                                </button>
                             </div>
                         </div>
+                        <div class="stage-active-chips">
+                            <span v-if="latestEmployment.employment_contract_type" class="chip chip-contract">{{ latestEmployment.employment_contract_type }}</span>
+                            <span v-if="latestEmployment.employment_work_mode" class="chip chip-mode">
+                                <span class="material-symbols-outlined" style="font-size:14px">{{ workModeIcon(latestEmployment.employment_work_mode) }}</span>
+                                {{ workModeLabel(latestEmployment.employment_work_mode) }}
+                            </span>
+                        </div>
                         <div v-if="latestEmployment.employment_start_date" class="stage-active-dates">
-                            <span class="material-symbols-outlined" style="font-size:15px;color:#E5004C">calendar_month</span>
+                            <span class="material-symbols-outlined" style="font-size:15px;color:#1F3A4D">calendar_month</span>
                             Début le {{ fmt(latestEmployment.employment_start_date) }}
                         </div>
                         <div v-if="latestEmployment.status_notes" class="stage-active-notes">{{ latestEmployment.status_notes }}</div>
+                        <a
+                            v-if="latestEmployment.employment_contract_path"
+                            :href="contractUrl(latestEmployment.employment_contract_path)!"
+                            target="_blank"
+                            class="contract-link"
+                        >
+                            <span class="material-symbols-outlined" style="font-size:16px">description</span>
+                            {{ latestEmployment.employment_contract_original_name || 'Contrat d\'emploi' }}
+                        </a>
                     </div>
                 </div>
 
                 <!-- Empty state Emploi -->
-                <div v-else class="card empty-state">
-                    <div class="empty-icon employment-icon-bg">
+                <div v-else-if="!showEmploymentForm" class="insertion-empty">
+                    <div class="insertion-empty-icon employment-empty-icon">
                         <span class="material-symbols-outlined">person_off</span>
                     </div>
-                    <h3 class="empty-title">Aucun emploi en cours</h3>
-                    <p class="empty-desc">Ajoutez un emploi pour suivre le parcours professionnel de l'apprenant.</p>
+                    <h3 class="insertion-empty-title">Aucun emploi enregistré</h3>
+                    <p class="insertion-empty-desc">Documentez l'insertion professionnelle : entreprise, poste, contrat et modalité.</p>
+                    <button type="button" class="btn-add-record btn-add-employment" @click="openEmploymentForm">
+                        <span class="material-symbols-outlined" style="font-size:18px">add</span>
+                        Ajouter un emploi
+                    </button>
                 </div>
 
                 <!-- Formulaire Emploi -->
-                <div class="card form-card">
-                    <div class="form-header" @click="showEmploymentForm = !showEmploymentForm">
-                        <div class="form-title">
-                            <span class="material-symbols-outlined form-icon">{{ editingRecord?.status === 'employed' ? 'edit' : 'add_circle' }}</span>
-                            <span>{{ editingRecord?.status === 'employed' ? 'Modifier l\'emploi' : 'Ajouter un emploi' }}</span>
-                        </div>
-                        <span class="material-symbols-outlined toggle-icon" :class="{ 'rotated': showEmploymentForm }">expand_more</span>
-                    </div>
-                    <form v-show="showEmploymentForm" @submit.prevent="submitForm" class="form-content">
-                        <div class="form-grid">
-                            <div class="form-group">
-                                <label class="form-label">Entreprise</label>
-                                <input type="text" v-model="form.employment_company" class="form-input" placeholder="Nom de l'entreprise" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Poste</label>
-                                <input type="text" v-model="form.employment_position" class="form-input" placeholder="Titre du poste">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Type de contrat</label>
-                                <select v-model="form.employment_contract_type" class="form-input">
-                                    <option value="">Choisir...</option>
-                                    <option value="CDI">CDI</option>
-                                    <option value="CDD">CDD</option>
-                                    <option value="freelance">Freelance</option>
-                                    <option value="autre">Autre</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Date de début</label>
-                                <input type="date" v-model="form.employment_start_date" class="form-input">
-                            </div>
-                        </div>
-                        <div class="form-group full-width">
-                            <label class="form-label">Notes</label>
-                            <textarea v-model="form.status_notes" class="form-textarea" rows="2" placeholder="Commentaires sur l'emploi..."></textarea>
-                        </div>
-                        <div class="form-actions">
-                            <button type="button" class="btn-secondary" @click="cancelEdit">Annuler</button>
-                            <button type="submit" class="btn-primary" :disabled="form.processing" @click="form.status = 'employed'">
-                                {{ form.processing ? 'Enregistrement...' : (editingRecord?.status === 'employed' ? 'Modifier l\'emploi' : 'Enregistrer l\'emploi') }}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                <InsertionRecordForm
+                    kind="employment"
+                    :form="form"
+                    :visible="showEmploymentForm"
+                    :is-editing="editingRecord?.status === 'employed'"
+                    :contract-types="employmentContractTypes"
+                    :work-modes="workModes"
+                    :can-manage-contract-types="canManageContractTypes"
+                    :existing-contract-url="contractUrl(editingRecord?.employment_contract_path ?? null)"
+                    :existing-contract-name="editingRecord?.employment_contract_original_name"
+                    :show-existing-contract="showExistingEmploymentContract"
+                    @submit="submitEmploymentForm"
+                    @cancel="cancelEdit"
+                    @manage-types="contractTypeModal = 'employment'"
+                    @remove-existing="form.remove_employment_contract = true; form.employment_contract_file = null"
+                />
 
                 <!-- Historique des emplois -->
                 <div v-if="employmentRecords.length > 0" class="history-card">
@@ -598,6 +714,16 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                                         Début le {{ fmt(record.employment_start_date) }}
                                     </span>
                                     <span v-if="record.employment_contract_type" class="history-chip chip-contract-sm">{{ record.employment_contract_type }}</span>
+                                    <span v-if="record.employment_work_mode" class="history-chip chip-mode-sm">{{ workModeLabel(record.employment_work_mode) }}</span>
+                                    <a
+                                        v-if="record.employment_contract_path"
+                                        :href="contractUrl(record.employment_contract_path)!"
+                                        target="_blank"
+                                        class="history-chip chip-file-sm"
+                                    >
+                                        <span class="material-symbols-outlined" style="font-size:12px">description</span>
+                                        Contrat
+                                    </a>
                                 </div>
                                 <div v-if="record.status_notes" class="history-notes">{{ record.status_notes }}</div>
                                 <div class="history-item-footer">
@@ -642,6 +768,21 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
             </div>
         </Transition>
     </Teleport>
+
+    <ContractTypeModal
+        :visible="contractTypeModal === 'internship'"
+        context="internship"
+        :types="internshipContractTypes"
+        :can-manage="canManageContractTypes"
+        @close="contractTypeModal = null"
+    />
+    <ContractTypeModal
+        :visible="contractTypeModal === 'employment'"
+        context="employment"
+        :types="employmentContractTypes"
+        :can-manage="canManageContractTypes"
+        @close="contractTypeModal = null"
+    />
 </template>
 
 <style scoped>
@@ -738,10 +879,111 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
 }
 .stage-active-top {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 14px;
     margin-bottom: 10px;
 }
+.stage-active-actions { flex-shrink: 0; margin-left: auto; }
+.card-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 7px 12px;
+    border: 1.5px solid #E5004C;
+    border-radius: 8px;
+    background: #fff;
+    color: #E5004C;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.card-action-btn:hover { background: #E5004C; color: #fff; }
+.card-action-btn-navy { border-color: #1F3A4D; color: #1F3A4D; }
+.card-action-btn-navy:hover { background: #1F3A4D; color: #fff; }
+.employment-active-card { border-top: 3px solid #1F3A4D; }
+.employment-active-icon { background: #e8edf2 !important; color: #1F3A4D !important; }
+.employment-active-label { color: #1F3A4D !important; }
+
+/* ===== INSERTION TABS ===== */
+.insertion-tab {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+.tab-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.tab-toolbar-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #191c1e;
+    margin: 0;
+}
+.tab-toolbar-desc {
+    font-size: 12px;
+    color: #9aaabb;
+    margin: 2px 0 0;
+}
+.btn-add-record {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: filter 0.15s, transform 0.1s;
+    white-space: nowrap;
+}
+.btn-add-record:hover { filter: brightness(1.06); }
+.btn-add-record:active { transform: scale(0.98); }
+.btn-add-stage { background: #E5004C; }
+.btn-add-employment { background: #1F3A4D; }
+
+.insertion-empty {
+    text-align: center;
+    padding: 48px 28px;
+    background: #fafbfc;
+    border: 1.5px dashed #e0e3e5;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+}
+.insertion-empty-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.insertion-empty-icon .material-symbols-outlined { font-size: 28px; }
+.stage-empty-icon { background: #fff0f4; color: #E5004C; }
+.employment-empty-icon { background: #e8edf2; color: #1F3A4D; }
+.insertion-empty-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #191c1e;
+    margin: 0;
+}
+.insertion-empty-desc {
+    font-size: 13px;
+    color: #6b7280;
+    max-width: 360px;
+    margin: 0;
+    line-height: 1.5;
+}
+.stage-active-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .stage-active-icon {
     width: 44px;
     height: 44px;
@@ -753,7 +995,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
     justify-content: center;
     flex-shrink: 0;
 }
-.stage-active-info { flex: 1; }
+.stage-active-info { flex: 1; min-width: 0; }
 .stage-active-label {
     font-size: 11px;
     font-weight: 700;
@@ -767,13 +1009,91 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
     color: #191c1e;
     margin-top: 2px;
 }
-.stage-active-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip {
     display: inline-flex; align-items: center; gap: 4px;
     padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 600;
 }
 .chip-paid { background: #fff0f4; color: #E5004C; }
 .chip-contract { background: #e8edf2; color: #1F3A4D; }
+.chip-mode {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: #dbeafe; color: #1d4ed8;
+}
+.label-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.manage-types-link {
+    border: none; background: none; padding: 0;
+    font-size: 11px; font-weight: 600; color: #E5004C;
+    cursor: pointer; text-decoration: underline;
+}
+.manage-types-link:hover { color: #c0003e; }
+
+.mode-options {
+    display: flex; flex-wrap: wrap; gap: 10px;
+}
+.mode-option {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 10px 16px; border: 1.5px solid #e0e3e5; border-radius: 10px;
+    background: #fafbfc; font-size: 13px; font-weight: 600; color: #515f74;
+    cursor: pointer; transition: all 0.15s;
+}
+.mode-option:hover { border-color: #c8cdd3; background: #fff; }
+.mode-option.selected {
+    border-color: #E5004C; background: #fff5f8; color: #E5004C;
+}
+.mode-icon { font-size: 18px; }
+
+.contract-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1F3A4D;
+    text-decoration: none;
+}
+.contract-link:hover { color: #E5004C; text-decoration: underline; }
+.contract-existing {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border: 1px solid #e8edf2;
+    border-radius: 8px;
+}
+.contract-remove {
+    border: none;
+    background: none;
+    color: #ba1a1a;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.form-file {
+    width: 100%;
+    font-size: 13px;
+    color: #515f74;
+}
+.file-hint { font-size: 11px; color: #9aaabb; margin-top: 4px; }
+.chip-file-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f0fdf4;
+    color: #166534;
+    text-decoration: none;
+}
+.chip-file-sm:hover { background: #dcfce7; }
+
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
 .stage-active-dates {
     display: flex;
     align-items: center;
@@ -887,7 +1207,6 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
 /* ===== FORM CARD ===== */
 .form-card {
     padding: 0;
-    overflow: hidden;
 }
 .form-header {
     display: flex;
@@ -897,6 +1216,35 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
     cursor: pointer;
     transition: background 0.15s;
     border-bottom: 1px solid transparent;
+}
+.form-mode-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.form-mode-contract-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    align-items: start;
+}
+@media (min-width: 768px) {
+    .form-mode-contract-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+.mode-options-stack {
+    flex-direction: column;
+    align-items: stretch;
+}
+.mode-options-stack .mode-option {
+    justify-content: flex-start;
+}
+.form-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 .form-header:hover {
     background: #f9fafb;
@@ -922,9 +1270,6 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
 }
 .toggle-icon.rotated {
     transform: rotate(180deg);
-}
-.form-content {
-    padding: 20px;
 }
 .form-grid {
     display: grid;
@@ -1127,6 +1472,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
 }
 .chip-date { background: #eef2f5; color: #1F3A4D; }
 .chip-contract-sm { background: #e8edf2; color: #1F3A4D; }
+.chip-mode-sm { background: #dbeafe; color: #1d4ed8; }
 .chip-paid-sm { background: #fff0f4; color: #E5004C; }
 .history-notes {
     font-size: 12px;

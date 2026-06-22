@@ -20,6 +20,10 @@ interface RecapRow {
     total: number
     present: number
     rate: number | null
+    absences: number
+}
+interface AttendanceSettings {
+    absenceAlertThreshold: number | null
 }
 interface Formation { id: string; name: string; project: { name: string } }
 
@@ -34,6 +38,7 @@ const props = defineProps<{
         rows: RecapRow[]
         dayStats: Record<string, { present: number; total: number }>
     }
+    attendanceSettings: AttendanceSettings
 }>()
 
 // ── Onglet actif ─────────────────────────────────────────────────
@@ -165,6 +170,12 @@ function rowSummary(row: RecapRow): { code: string; count: number }[] {
     return CODE_ORDER
         .filter(c => counts[c])
         .map(c => ({ code: c, count: counts[c] }))
+}
+
+function isRowAlert(row: RecapRow): boolean {
+    const threshold = props.attendanceSettings.absenceAlertThreshold
+    if (!threshold || threshold <= 0) return false
+    return row.absences >= threshold
 }
 </script>
 
@@ -365,6 +376,13 @@ function rowSummary(row: RecapRow): { code: string; count: number }[] {
             </div>
 
             <div v-else class="recap-container">
+                <div
+                    v-if="attendanceSettings.absenceAlertThreshold"
+                    class="recap-alert-banner"
+                >
+                    <span class="material-symbols-outlined" style="font-size:18px">warning</span>
+                    Ligne en rouge à partir de {{ attendanceSettings.absenceAlertThreshold }} absence(s) (AJ + AN).
+                </div>
                 <div class="recap-scroll">
                     <table class="recap-table">
                         <thead>
@@ -380,8 +398,18 @@ function rowSummary(row: RecapRow): { code: string; count: number }[] {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="row in recap.rows" :key="row.id" class="recap-tr">
-                                <td class="td-sticky td-name">{{ row.full_name }}</td>
+                            <tr
+                                v-for="row in recap.rows"
+                                :key="row.id"
+                                class="recap-tr"
+                                :class="{ 'recap-tr-alert': isRowAlert(row) }"
+                            >
+                                <td class="td-sticky td-name">
+                                    {{ row.full_name }}
+                                    <span v-if="isRowAlert(row)" class="absence-alert-badge" :title="`${row.absences} absence(s)`">
+                                        {{ row.absences }} abs.
+                                    </span>
+                                </td>
                                 <td v-for="d in recap.dates" :key="d" class="td-day">
                                     <span v-if="row.days[d]" class="rc-badge" :class="recapCodeClass[row.days[d]!]">
                                         {{ row.days[d] }}
@@ -694,6 +722,36 @@ function rowSummary(row: RecapRow): { code: string; count: number }[] {
 .recap-tr { border-top: 1px solid #f0f1f3; }
 .recap-tr:hover { background: #fafbfc; }
 .recap-tr:hover .td-sticky { background: #fafbfc; }
+.recap-tr-alert { background: #fef2f2 !important; }
+.recap-tr-alert:hover { background: #fee2e2 !important; }
+.recap-tr-alert .td-sticky,
+.recap-tr-alert .td-sticky-right { background: #fef2f2 !important; }
+.recap-tr-alert:hover .td-sticky,
+.recap-tr-alert:hover .td-sticky-right { background: #fee2e2 !important; }
+.recap-alert-banner {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+    background: #fff5f5;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #991b1b;
+}
+.absence-alert-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 99px;
+    background: #fee2e2;
+    color: #991b1b;
+    font-size: 10px;
+    font-weight: 700;
+    vertical-align: middle;
+}
 .td-name {
     padding: 8px 14px; font-weight: 600; color: #191c1e; white-space: nowrap;
     background: #fff; border-right: 1px solid #f0f1f3;

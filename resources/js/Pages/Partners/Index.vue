@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import PartnerCategoryBadge from '@/Components/PartnerCategoryBadge.vue'
 
 defineOptions({ layout: AdminLayout })
 
 interface Partner {
     id: string
     name: string
+    category: string
     logo_path: string | null
 }
 
@@ -19,7 +21,23 @@ interface Paginated {
     to: number
 }
 
-defineProps<{ partners: Paginated }>()
+interface CategoryOption {
+    value: string
+    label: string
+    color: string
+}
+
+const props = defineProps<{
+    partners: Paginated
+    filters: { category?: string }
+    categories: CategoryOption[]
+}>()
+
+const selectedCategory = ref(props.filters.category ?? '')
+
+watch(selectedCategory, (value) => {
+    router.get('/partners', { category: value || undefined }, { preserveState: true, replace: true })
+})
 
 const confirmTarget = ref<Partner | null>(null)
 
@@ -54,11 +72,24 @@ const destroy = () => {
             </Link>
         </div>
 
+        <!-- Filtre par catégorie -->
+        <div v-if="partners.total > 0 || selectedCategory" class="filter-bar">
+            <label class="filter-label" for="category-filter">Catégorie</label>
+            <select id="category-filter" v-model="selectedCategory" class="filter-select">
+                <option value="">Toutes les catégories</option>
+                <option v-for="cat in categories" :key="cat.value" :value="cat.value">
+                    {{ cat.label }}
+                </option>
+            </select>
+        </div>
+
         <!-- Grille de cartes -->
         <div v-if="partners.data.length === 0" class="empty-state">
             <span class="material-symbols-outlined" style="font-size:48px;color:#ddd">handshake</span>
-            <p class="text-body-md text-secondary mt-sm">Aucun partenaire configuré.</p>
-            <Link href="/partners/create" class="btn-primary mt-md">Ajouter le premier</Link>
+            <p class="text-body-md text-secondary mt-sm">
+                {{ selectedCategory ? 'Aucun partenaire pour cette catégorie.' : 'Aucun partenaire configuré.' }}
+            </p>
+            <Link v-if="!selectedCategory" href="/partners/create" class="btn-primary mt-md">Ajouter le premier</Link>
         </div>
 
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md">
@@ -83,6 +114,7 @@ const destroy = () => {
                 <!-- Infos -->
                 <div class="partner-info">
                     <p class="partner-name">{{ partner.name }}</p>
+                    <PartnerCategoryBadge :category="partner.category" size="sm" />
                 </div>
 
                 <!-- Actions -->
@@ -146,6 +178,37 @@ const destroy = () => {
     transition: background 0.2s; text-decoration: none;
 }
 .btn-primary:hover { background: #c0003e; }
+
+.filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid #e0e3e5;
+    border-radius: 12px;
+}
+.filter-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #515f74;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.filter-select {
+    min-width: 220px;
+    padding: 8px 12px;
+    border: 1.5px solid #e0e3e5;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #191c1e;
+    background: #fafbfc;
+    outline: none;
+}
+.filter-select:focus {
+    border-color: #E5004C;
+    box-shadow: 0 0 0 3px rgba(229, 0, 76, 0.08);
+}
 
 /* Cartes */
 .partner-card {

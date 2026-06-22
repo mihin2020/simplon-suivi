@@ -2,11 +2,21 @@
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import PartnerCategoryBadge from '@/Components/PartnerCategoryBadge.vue'
 
 defineOptions({ layout: AdminLayout })
 
+interface CategoryOption {
+    value: string
+    label: string
+    color: string
+}
+
+defineProps<{ categories: CategoryOption[] }>()
+
 const form = useForm({
     name: '',
+    category: '' as string,
     logo: null as File | null,
     contact_first_name: '',
     contact_last_name: '',
@@ -147,6 +157,31 @@ const submit = () => form.post('/partners', { forceFormData: true })
                         <p v-if="form.errors.name" class="error-msg">{{ form.errors.name }}</p>
                     </div>
 
+                    <!-- Catégorie -->
+                    <div class="field">
+                        <label class="label">
+                            Catégorie
+                            <span class="required">*</span>
+                        </label>
+                        <div class="category-options">
+                            <label
+                                v-for="cat in categories"
+                                :key="cat.value"
+                                class="category-option"
+                                :class="{ selected: form.category === cat.value, 'has-error': form.errors.category }"
+                            >
+                                <input
+                                    v-model="form.category"
+                                    type="radio"
+                                    :value="cat.value"
+                                    class="sr-only"
+                                />
+                                <PartnerCategoryBadge :category="cat.value" />
+                            </label>
+                        </div>
+                        <p v-if="form.errors.category" class="error-msg">{{ form.errors.category }}</p>
+                    </div>
+
                     <!-- Contact Section -->
                     <div class="contact-section">
                         <div class="contact-header">
@@ -262,6 +297,12 @@ const submit = () => form.post('/partners', { forceFormData: true })
                             </div>
                             <div>
                                 <p class="preview-name">{{ form.name || 'Nom du partenaire' }}</p>
+                                <PartnerCategoryBadge
+                                    v-if="form.category"
+                                    :category="form.category"
+                                    size="sm"
+                                    class="mt-xs"
+                                />
                             </div>
                         </div>
                     </div>
@@ -504,6 +545,29 @@ const submit = () => form.post('/partners', { forceFormData: true })
     border-radius: 10px;
 }
 .preview-name { font-size: 14px; font-weight: 600; color: #191c1e; }
+.mt-xs { margin-top: 4px; }
+
+.category-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.category-option {
+    cursor: pointer;
+    padding: 8px 12px;
+    border: 1.5px solid #e0e3e5;
+    border-radius: 10px;
+    background: #fafbfc;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.category-option:hover { border-color: #c8cdd3; background: #fff; }
+.category-option.selected {
+    border-color: #E5004C;
+    background: #fff5f8;
+    box-shadow: 0 0 0 3px rgba(229, 0, 76, 0.08);
+}
+.category-option.has-error { border-color: #ba1a1a; }
+
 .preview-type {
     display: inline-block; margin-top: 3px;
     padding: 2px 8px; border-radius: 99px;

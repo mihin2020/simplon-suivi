@@ -2,12 +2,14 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import PartnerCategoryBadge from '@/Components/PartnerCategoryBadge.vue'
 
 defineOptions({ layout: AdminLayout })
 
 interface Partner {
     id: string
     name: string
+    category: string
     logo_path: string | null
 }
 
@@ -272,10 +274,13 @@ const destroyFormation = () => {
                             <div v-else class="partner-chips-row">
                                 <div v-for="p in selectedPartners" :key="p.id" class="partner-chip-item">
                                     <div class="partner-chip-avatar">
-                                        <img v-if="p.logo_path" :src="`/storage/${p.logo_path}`" :alt="p.name" class="partner-logo-img" />
-                                        <span v-else>{{ p.name.charAt(0).toUpperCase() }}</span>
+                                        <img v-if="p.logo_path" :src="`/storage/${p.logo_path}`" :alt="p.name" class="partner-avatar-img" />
+                                        <span v-else class="partner-avatar-initial">{{ p.name.charAt(0).toUpperCase() }}</span>
                                     </div>
-                                    <span class="partner-chip-name">{{ p.name }}</span>
+                                    <div class="partner-chip-info">
+                                        <span class="partner-chip-name">{{ p.name }}</span>
+                                        <PartnerCategoryBadge :category="p.category" size="sm" />
+                                    </div>
                                     <button class="partner-chip-remove" @click="togglePartner(p.id)" title="Retirer">
                                         <span class="material-symbols-outlined" style="font-size:14px">close</span>
                                     </button>
@@ -296,10 +301,13 @@ const destroyFormation = () => {
                                         @click="togglePartner(partner.id)"
                                     >
                                         <div class="partner-select-avatar">
-                                            <img v-if="partner.logo_path" :src="`/storage/${partner.logo_path}`" :alt="partner.name" class="partner-logo-img" />
-                                            <span v-else>{{ partner.name.charAt(0).toUpperCase() }}</span>
+                                            <img v-if="partner.logo_path" :src="`/storage/${partner.logo_path}`" :alt="partner.name" class="partner-avatar-img" />
+                                            <span v-else class="partner-avatar-initial">{{ partner.name.charAt(0).toUpperCase() }}</span>
                                         </div>
-                                        <span class="partner-select-name">{{ partner.name }}</span>
+                                        <div class="partner-select-info">
+                                            <span class="partner-select-name">{{ partner.name }}</span>
+                                            <PartnerCategoryBadge :category="partner.category" size="sm" />
+                                        </div>
                                         <span class="material-symbols-outlined" style="font-size:20px;color:#d0d5db">add_circle</span>
                                     </div>
                                 </div>
@@ -504,8 +512,8 @@ const destroyFormation = () => {
 .partner-select-row:hover { background: #f6f8fa; }
 .partner-select-row.partner-selected { background: #fff0f4; border-color: #ffc0d0; }
 .partner-select-avatar {
-    width: 36px; height: 36px; border-radius: 8px;
-    background: #e8edf2; color: #1F3A4D;
+    width: 40px; height: 40px; border-radius: 8px;
+    background: #fff; border: 1px solid #e8edf2;
     display: flex; align-items: center; justify-content: center;
     font-weight: 700; font-size: 15px; flex-shrink: 0; overflow: hidden;
 }
@@ -621,12 +629,43 @@ const destroyFormation = () => {
     border-radius: 20px; font-size: 13px;
 }
 .partner-chip-avatar {
-    width: 22px; height: 22px; border-radius: 50%;
-    background: #E5004C; color: #fff;
+    width: 32px; height: 32px; border-radius: 8px;
+    background: #fff; border: 1px solid #e8edf2;
     display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 700; flex-shrink: 0; overflow: hidden;
+    font-size: 12px; font-weight: 700; flex-shrink: 0; overflow: hidden;
+}
+.partner-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    padding: 2px;
+}
+.partner-avatar-initial {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1F3A4D;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
 }
 .partner-chip-name { font-size: 13px; font-weight: 500; color: #1F3A4D; }
+.partner-chip-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
+.partner-select-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+}
 .partner-chip-remove {
     display: inline-flex; align-items: center; justify-content: center;
     width: 18px; height: 18px; border-radius: 50%;

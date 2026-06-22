@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\InsertionStatus;
 use App\Enums\LearnerStatus;
+use App\Enums\WorkMode;
 use App\Http\Requests\Learner\StoreLearnerRequest;
 use App\Http\Requests\Learner\UpdateLearnerRequest;
 use App\Models\AgeRange;
+use App\Models\ContractType;
 use App\Models\EducationLevel;
 use App\Models\Formation;
 use App\Models\LastDiploma;
@@ -13,6 +16,7 @@ use App\Models\Learner;
 use App\Models\Project;
 use App\Models\Vulnerability;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -50,7 +54,7 @@ class LearnerController extends Controller
 
         return Inertia::render('Learners/Index', [
             'learners' => $learners,
-            'filters'  => $filters,
+            'filters' => $filters,
             'projects' => Project::orderBy('name')->get(['id', 'name']),
             'formations' => Formation::with('project:id,name')
                 ->orderBy('name')
@@ -64,9 +68,9 @@ class LearnerController extends Controller
 
         return Inertia::render('Learners/Create', [
             'educationLevels' => EducationLevel::orderBy('created_at')->get(),
-            'ageRanges'       => AgeRange::orderBy('order')->orderBy('age_min')->get(),
+            'ageRanges' => AgeRange::orderBy('order')->orderBy('age_min')->get(),
             'vulnerabilities' => Vulnerability::orderBy('created_at')->get(),
-            'lastDiplomas'    => LastDiploma::orderBy('created_at')->get(),
+            'lastDiplomas' => LastDiploma::orderBy('created_at')->get(),
         ]);
     }
 
@@ -95,7 +99,7 @@ class LearnerController extends Controller
             ->with('success', 'Apprenant créé avec succès.');
     }
 
-    public function show(Learner $learner): Response
+    public function show(Request $request, Learner $learner): Response
     {
         $this->authorize('view', $learner);
 
@@ -124,13 +128,21 @@ class LearnerController extends Controller
             'learner' => $learner,
             'insertionRecords' => $insertionRecords,
             'latestInsertion' => $latestInsertion,
-            'insertionStatuses' => collect(\App\Enums\InsertionStatus::cases())->map(fn ($s) => [
+            'insertionStatuses' => collect(InsertionStatus::cases())->map(fn ($s) => [
                 'value' => $s->value,
                 'label' => $s->label(),
                 'color' => $s->color(),
                 'is_stage' => $s->isStage(),
                 'is_employment' => $s->isEmployment(),
             ]),
+            'internshipContractTypes' => ContractType::internship()->orderBy('order')->orderBy('name')->get(['id', 'name']),
+            'employmentContractTypes' => ContractType::employment()->orderBy('order')->orderBy('name')->get(['id', 'name']),
+            'workModes' => collect(WorkMode::cases())->map(fn ($m) => [
+                'value' => $m->value,
+                'label' => $m->label(),
+                'icon' => $m->icon(),
+            ]),
+            'canManageContractTypes' => $request->user()->hasPermission('configuration.manage'),
         ]);
     }
 
@@ -139,11 +151,11 @@ class LearnerController extends Controller
         $this->authorize('update', $learner);
 
         return Inertia::render('Learners/Edit', [
-            'learner'         => $learner,
+            'learner' => $learner,
             'educationLevels' => EducationLevel::orderBy('created_at')->get(),
-            'ageRanges'       => AgeRange::orderBy('order')->orderBy('age_min')->get(),
+            'ageRanges' => AgeRange::orderBy('order')->orderBy('age_min')->get(),
             'vulnerabilities' => Vulnerability::orderBy('created_at')->get(),
-            'lastDiplomas'    => LastDiploma::orderBy('created_at')->get(),
+            'lastDiplomas' => LastDiploma::orderBy('created_at')->get(),
         ]);
     }
 
@@ -203,13 +215,13 @@ class LearnerController extends Controller
             ->select('id', 'first_name', 'last_name', 'email', 'phone')
             ->when($q, fn ($query) => $query->where(function ($sq) use ($q) {
                 $sq->where('first_name', 'like', "%{$q}%")
-                   ->orWhere('last_name', 'like', "%{$q}%")
-                   ->orWhere('email', 'like', "%{$q}%");
+                    ->orWhere('last_name', 'like', "%{$q}%")
+                    ->orWhere('email', 'like', "%{$q}%");
             }))
             ->when($formationId, fn ($query) => $query->whereHas('formations', fn ($fq) => $fq
                 ->where('formations.id', $formationId)
                 ->where('formation_learner.status', LearnerStatus::InProgress)))
-            ->when($projectId && !$formationId, fn ($query) => $query->whereHas('formations', fn ($fq) => $fq
+            ->when($projectId && ! $formationId, fn ($query) => $query->whereHas('formations', fn ($fq) => $fq
                 ->where('project_id', $projectId)
                 ->where('formation_learner.status', LearnerStatus::InProgress)))
             ->whereNotNull('email')

@@ -7,6 +7,7 @@ use App\Enums\AttendanceCode;
 use App\Http\Requests\Attendance\StoreAttendanceRequest;
 use App\Models\Attendance;
 use App\Models\Formation;
+use App\Support\AttendanceSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -19,6 +20,32 @@ use Inertia\Response;
 
 class AttendanceController extends Controller
 {
+    /** @return array<int, string> */
+    private function absenceCodes(): array
+    {
+        return [
+            AttendanceCode::AbsentJustified->value,
+            AttendanceCode::AbsentNotJustified->value,
+        ];
+    }
+
+    /** @param  iterable<string|null>  $dayCodes */
+    private function countAbsences(iterable $dayCodes): int
+    {
+        $absenceCodes = $this->absenceCodes();
+
+        return collect($dayCodes)
+            ->filter(fn (?string $code) => $code && in_array($code, $absenceCodes, true))
+            ->count();
+    }
+
+    private function attendanceSettingsPayload(): array
+    {
+        return [
+            'absenceAlertThreshold' => AttendanceSettings::absenceAlertThreshold(),
+        ];
+    }
+
     public function index(Formation $formation): Response
     {
         $this->authorize('create', [Attendance::class, $formation]);
@@ -45,17 +72,17 @@ class AttendanceController extends Controller
             ->groupBy('learner_id');
 
         $learnerRows = $learners->map(function ($learner) use ($dayAttendances, $allAttendancesByLearner, $presentCodes) {
-            $att   = $dayAttendances->get($learner->id);
-            $all   = $allAttendancesByLearner->get($learner->id, collect());
+            $att = $dayAttendances->get($learner->id);
+            $all = $allAttendancesByLearner->get($learner->id, collect());
             $total = $all->count();
-            $pres  = $all->filter(fn ($a) => in_array($a->code->value, $presentCodes))->count();
-            $rate  = $total > 0 ? round($pres / $total * 100) : null;
+            $pres = $all->filter(fn ($a) => in_array($a->code->value, $presentCodes))->count();
+            $rate = $total > 0 ? round($pres / $total * 100) : null;
 
             return [
-                'id'         => $learner->id,
-                'full_name'  => $learner->full_name,
+                'id' => $learner->id,
+                'full_name' => $learner->full_name,
                 'attendance' => $att ? ['code' => $att->code->value, 'comment' => $att->comment] : null,
-                'rate'       => $rate,
+                'rate' => $rate,
             ];
         });
 
@@ -66,15 +93,16 @@ class AttendanceController extends Controller
             ->pluck('day');
 
         return Inertia::render('Attendances/Index', [
-            'formation'  => $formation->load('project'),
-            'date'       => $date->toDateString(),
-            'learners'   => $learnerRows,
-            'codes'      => collect(AttendanceCode::cases())->map(fn ($c) => [
+            'formation' => $formation->load('project'),
+            'date' => $date->toDateString(),
+            'learners' => $learnerRows,
+            'codes' => collect(AttendanceCode::cases())->map(fn ($c) => [
                 'value' => $c->value,
                 'label' => $c->label(),
                 'color' => $c->color(),
             ]),
             'savedDates' => $savedDates,
+            'attendanceSettings' => $this->attendanceSettingsPayload(),
         ]);
     }
 
@@ -82,9 +110,9 @@ class AttendanceController extends Controller
     {
         $action->execute(
             formation: $formation,
-            date:      Carbon::parse($request->validated('date')),
-            records:   $request->validated('records'),
-            recorder:  $request->user(),
+            date: Carbon::parse($request->validated('date')),
+            records: $request->validated('records'),
+            recorder: $request->user(),
         );
 
         return redirect()
@@ -98,18 +126,18 @@ class AttendanceController extends Controller
 
         $request->validate([
             'learner_id' => ['required', 'exists:learners,id'],
-            'date'       => ['required', 'date'],
-            'code'       => ['required', 'string', Rule::in(array_column(AttendanceCode::cases(), 'value'))],
+            'date' => ['required', 'date'],
+            'code' => ['required', 'string', Rule::in(array_column(AttendanceCode::cases(), 'value'))],
         ]);
 
         Attendance::updateOrCreate(
             [
                 'formation_id' => $formation->id,
-                'learner_id'   => $request->learner_id,
-                'date'         => Carbon::parse($request->date)->toDateString(),
+                'learner_id' => $request->learner_id,
+                'date' => Carbon::parse($request->date)->toDateString(),
             ],
             [
-                'code'        => AttendanceCode::from($request->code)->value,
+                'code' => AttendanceCode::from($request->code)->value,
                 'recorded_by' => $request->user()->id,
             ]
         );
@@ -139,53 +167,59 @@ class AttendanceController extends Controller
 
         $allAttendances = $formation->attendances()
             ->get()
-            ->groupBy(fn ($a) => $a->learner_id . '_' . $a->date->toDateString());
+            ->groupBy(fn ($a) => $a->learner_id.'_'.$a->date->toDateString());
 
         $rows = $learners->map(function ($learner) use ($allDates, $allAttendances, $presentCodes) {
             $days = $allDates->mapWithKeys(function ($day) use ($learner, $allAttendances) {
-                $key = $learner->id . '_' . $day;
+                $key = $learner->id.'_'.$day;
                 $att = $allAttendances->get($key)?->first();
+
                 return [$day => $att ? $att->code->value : null];
             });
 
-            $total   = $days->filter()->count();
+            $total = $days->filter()->count();
             $present = $days->filter(fn ($c) => in_array($c, $presentCodes))->count();
-            $rate    = $total > 0 ? round($present / $total * 100) : null;
+            $rate = $total > 0 ? round($present / $total * 100) : null;
+            $absences = $this->countAbsences($days);
 
             return [
-                'id'        => $learner->id,
+                'id' => $learner->id,
                 'full_name' => $learner->full_name,
-                'days'      => $days,
-                'total'     => $total,
-                'present'   => $present,
-                'rate'      => $rate,
+                'days' => $days,
+                'total' => $total,
+                'present' => $present,
+                'rate' => $rate,
+                'absences' => $absences,
             ];
         });
 
         $dayStats = $allDates->mapWithKeys(function ($day) use ($learners, $allAttendances, $presentCodes) {
             $present = $learners->filter(function ($l) use ($day, $allAttendances, $presentCodes) {
-                $key  = $l->id . '_' . $day;
+                $key = $l->id.'_'.$day;
                 $code = $allAttendances->get($key)?->first()?->code?->value;
+
                 return in_array($code, $presentCodes);
             })->count();
+
             return [$day => ['present' => $present, 'total' => $learners->count()]];
         });
 
         return Inertia::render('Attendances/Index', [
-            'formation'  => $formation->load('project'),
-            'date'       => now()->toDateString(),
-            'learners'   => collect(),
-            'codes'      => collect(AttendanceCode::cases())->map(fn ($c) => [
+            'formation' => $formation->load('project'),
+            'date' => now()->toDateString(),
+            'learners' => collect(),
+            'codes' => collect(AttendanceCode::cases())->map(fn ($c) => [
                 'value' => $c->value,
                 'label' => $c->label(),
                 'color' => $c->color(),
             ]),
             'savedDates' => $allDates,
-            'recap'      => [
-                'dates'    => $allDates,
-                'rows'     => $rows,
+            'recap' => [
+                'dates' => $allDates,
+                'rows' => $rows,
                 'dayStats' => $dayStats,
             ],
+            'attendanceSettings' => $this->attendanceSettingsPayload(),
         ]);
     }
 
@@ -205,9 +239,9 @@ class AttendanceController extends Controller
             ->keyBy('learner_id');
 
         $pdf = Pdf::loadView('pdfs.attendance-day', [
-            'formation'   => $formation->load('project'),
-            'date'        => $date,
-            'learners'    => $learners,
+            'formation' => $formation->load('project'),
+            'date' => $date,
+            'learners' => $learners,
             'attendances' => $attendances,
         ])->setPaper('a4', 'landscape');
 
@@ -236,29 +270,35 @@ class AttendanceController extends Controller
 
         $allAttendances = $formation->attendances()
             ->get()
-            ->groupBy(fn ($a) => $a->learner_id . '_' . $a->date->toDateString());
+            ->groupBy(fn ($a) => $a->learner_id.'_'.$a->date->toDateString());
 
         $rows = $learners->map(function ($learner) use ($allDates, $allAttendances) {
             $days = $allDates->mapWithKeys(function ($day) use ($learner, $allAttendances) {
-                $key = $learner->id . '_' . $day;
+                $key = $learner->id.'_'.$day;
                 $att = $allAttendances->get($key)?->first();
+
                 return [$day => $att ? $att->code->value : null];
             });
+
             return [
                 'full_name' => $learner->full_name,
-                'days'      => $days,
+                'days' => $days,
+                'absences' => $this->countAbsences($days),
             ];
         });
 
+        $absenceAlertThreshold = AttendanceSettings::absenceAlertThreshold();
+
         // Paginer les dates : max 8 colonnes-jours par page A4 paysage pour confort de lecture
-        $chunkSize  = 8;
+        $chunkSize = 8;
         $dateChunks = $allDates->chunk($chunkSize);
 
         $pdf = Pdf::loadView('pdfs.attendance-recap', [
-            'formation'   => $formation->load('project'),
-            'rows'        => $rows,
-            'dateChunks'  => $dateChunks,
-            'totalDates'  => $allDates->count(),
+            'formation' => $formation->load('project'),
+            'rows' => $rows,
+            'dateChunks' => $dateChunks,
+            'totalDates' => $allDates->count(),
+            'absenceAlertThreshold' => $absenceAlertThreshold,
         ])->setPaper('a4', 'landscape');
 
         $filename = sprintf('recap_presences_%s.pdf', str($formation->name)->slug());

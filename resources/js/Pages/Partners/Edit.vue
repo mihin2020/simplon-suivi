@@ -2,12 +2,14 @@
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import PartnerCategoryBadge from '@/Components/PartnerCategoryBadge.vue'
 
 defineOptions({ layout: AdminLayout })
 
 interface Partner {
     id: string
     name: string
+    category: string
     logo_path: string | null
     contact_first_name: string | null
     contact_last_name: string | null
@@ -17,10 +19,17 @@ interface Partner {
     contact_position: string | null
 }
 
-const props = defineProps<{ partner: Partner }>()
+interface CategoryOption {
+    value: string
+    label: string
+    color: string
+}
+
+const props = defineProps<{ partner: Partner; categories: CategoryOption[] }>()
 
 const form = useForm({
     name: props.partner.name,
+    category: props.partner.category,
     logo: null as File | null,
     contact_first_name: props.partner.contact_first_name ?? '',
     contact_last_name: props.partner.contact_last_name ?? '',
@@ -56,7 +65,13 @@ const removeLogo = () => {
     previewUrl.value = null
 }
 
-const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: true })
+const submit = () => {
+    if (form.logo) {
+        form.post(`/partners/${props.partner.id}?_method=PUT`, { forceFormData: true })
+    } else {
+        form.put(`/partners/${props.partner.id}`)
+    }
+}
 </script>
 
 <template>
@@ -159,6 +174,31 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
                             />
                         </div>
                         <p v-if="form.errors.name" class="error-msg">{{ form.errors.name }}</p>
+                    </div>
+
+                    <!-- Catégorie -->
+                    <div class="field">
+                        <label class="label">
+                            Catégorie
+                            <span class="required">*</span>
+                        </label>
+                        <div class="category-options">
+                            <label
+                                v-for="cat in categories"
+                                :key="cat.value"
+                                class="category-option"
+                                :class="{ selected: form.category === cat.value, 'has-error': form.errors.category }"
+                            >
+                                <input
+                                    v-model="form.category"
+                                    type="radio"
+                                    :value="cat.value"
+                                    class="sr-only"
+                                />
+                                <PartnerCategoryBadge :category="cat.value" />
+                            </label>
+                        </div>
+                        <p v-if="form.errors.category" class="error-msg">{{ form.errors.category }}</p>
                     </div>
 
                     <!-- Contact Section -->
@@ -274,7 +314,15 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
                                     {{ form.name ? form.name.charAt(0).toUpperCase() : '?' }}
                                 </span>
                             </div>
-                            <p class="preview-name">{{ form.name || 'Nom du partenaire' }}</p>
+                            <div>
+                                <p class="preview-name">{{ form.name || 'Nom du partenaire' }}</p>
+                                <PartnerCategoryBadge
+                                    v-if="form.category"
+                                    :category="form.category"
+                                    size="sm"
+                                    class="mt-xs"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -416,6 +464,28 @@ const submit = () => form.put(`/partners/${props.partner.id}`, { forceFormData: 
     display: flex; align-items: center; justify-content: center; border-radius: 10px;
 }
 .preview-name { font-size: 14px; font-weight: 600; color: #191c1e; }
+.mt-xs { margin-top: 4px; }
+
+.category-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.category-option {
+    cursor: pointer;
+    padding: 8px 12px;
+    border: 1.5px solid #e0e3e5;
+    border-radius: 10px;
+    background: #fafbfc;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+.category-option:hover { border-color: #c8cdd3; background: #fff; }
+.category-option.selected {
+    border-color: #E5004C;
+    background: #fff5f8;
+    box-shadow: 0 0 0 3px rgba(229, 0, 76, 0.08);
+}
+.category-option.has-error { border-color: #ba1a1a; }
 
 .form-actions {
     display: flex; justify-content: flex-end; gap: 10px;

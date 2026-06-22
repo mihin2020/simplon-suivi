@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\AttendanceCode;
+use App\Enums\PaymentStatus;
 use App\Models\AgeRange;
 use App\Models\Attendance;
 use App\Models\CampusFormation;
@@ -17,7 +18,6 @@ use App\Models\LastDiploma;
 use App\Models\Learner;
 use App\Models\Media;
 use App\Models\Partner;
-use App\Models\Payment;
 use App\Models\Project;
 use App\Models\Referentiel;
 use App\Models\Role;
@@ -29,7 +29,8 @@ use App\Models\WhatsAppMessage;
 class AiTools
 {
     private const DEFAULT_LIMIT = 50;
-    private const MAX_LIMIT     = 100;
+
+    private const MAX_LIMIT = 100;
 
     /**
      * Schémas JSON (communs aux providers) décrivant les outils disponibles.
@@ -38,207 +39,207 @@ class AiTools
     {
         return [
             [
-                'name'        => 'search_learners',
+                'name' => 'search_learners',
                 'description' => "Recherche des apprenants par nom/prénom/email, formation, projet ou statut d'insertion (recherche, stage, emploi, sans emploi). Retourne une liste bornée.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => [
-                        'query'            => ['type' => 'string', 'description' => 'Nom, prénom ou email recherché'],
-                        'formation_id'     => ['type' => 'string', 'description' => "UUID d'une formation pour filtrer"],
-                        'project_id'       => ['type' => 'string', 'description' => "UUID d'un projet pour filtrer"],
+                        'query' => ['type' => 'string', 'description' => 'Nom, prénom ou email recherché'],
+                        'formation_id' => ['type' => 'string', 'description' => "UUID d'une formation pour filtrer"],
+                        'project_id' => ['type' => 'string', 'description' => "UUID d'un projet pour filtrer"],
                         'insertion_status' => ['type' => 'string', 'enum' => ['searching', 'internship', 'employed', 'unemployed']],
-                        'limit'            => ['type' => 'integer', 'description' => 'Nombre max de résultats (défaut 50, max 100)'],
+                        'limit' => ['type' => 'integer', 'description' => 'Nombre max de résultats (défaut 50, max 100)'],
                     ],
                 ],
             ],
             [
-                'name'        => 'get_learner_detail',
+                'name' => 'get_learner_detail',
                 'description' => "Récupère la fiche complète d'un apprenant : formations, statut d'insertion, résumé des présences.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => ['learner_id' => ['type' => 'string', 'description' => "UUID de l'apprenant"]],
-                    'required'   => ['learner_id'],
+                    'required' => ['learner_id'],
                 ],
             ],
             [
-                'name'        => 'list_projects',
+                'name' => 'list_projects',
                 'description' => 'Liste tous les projets avec leurs dates et leur nombre de formations.',
-                'parameters'  => ['type' => 'object', 'properties' => new \stdClass()],
+                'parameters' => ['type' => 'object', 'properties' => new \stdClass],
             ],
             [
-                'name'        => 'list_formations',
+                'name' => 'list_formations',
                 'description' => "Liste les formations (éventuellement filtrées par projet) avec le nombre d'apprenants et de formateurs.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => ['project_id' => ['type' => 'string', 'description' => "UUID d'un projet pour filtrer"]],
                 ],
             ],
             [
-                'name'        => 'get_formation_detail',
+                'name' => 'get_formation_detail',
                 'description' => "Détail d'une formation : apprenants inscrits, formateurs assignés, taux de présence global.",
-                'parameters'  => [
-                    'type'       => 'object',
-                    'properties' => ['formation_id' => ['type' => 'string', 'description' => "UUID de la formation"]],
-                    'required'   => ['formation_id'],
+                'parameters' => [
+                    'type' => 'object',
+                    'properties' => ['formation_id' => ['type' => 'string', 'description' => 'UUID de la formation']],
+                    'required' => ['formation_id'],
                 ],
             ],
             [
-                'name'        => 'list_trainers',
-                'description' => "Liste les formateurs, éventuellement filtrés par formation.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'name' => 'list_trainers',
+                'description' => 'Liste les formateurs, éventuellement filtrés par formation.',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => ['formation_id' => ['type' => 'string', 'description' => "UUID d'une formation pour filtrer"]],
                 ],
             ],
             [
-                'name'        => 'get_attendance_stats',
-                'description' => "Statistiques agrégées de présence pour une formation (taux de présence, absences justifiées/non justifiées, retards), sur une période optionnelle. Ne retourne PAS le détail ligne par ligne.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'name' => 'get_attendance_stats',
+                'description' => 'Statistiques agrégées de présence pour une formation (taux de présence, absences justifiées/non justifiées, retards), sur une période optionnelle. Ne retourne PAS le détail ligne par ligne.',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => [
-                        'formation_id' => ['type' => 'string', 'description' => "UUID de la formation"],
-                        'date_from'    => ['type' => 'string', 'description' => 'Date de début (YYYY-MM-DD), optionnel'],
-                        'date_to'      => ['type' => 'string', 'description' => 'Date de fin (YYYY-MM-DD), optionnel'],
+                        'formation_id' => ['type' => 'string', 'description' => 'UUID de la formation'],
+                        'date_from' => ['type' => 'string', 'description' => 'Date de début (YYYY-MM-DD), optionnel'],
+                        'date_to' => ['type' => 'string', 'description' => 'Date de fin (YYYY-MM-DD), optionnel'],
                     ],
-                    'required'   => ['formation_id'],
+                    'required' => ['formation_id'],
                 ],
             ],
             [
-                'name'        => 'get_attendance_detail',
-                'description' => "Détail des présences de TOUS les apprenants pour UNE seule date et UNE formation.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'name' => 'get_attendance_detail',
+                'description' => 'Détail des présences de TOUS les apprenants pour UNE seule date et UNE formation.',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => [
-                        'formation_id' => ['type' => 'string', 'description' => "UUID de la formation"],
-                        'date'         => ['type' => 'string', 'description' => 'Date au format YYYY-MM-DD'],
+                        'formation_id' => ['type' => 'string', 'description' => 'UUID de la formation'],
+                        'date' => ['type' => 'string', 'description' => 'Date au format YYYY-MM-DD'],
                     ],
-                    'required'   => ['formation_id', 'date'],
+                    'required' => ['formation_id', 'date'],
                 ],
             ],
             [
-                'name'        => 'list_insertions',
-                'description' => "Liste le suivi insertion/emploi des apprenants (dernier statut connu par apprenant), filtrable par statut ou formation.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'name' => 'list_insertions',
+                'description' => 'Liste le suivi insertion/emploi des apprenants (dernier statut connu par apprenant), filtrable par statut ou formation.',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => [
-                        'status'       => ['type' => 'string', 'enum' => ['searching', 'internship', 'employed', 'unemployed']],
+                        'status' => ['type' => 'string', 'enum' => ['searching', 'internship', 'employed', 'unemployed']],
                         'formation_id' => ['type' => 'string', 'description' => "UUID d'une formation pour filtrer"],
-                        'limit'        => ['type' => 'integer', 'description' => 'Nombre max de résultats (défaut 50, max 100)'],
+                        'limit' => ['type' => 'integer', 'description' => 'Nombre max de résultats (défaut 50, max 100)'],
                     ],
                 ],
             ],
             [
-                'name'        => 'list_partners',
+                'name' => 'list_partners',
                 'description' => 'Liste tous les partenaires de la plateforme avec leurs contacts.',
-                'parameters'  => ['type' => 'object', 'properties' => new \stdClass()],
+                'parameters' => ['type' => 'object', 'properties' => new \stdClass],
             ],
             [
-                'name'        => 'list_referentiels',
-                'description' => "Liste les référentiels (et leurs blocs de compétences si un ID est précisé).",
-                'parameters'  => [
-                    'type'       => 'object',
+                'name' => 'list_referentiels',
+                'description' => 'Liste les référentiels (et leurs blocs de compétences si un ID est précisé).',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => ['referentiel_id' => ['type' => 'string', 'description' => "UUID d'un référentiel pour avoir le détail complet (blocs + compétences)"]],
                 ],
             ],
             [
-                'name'        => 'list_users',
+                'name' => 'list_users',
                 'description' => 'Liste les utilisateurs de la plateforme (comptes Admin/Formateur/Super Admin) avec leur rôle.',
-                'parameters'  => ['type' => 'object', 'properties' => new \stdClass()],
+                'parameters' => ['type' => 'object', 'properties' => new \stdClass],
             ],
             [
-                'name'        => 'list_campus_formations',
-                'description' => "Liste les formations Campus (catalogue payant : nom, durée, mode présentiel/en ligne, coût, nombre de cohortes).",
-                'parameters'  => ['type' => 'object', 'properties' => new \stdClass()],
+                'name' => 'list_campus_formations',
+                'description' => 'Liste les formations Campus (catalogue payant : nom, durée, mode présentiel/en ligne, coût, nombre de cohortes).',
+                'parameters' => ['type' => 'object', 'properties' => new \stdClass],
             ],
             [
-                'name'        => 'list_cohorts',
+                'name' => 'list_cohorts',
                 'description' => "Liste les cohortes Campus, avec leur formation, statut, dates, nombre d'apprenants actifs et résumé financier (attendu/collecté/restant).",
-                'parameters'  => [
-                    'type'       => 'object',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => [
                         'campus_formation_id' => ['type' => 'string', 'description' => "UUID d'une formation Campus pour filtrer"],
-                        'status'              => ['type' => 'string', 'enum' => ['planifiee', 'en_cours', 'cloturee']],
+                        'status' => ['type' => 'string', 'enum' => ['planifiee', 'en_cours', 'cloturee']],
                     ],
                 ],
             ],
             [
-                'name'        => 'get_cohort_finance_detail',
+                'name' => 'get_cohort_finance_detail',
                 'description' => "Détail financier d'une cohorte : montants attendu/collecté/restant, tranches en retard, et paiement par apprenant.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => ['cohort_id' => ['type' => 'string', 'description' => 'UUID de la cohorte']],
-                    'required'   => ['cohort_id'],
+                    'required' => ['cohort_id'],
                 ],
             ],
             [
-                'name'        => 'list_expenses',
-                'description' => "Liste les dépenses enregistrées (par formation classique, pas Campus), avec le total cumulé. Filtrable par formation et par période.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'name' => 'list_expenses',
+                'description' => 'Liste les dépenses enregistrées (par formation classique, pas Campus), avec le total cumulé. Filtrable par formation et par période.',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => [
                         'formation_id' => ['type' => 'string', 'description' => "UUID d'une formation pour filtrer"],
-                        'date_from'    => ['type' => 'string', 'description' => 'Date de début (YYYY-MM-DD)'],
-                        'date_to'      => ['type' => 'string', 'description' => 'Date de fin (YYYY-MM-DD)'],
-                        'limit'        => ['type' => 'integer', 'description' => 'Nombre max de résultats (défaut 50, max 100)'],
+                        'date_from' => ['type' => 'string', 'description' => 'Date de début (YYYY-MM-DD)'],
+                        'date_to' => ['type' => 'string', 'description' => 'Date de fin (YYYY-MM-DD)'],
+                        'limit' => ['type' => 'integer', 'description' => 'Nombre max de résultats (défaut 50, max 100)'],
                     ],
                 ],
             ],
             [
-                'name'        => 'list_formation_links',
-                'description' => "Liste les liens/ressources partagés pour une formation (visioconférence, documents externes, etc.).",
-                'parameters'  => [
-                    'type'       => 'object',
+                'name' => 'list_formation_links',
+                'description' => 'Liste les liens/ressources partagés pour une formation (visioconférence, documents externes, etc.).',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => ['formation_id' => ['type' => 'string', 'description' => 'UUID de la formation']],
-                    'required'   => ['formation_id'],
+                    'required' => ['formation_id'],
                 ],
             ],
             [
-                'name'        => 'list_media',
+                'name' => 'list_media',
                 'description' => "Liste les médias (photos/vidéos/documents) de la médiathèque d'une formation, éventuellement filtrés par album.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => [
                         'formation_id' => ['type' => 'string', 'description' => 'UUID de la formation'],
-                        'album'        => ['type' => 'string', 'description' => "Nom de l'album pour filtrer"],
-                        'limit'        => ['type' => 'integer', 'description' => 'Nombre max de résultats (défaut 50, max 100)'],
+                        'album' => ['type' => 'string', 'description' => "Nom de l'album pour filtrer"],
+                        'limit' => ['type' => 'integer', 'description' => 'Nombre max de résultats (défaut 50, max 100)'],
                     ],
-                    'required'   => ['formation_id'],
+                    'required' => ['formation_id'],
                 ],
             ],
             [
-                'name'        => 'list_emails',
-                'description' => "Liste les emails envoyés/reçus par la plateforme (boîte de communication), filtrable par sens, lecture, ou fil de discussion.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'name' => 'list_emails',
+                'description' => 'Liste les emails envoyés/reçus par la plateforme (boîte de communication), filtrable par sens, lecture, ou fil de discussion.',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => [
                         'direction' => ['type' => 'string', 'enum' => ['sent', 'received']],
-                        'is_read'   => ['type' => 'boolean'],
+                        'is_read' => ['type' => 'boolean'],
                         'thread_id' => ['type' => 'string', 'description' => 'Identifiant du fil de discussion'],
-                        'limit'     => ['type' => 'integer', 'description' => 'Nombre max de résultats (défaut 50, max 100)'],
+                        'limit' => ['type' => 'integer', 'description' => 'Nombre max de résultats (défaut 50, max 100)'],
                     ],
                 ],
             ],
             [
-                'name'        => 'list_whatsapp_messages',
-                'description' => "Liste les messages WhatsApp générés/envoyés (liens wa.me), filtrable par apprenant ou statut.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'name' => 'list_whatsapp_messages',
+                'description' => 'Liste les messages WhatsApp générés/envoyés (liens wa.me), filtrable par apprenant ou statut.',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => [
                         'learner_id' => ['type' => 'string', 'description' => "UUID d'un apprenant pour filtrer"],
-                        'status'     => ['type' => 'string', 'description' => 'Statut du message'],
-                        'limit'      => ['type' => 'integer', 'description' => 'Nombre max de résultats (défaut 50, max 100)'],
+                        'status' => ['type' => 'string', 'description' => 'Statut du message'],
+                        'limit' => ['type' => 'integer', 'description' => 'Nombre max de résultats (défaut 50, max 100)'],
                     ],
                 ],
             ],
             [
-                'name'        => 'list_reference_data',
+                'name' => 'list_reference_data',
                 'description' => "Liste une table de données de référence/configuration : niveaux d'étude, tranches d'âge, vulnérabilités, derniers diplômes, ou rôles applicatifs.",
-                'parameters'  => [
-                    'type'       => 'object',
+                'parameters' => [
+                    'type' => 'object',
                     'properties' => [
                         'type' => ['type' => 'string', 'enum' => ['education_levels', 'age_ranges', 'vulnerabilities', 'last_diplomas', 'roles']],
                     ],
-                    'required'   => ['type'],
+                    'required' => ['type'],
                 ],
             ],
         ];
@@ -248,28 +249,28 @@ class AiTools
     {
         try {
             return match ($name) {
-                'search_learners'       => self::searchLearners($args),
-                'get_learner_detail'    => self::getLearnerDetail($args),
-                'list_projects'         => self::listProjects(),
-                'list_formations'       => self::listFormations($args),
-                'get_formation_detail'  => self::getFormationDetail($args),
-                'list_trainers'         => self::listTrainers($args),
-                'get_attendance_stats'  => self::getAttendanceStats($args),
+                'search_learners' => self::searchLearners($args),
+                'get_learner_detail' => self::getLearnerDetail($args),
+                'list_projects' => self::listProjects(),
+                'list_formations' => self::listFormations($args),
+                'get_formation_detail' => self::getFormationDetail($args),
+                'list_trainers' => self::listTrainers($args),
+                'get_attendance_stats' => self::getAttendanceStats($args),
                 'get_attendance_detail' => self::getAttendanceDetail($args),
-                'list_insertions'       => self::listInsertions($args),
-                'list_partners'           => self::listPartners(),
-                'list_referentiels'       => self::listReferentiels($args),
-                'list_users'              => self::listUsers(),
-                'list_campus_formations'  => self::listCampusFormations(),
-                'list_cohorts'            => self::listCohorts($args),
+                'list_insertions' => self::listInsertions($args),
+                'list_partners' => self::listPartners(),
+                'list_referentiels' => self::listReferentiels($args),
+                'list_users' => self::listUsers(),
+                'list_campus_formations' => self::listCampusFormations(),
+                'list_cohorts' => self::listCohorts($args),
                 'get_cohort_finance_detail' => self::getCohortFinanceDetail($args),
-                'list_expenses'           => self::listExpenses($args),
-                'list_formation_links'    => self::listFormationLinks($args),
-                'list_media'              => self::listMedia($args),
-                'list_emails'             => self::listEmails($args),
-                'list_whatsapp_messages'  => self::listWhatsappMessages($args),
-                'list_reference_data'     => self::listReferenceData($args),
-                default                   => ['error' => "Outil inconnu : {$name}"],
+                'list_expenses' => self::listExpenses($args),
+                'list_formation_links' => self::listFormationLinks($args),
+                'list_media' => self::listMedia($args),
+                'list_emails' => self::listEmails($args),
+                'list_whatsapp_messages' => self::listWhatsappMessages($args),
+                'list_reference_data' => self::listReferenceData($args),
+                default => ['error' => "Outil inconnu : {$name}"],
             };
         } catch (\Exception $e) {
             return ['error' => "Échec de l'outil {$name} : {$e->getMessage()}"];
@@ -317,18 +318,18 @@ class AiTools
         }
 
         $total = $learners->count();
-        $page  = $learners->take($limit);
+        $page = $learners->take($limit);
 
         return [
             'total_matching' => $total,
-            'returned'       => $page->count(),
-            'learners'       => $page->map(fn ($l) => [
-                'id'               => $l->id,
-                'name'             => "{$l->first_name} {$l->last_name}",
-                'email'            => $l->email,
-                'phone'            => $l->phone,
-                'gender'           => $l->gender?->value,
-                'formations'       => $l->formations->pluck('name')->all(),
+            'returned' => $page->count(),
+            'learners' => $page->map(fn ($l) => [
+                'id' => $l->id,
+                'name' => "{$l->first_name} {$l->last_name}",
+                'email' => $l->email,
+                'phone' => $l->phone,
+                'gender' => $l->gender?->value,
+                'formations' => $l->formations->pluck('name')->all(),
                 'insertion_status' => $l->insertionRecords->first()?->status?->label(),
             ])->values()->all(),
         ];
@@ -352,20 +353,20 @@ class AiTools
             ->pluck('cnt', 'code');
 
         return [
-            'id'         => $learner->id,
-            'name'       => "{$learner->first_name} {$learner->last_name}",
-            'email'      => $learner->email,
-            'phone'      => $learner->phone,
-            'gender'     => $learner->gender?->value,
+            'id' => $learner->id,
+            'name' => "{$learner->first_name} {$learner->last_name}",
+            'email' => $learner->email,
+            'phone' => $learner->phone,
+            'gender' => $learner->gender?->value,
             'formations' => $learner->formations->map(fn ($f) => [
-                'id'      => $f->id,
-                'name'    => $f->name,
+                'id' => $f->id,
+                'name' => $f->name,
                 'project' => $f->project?->name,
-                'status'  => $f->pivot->status,
+                'status' => $f->pivot->status,
             ])->all(),
             'insertion_history' => $learner->insertionRecords->map(fn ($r) => [
-                'status'  => $r->status->label(),
-                'since'   => $r->status_changed_at?->format('d/m/Y'),
+                'status' => $r->status->label(),
+                'since' => $r->status_changed_at?->format('d/m/Y'),
                 'company' => $r->internship_company ?? $r->employment_company,
             ])->all(),
             'attendance_summary' => $attendanceCounts,
@@ -380,12 +381,12 @@ class AiTools
             ->get();
 
         return ['projects' => $projects->map(fn ($p) => [
-            'id'              => $p->id,
-            'name'            => $p->name,
-            'started_at'      => $p->started_at?->format('d/m/Y'),
-            'ended_at'        => $p->ended_at?->format('d/m/Y'),
-            'status'          => $p->status?->value,
-            'formations_count'=> $p->formations_count,
+            'id' => $p->id,
+            'name' => $p->name,
+            'started_at' => $p->started_at?->format('d/m/Y'),
+            'ended_at' => $p->ended_at?->format('d/m/Y'),
+            'status' => $p->status?->value,
+            'formations_count' => $p->formations_count,
         ])->all()];
     }
 
@@ -402,12 +403,12 @@ class AiTools
         $formations = $query->orderBy('name')->get();
 
         return ['formations' => $formations->map(fn ($f) => [
-            'id'             => $f->id,
-            'name'           => $f->name,
-            'project'        => $f->project?->name,
-            'started_at'     => $f->started_at?->format('d/m/Y'),
-            'ended_at'       => $f->ended_at?->format('d/m/Y'),
-            'status'         => $f->status?->value,
+            'id' => $f->id,
+            'name' => $f->name,
+            'project' => $f->project?->name,
+            'started_at' => $f->started_at?->format('d/m/Y'),
+            'ended_at' => $f->ended_at?->format('d/m/Y'),
+            'status' => $f->status?->value,
             'learners_count' => $f->learners_count,
             'trainers_count' => $f->trainers_count,
         ])->all()];
@@ -430,24 +431,24 @@ class AiTools
             ->groupBy('code')
             ->pluck('cnt', 'code');
 
-        $total   = $attendanceCounts->sum();
+        $total = $attendanceCounts->sum();
         $present = (int) ($attendanceCounts[AttendanceCode::Present->value] ?? 0);
 
         return [
-            'id'              => $formation->id,
-            'name'            => $formation->name,
-            'project'         => $formation->project?->name,
-            'started_at'      => $formation->started_at?->format('d/m/Y'),
-            'ended_at'        => $formation->ended_at?->format('d/m/Y'),
-            'status'          => $formation->status?->value,
-            'learners'        => $formation->learners->map(fn ($l) => [
+            'id' => $formation->id,
+            'name' => $formation->name,
+            'project' => $formation->project?->name,
+            'started_at' => $formation->started_at?->format('d/m/Y'),
+            'ended_at' => $formation->ended_at?->format('d/m/Y'),
+            'status' => $formation->status?->value,
+            'learners' => $formation->learners->map(fn ($l) => [
                 'id' => $l->id, 'name' => "{$l->first_name} {$l->last_name}", 'email' => $l->email,
                 'status' => $l->pivot->status,
             ])->all(),
-            'trainers'        => $formation->trainers->map(fn ($t) => [
+            'trainers' => $formation->trainers->map(fn ($t) => [
                 'id' => $t->id, 'name' => $t->user?->full_name, 'is_lead' => (bool) $t->pivot->is_lead,
             ])->all(),
-            'attendance_rate' => $total > 0 ? round(($present / $total) * 100, 1) . '%' : 'Aucune donnée',
+            'attendance_rate' => $total > 0 ? round(($present / $total) * 100, 1).'%' : 'Aucune donnée',
         ];
     }
 
@@ -462,10 +463,10 @@ class AiTools
         $trainers = $query->get();
 
         return ['trainers' => $trainers->map(fn ($t) => [
-            'id'         => $t->id,
-            'name'       => $t->user?->full_name,
-            'email'      => $t->user?->email,
-            'phone'      => $t->phone,
+            'id' => $t->id,
+            'name' => $t->user?->full_name,
+            'email' => $t->user?->email,
+            'phone' => $t->phone,
             'formations' => $t->formations->pluck('name')->all(),
         ])->all()];
     }
@@ -482,20 +483,20 @@ class AiTools
         }
 
         $counts = (clone $query)->selectRaw('code, count(*) as cnt')->groupBy('code')->pluck('cnt', 'code');
-        $total  = $counts->sum();
-        $dates  = (clone $query)->selectRaw('min(date) as min_date, max(date) as max_date')->first();
+        $total = $counts->sum();
+        $dates = (clone $query)->selectRaw('min(date) as min_date, max(date) as max_date')->first();
 
         return [
-            'total_entries'  => $total,
-            'present'        => (int) ($counts[AttendanceCode::Present->value] ?? 0),
-            'absent_justified'     => (int) ($counts[AttendanceCode::AbsentJustified->value] ?? 0),
-            'absent_unjustified'   => (int) ($counts[AttendanceCode::AbsentNotJustified->value] ?? 0),
-            'late_justified'       => (int) ($counts[AttendanceCode::LateJustified->value] ?? 0),
-            'late_unjustified'     => (int) ($counts[AttendanceCode::LateNotJustified->value] ?? 0),
-            'presence_rate'  => $total > 0 ? round((($counts[AttendanceCode::Present->value] ?? 0) / $total) * 100, 1) . '%' : 'N/A',
-            'period'         => [
+            'total_entries' => $total,
+            'present' => (int) ($counts[AttendanceCode::Present->value] ?? 0),
+            'absent_justified' => (int) ($counts[AttendanceCode::AbsentJustified->value] ?? 0),
+            'absent_unjustified' => (int) ($counts[AttendanceCode::AbsentNotJustified->value] ?? 0),
+            'late_justified' => (int) ($counts[AttendanceCode::LateJustified->value] ?? 0),
+            'late_unjustified' => (int) ($counts[AttendanceCode::LateNotJustified->value] ?? 0),
+            'presence_rate' => $total > 0 ? round((($counts[AttendanceCode::Present->value] ?? 0) / $total) * 100, 1).'%' : 'N/A',
+            'period' => [
                 'from' => $dates?->min_date,
-                'to'   => $dates?->max_date,
+                'to' => $dates?->max_date,
             ],
         ];
     }
@@ -512,10 +513,10 @@ class AiTools
         }
 
         return ['entries' => $records->map(fn ($r) => [
-            'learner'  => $r->learner ? "{$r->learner->first_name} {$r->learner->last_name}" : "ID:{$r->learner_id}",
-            'code'     => $r->code->value,
-            'label'    => $r->code->label(),
-            'comment'  => $r->comment,
+            'learner' => $r->learner ? "{$r->learner->first_name} {$r->learner->last_name}" : "ID:{$r->learner_id}",
+            'code' => $r->code->value,
+            'label' => $r->code->label(),
+            'comment' => $r->comment,
         ])->all()];
     }
 
@@ -534,35 +535,37 @@ class AiTools
         }
 
         $records = $query->get()->unique('learner_id');
-        $total   = $records->count();
-        $page    = $records->take($limit);
+        $total = $records->count();
+        $page = $records->take($limit);
 
         return [
             'total_matching' => $total,
-            'returned'       => $page->count(),
-            'records'        => $page->filter(fn ($r) => $r->learner)->map(fn ($r) => [
-                'learner'  => "{$r->learner->first_name} {$r->learner->last_name}",
-                'status'   => $r->status->label(),
-                'company'  => $r->internship_company ?? $r->employment_company,
+            'returned' => $page->count(),
+            'records' => $page->filter(fn ($r) => $r->learner)->map(fn ($r) => [
+                'learner' => "{$r->learner->first_name} {$r->learner->last_name}",
+                'status' => $r->status->label(),
+                'company' => $r->internship_company ?? $r->employment_company,
                 'contract' => $r->internship_contract_type ?? $r->employment_contract_type,
-                'since'    => $r->internship_start_date?->format('d/m/Y') ?? $r->employment_start_date?->format('d/m/Y'),
+                'since' => $r->internship_start_date?->format('d/m/Y') ?? $r->employment_start_date?->format('d/m/Y'),
             ])->values()->all(),
         ];
     }
 
     private static function listPartners(): array
     {
-        $partners = Partner::select('id', 'name', 'contact_first_name', 'contact_last_name', 'contact_email', 'contact_phone', 'contact_position')
+        $partners = Partner::select('id', 'name', 'category', 'contact_first_name', 'contact_last_name', 'contact_email', 'contact_phone', 'contact_position')
             ->orderBy('name')
             ->get();
 
         return ['partners' => $partners->map(fn ($p) => [
-            'id'      => $p->id,
-            'name'    => $p->name,
+            'id' => $p->id,
+            'name' => $p->name,
+            'category' => $p->category?->value,
+            'category_label' => $p->category?->label(),
             'contact' => trim("{$p->contact_first_name} {$p->contact_last_name}") ?: null,
-            'email'   => $p->contact_email,
-            'phone'   => $p->contact_phone,
-            'position'=> $p->contact_position,
+            'email' => $p->contact_email,
+            'phone' => $p->contact_phone,
+            'position' => $p->contact_position,
         ])->all()];
     }
 
@@ -575,10 +578,10 @@ class AiTools
             }
 
             return ['referentiel' => [
-                'id'     => $r->id,
-                'name'   => $r->name,
+                'id' => $r->id,
+                'name' => $r->name,
                 'blocks' => $r->blocks->map(fn ($b) => [
-                    'name'        => $b->name,
+                    'name' => $b->name,
                     'competences' => $b->competences->pluck('name')->all(),
                 ])->all(),
             ]];
@@ -598,9 +601,9 @@ class AiTools
             ->get();
 
         return ['users' => $users->map(fn ($u) => [
-            'name'   => "{$u->first_name} {$u->last_name}",
-            'email'  => $u->email,
-            'role'   => $u->role?->value,
+            'name' => "{$u->first_name} {$u->last_name}",
+            'email' => $u->email,
+            'role' => $u->role?->value,
             'active' => $u->is_active,
         ])->all()];
     }
@@ -610,13 +613,13 @@ class AiTools
         $formations = CampusFormation::withCount('cohorts')->orderBy('name')->get();
 
         return ['campus_formations' => $formations->map(fn ($f) => [
-            'id'             => $f->id,
-            'name'           => $f->name,
-            'mode'           => $f->mode?->label(),
-            'duration_months'=> $f->duration_months,
-            'total_cost'     => $f->total_cost,
-            'is_active'      => $f->is_active,
-            'cohorts_count'  => $f->cohorts_count,
+            'id' => $f->id,
+            'name' => $f->name,
+            'mode' => $f->mode?->label(),
+            'duration_months' => $f->duration_months,
+            'total_cost' => $f->total_cost,
+            'is_active' => $f->is_active,
+            'cohorts_count' => $f->cohorts_count,
         ])->all()];
     }
 
@@ -635,16 +638,16 @@ class AiTools
         $cohorts = $query->orderByDesc('started_at')->get();
 
         return ['cohorts' => $cohorts->map(fn ($c) => [
-            'id'                  => $c->id,
-            'name'                => $c->name,
-            'campus_formation'    => $c->campusFormation?->name,
-            'status'              => $c->status?->label(),
-            'started_at'          => $c->started_at?->format('d/m/Y'),
-            'ended_at'            => $c->ended_at?->format('d/m/Y'),
-            'active_learners'     => $c->active_learners_count,
-            'total_expected'      => $c->total_expected,
-            'total_collected'     => $c->total_collected,
-            'total_remaining'     => $c->total_remaining,
+            'id' => $c->id,
+            'name' => $c->name,
+            'campus_formation' => $c->campusFormation?->name,
+            'status' => $c->status?->label(),
+            'started_at' => $c->started_at?->format('d/m/Y'),
+            'ended_at' => $c->ended_at?->format('d/m/Y'),
+            'active_learners' => $c->active_learners_count,
+            'total_expected' => $c->total_expected,
+            'total_collected' => $c->total_collected,
+            'total_remaining' => $c->total_remaining,
         ])->all()];
     }
 
@@ -664,21 +667,22 @@ class AiTools
             ->groupBy('learner_id')
             ->map(function ($payments) {
                 $learner = $payments->first()->learner;
+
                 return [
                     'learner' => $learner ? "{$learner->first_name} {$learner->last_name}" : 'Inconnu',
-                    'paid'    => $payments->where('status', \App\Enums\PaymentStatus::Paye)->sum('amount'),
-                    'pending' => $payments->whereIn('status', [\App\Enums\PaymentStatus::EnAttente, \App\Enums\PaymentStatus::EnRetard])->sum('amount'),
+                    'paid' => $payments->where('status', PaymentStatus::Paye)->sum('amount'),
+                    'pending' => $payments->whereIn('status', [PaymentStatus::EnAttente, PaymentStatus::EnRetard])->sum('amount'),
                 ];
             })->values();
 
         return [
-            'cohort'           => $cohort->name,
+            'cohort' => $cohort->name,
             'campus_formation' => $cohort->campusFormation?->name,
-            'total_expected'   => $cohort->total_expected,
-            'total_collected'  => $cohort->total_collected,
-            'total_remaining'  => $cohort->total_remaining,
+            'total_expected' => $cohort->total_expected,
+            'total_collected' => $cohort->total_collected,
+            'total_remaining' => $cohort->total_remaining,
             'learners_with_overdue_payment' => $overdueCount,
-            'per_learner'      => $perLearner->all(),
+            'per_learner' => $perLearner->all(),
         ];
     }
 
@@ -699,19 +703,19 @@ class AiTools
         }
 
         $expenses = $query->orderByDesc('expense_date')->get();
-        $total    = $expenses->sum('amount');
-        $page     = $expenses->take($limit);
+        $total = $expenses->sum('amount');
+        $page = $expenses->take($limit);
 
         return [
             'total_matching' => $expenses->count(),
-            'total_amount'   => $total,
-            'returned'       => $page->count(),
-            'expenses'       => $page->map(fn ($e) => [
-                'title'     => $e->title,
-                'amount'    => $e->amount,
-                'date'      => $e->expense_date?->format('d/m/Y'),
+            'total_amount' => $total,
+            'returned' => $page->count(),
+            'expenses' => $page->map(fn ($e) => [
+                'title' => $e->title,
+                'amount' => $e->amount,
+                'date' => $e->expense_date?->format('d/m/Y'),
                 'formation' => $e->formation?->name,
-                'spent_by'  => $e->spent_by,
+                'spent_by' => $e->spent_by,
             ])->values()->all(),
         ];
     }
@@ -724,7 +728,7 @@ class AiTools
 
         return ['links' => $links->map(fn ($l) => [
             'title' => $l->title,
-            'url'   => $l->url,
+            'url' => $l->url,
         ])->all()];
     }
 
@@ -739,16 +743,16 @@ class AiTools
         }
 
         $media = $query->orderByDesc('created_at')->get();
-        $page  = $media->take($limit);
+        $page = $media->take($limit);
 
         return [
             'total_matching' => $media->count(),
-            'returned'       => $page->count(),
-            'media'          => $page->map(fn ($m) => [
+            'returned' => $page->count(),
+            'media' => $page->map(fn ($m) => [
                 'title' => $m->title,
-                'type'  => $m->type,
+                'type' => $m->type,
                 'album' => $m->album,
-                'size'  => $m->formatted_size,
+                'size' => $m->formatted_size,
             ])->values()->all(),
         ];
     }
@@ -770,18 +774,18 @@ class AiTools
         }
 
         $emails = $query->orderByDesc('created_at')->get();
-        $page   = $emails->take($limit);
+        $page = $emails->take($limit);
 
         return [
             'total_matching' => $emails->count(),
-            'returned'       => $page->count(),
-            'emails'         => $page->map(fn ($e) => [
-                'subject'   => $e->subject,
-                'from'      => $e->from_email,
-                'to'        => $e->to,
+            'returned' => $page->count(),
+            'emails' => $page->map(fn ($e) => [
+                'subject' => $e->subject,
+                'from' => $e->from_email,
+                'to' => $e->to,
                 'direction' => $e->direction,
-                'is_read'   => $e->is_read,
-                'date'      => ($e->sent_at ?? $e->received_at)?->format('d/m/Y H:i'),
+                'is_read' => $e->is_read,
+                'date' => ($e->sent_at ?? $e->received_at)?->format('d/m/Y H:i'),
             ])->values()->all(),
         ];
     }
@@ -800,15 +804,15 @@ class AiTools
         }
 
         $messages = $query->orderByDesc('created_at')->get();
-        $page     = $messages->take($limit);
+        $page = $messages->take($limit);
 
         return [
             'total_matching' => $messages->count(),
-            'returned'       => $page->count(),
-            'messages'       => $page->map(fn ($m) => [
+            'returned' => $page->count(),
+            'messages' => $page->map(fn ($m) => [
                 'recipient' => $m->recipient_name ?? $m->learner?->first_name,
-                'phone'     => $m->phone,
-                'status'    => $m->status,
+                'phone' => $m->phone,
+                'status' => $m->status,
                 'direction' => $m->direction,
                 'formation' => $m->formation_name,
             ])->values()->all(),
@@ -821,11 +825,11 @@ class AiTools
 
         return match ($type) {
             'education_levels' => ['education_levels' => EducationLevel::orderBy('order')->pluck('name')],
-            'age_ranges'       => ['age_ranges' => AgeRange::orderBy('order')->get(['name', 'age_min', 'age_max'])],
-            'vulnerabilities'  => ['vulnerabilities' => Vulnerability::orderBy('order')->pluck('name')],
-            'last_diplomas'    => ['last_diplomas' => LastDiploma::orderBy('order')->pluck('name')],
-            'roles'            => ['roles' => Role::pluck('name')],
-            default            => ['error' => "Type de référence inconnu : {$type}"],
+            'age_ranges' => ['age_ranges' => AgeRange::orderBy('order')->get(['name', 'age_min', 'age_max'])],
+            'vulnerabilities' => ['vulnerabilities' => Vulnerability::orderBy('order')->pluck('name')],
+            'last_diplomas' => ['last_diplomas' => LastDiploma::orderBy('order')->pluck('name')],
+            'roles' => ['roles' => Role::pluck('name')],
+            default => ['error' => "Type de référence inconnu : {$type}"],
         };
     }
 }

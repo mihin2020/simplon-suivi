@@ -46,7 +46,7 @@ class ProjectController extends Controller
                 'value' => $s->value,
                 'label' => $s->label(),
             ]),
-            'partners' => Partner::orderBy('name')->get(['id', 'name']),
+            'partners' => Partner::orderBy('name')->get(['id', 'name', 'category']),
         ]);
     }
 
@@ -70,12 +70,12 @@ class ProjectController extends Controller
 
         $project->load([
             'formations' => fn ($q) => $q->withCount('activeLearners')->orderByDesc('started_at'),
-            'partners:id,name,logo_path',
+            'partners:id,name,logo_path,category',
         ]);
 
         return Inertia::render('Projects/Show', [
-            'project'     => $project,
-            'allPartners' => Partner::orderBy('name')->get(['id', 'name', 'logo_path']),
+            'project' => $project,
+            'allPartners' => Partner::orderBy('name')->get(['id', 'name', 'logo_path', 'category']),
         ]);
     }
 
@@ -83,18 +83,18 @@ class ProjectController extends Controller
     {
         $this->authorize('update', $project);
 
-        $project->load('partners:id,name');
+        $project->load('partners:id,name,category');
 
         return Inertia::render('Projects/Edit', [
-            'project'  => array_merge($project->toArray(), [
+            'project' => array_merge($project->toArray(), [
                 'started_at' => $project->started_at?->format('Y-m-d'),
-                'ended_at'   => $project->ended_at?->format('Y-m-d'),
+                'ended_at' => $project->ended_at?->format('Y-m-d'),
             ]),
             'statuses' => collect(ProjectStatus::cases())->map(fn ($s) => [
                 'value' => $s->value,
                 'label' => $s->label(),
             ]),
-            'partners' => Partner::orderBy('name')->get(['id', 'name']),
+            'partners' => Partner::orderBy('name')->get(['id', 'name', 'category']),
         ]);
     }
 
@@ -103,7 +103,7 @@ class ProjectController extends Controller
         $this->authorize('update', $project);
 
         $request->validate([
-            'partner_ids'   => ['nullable', 'array'],
+            'partner_ids' => ['nullable', 'array'],
             'partner_ids.*' => ['uuid', 'exists:partners,id'],
         ]);
 
@@ -194,7 +194,7 @@ class ProjectController extends Controller
         if (isset($data['status']) && $data['status'] === ProjectStatus::Completed->value && $oldStatus !== ProjectStatus::Completed->value) {
             // Calculer les statistiques
             $totalLearners = $project->formations()->withCount('learners')->get()->sum('learners_count');
-            $completedLearners = $project->formations()->with(['learners' => fn($q) => $q->wherePivot('status', LearnerStatus::Completed->value)])->get()->sum(fn($f) => $f->learners->count());
+            $completedLearners = $project->formations()->with(['learners' => fn ($q) => $q->wherePivot('status', LearnerStatus::Completed->value)])->get()->sum(fn ($f) => $f->learners->count());
 
             return redirect()
                 ->route('projects.show', $project)
@@ -205,7 +205,7 @@ class ProjectController extends Controller
         if (isset($data['status']) && $data['status'] === ProjectStatus::Archived->value && $oldStatus !== ProjectStatus::Archived->value) {
             // Calculer les statistiques
             $totalLearners = $project->formations()->withCount('learners')->get()->sum('learners_count');
-            $completedLearners = $project->formations()->with(['learners' => fn($q) => $q->wherePivot('status', LearnerStatus::Completed->value)])->get()->sum(fn($f) => $f->learners->count());
+            $completedLearners = $project->formations()->with(['learners' => fn ($q) => $q->wherePivot('status', LearnerStatus::Completed->value)])->get()->sum(fn ($f) => $f->learners->count());
 
             return redirect()
                 ->route('projects.show', $project)
@@ -240,9 +240,9 @@ class ProjectController extends Controller
             ->orderBy('name')
             ->get()
             ->map(fn ($f) => [
-                'id'   => $f->id,
+                'id' => $f->id,
                 'name' => $f->name,
-                'period' => $f->started_at?->format('d/m/Y') . ' - ' . $f->ended_at?->format('d/m/Y'),
+                'period' => $f->started_at?->format('d/m/Y').' - '.$f->ended_at?->format('d/m/Y'),
             ]);
 
         return response()->json($formations);

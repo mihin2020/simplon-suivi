@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\InsertionStatus;
+use App\Enums\WorkMode;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -22,9 +23,15 @@ class InsertionRecord extends Model
         'internship_company',
         'internship_paid',
         'internship_contract_type',
+        'internship_work_mode',
+        'internship_contract_path',
+        'internship_contract_original_name',
         'employment_company',
         'employment_start_date',
         'employment_contract_type',
+        'employment_work_mode',
+        'employment_contract_path',
+        'employment_contract_original_name',
         'employment_position',
         'recorded_by',
     ];
@@ -37,7 +44,9 @@ class InsertionRecord extends Model
             'internship_start_date' => 'date',
             'internship_end_date' => 'date',
             'internship_paid' => 'boolean',
+            'internship_work_mode' => WorkMode::class,
             'employment_start_date' => 'date',
+            'employment_work_mode' => WorkMode::class,
         ];
     }
 

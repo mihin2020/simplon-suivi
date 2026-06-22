@@ -2,24 +2,36 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\PartnerCategory;
 use App\Http\Requests\Partner\StorePartnerRequest;
 use App\Http\Requests\Partner\UpdatePartnerRequest;
 use App\Models\Partner;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PartnerController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
         $this->authorize('viewAny', Partner::class);
 
-        $partners = Partner::orderBy('name')->paginate(20);
+        $category = $request->input('category');
+
+        $partners = Partner::query()
+            ->category($category)
+            ->orderBy('name')
+            ->paginate(20)
+            ->withQueryString();
 
         return Inertia::render('Partners/Index', [
             'partners' => $partners,
+            'filters' => [
+                'category' => $category,
+            ],
+            'categories' => $this->categoryOptions(),
         ]);
     }
 
@@ -27,7 +39,9 @@ class PartnerController extends Controller
     {
         $this->authorize('create', Partner::class);
 
-        return Inertia::render('Partners/Create');
+        return Inertia::render('Partners/Create', [
+            'categories' => $this->categoryOptions(),
+        ]);
     }
 
     public function store(StorePartnerRequest $request): RedirectResponse
@@ -52,6 +66,7 @@ class PartnerController extends Controller
 
         return Inertia::render('Partners/Edit', [
             'partner' => $partner,
+            'categories' => $this->categoryOptions(),
         ]);
     }
 
@@ -83,5 +98,20 @@ class PartnerController extends Controller
         return redirect()
             ->route('partners.index')
             ->with('success', 'Partenaire supprimé.');
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string, color: string}>
+     */
+    private function categoryOptions(): array
+    {
+        return collect(PartnerCategory::cases())
+            ->map(fn (PartnerCategory $category) => [
+                'value' => $category->value,
+                'label' => $category->label(),
+                'color' => $category->badgeColor(),
+            ])
+            ->values()
+            ->all();
     }
 }

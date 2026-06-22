@@ -2,8 +2,10 @@
 
 namespace App\Http\Requests\Partner;
 
+use App\Enums\PartnerCategory;
 use App\Models\Partner;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StorePartnerRequest extends FormRequest
 {
@@ -16,6 +18,7 @@ class StorePartnerRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'category' => ['required', 'string', Rule::enum(PartnerCategory::class)],
             'logo' => ['nullable', 'image', 'mimes:jpeg,png,jpg,webp,svg', 'max:2048'],
             'contact_first_name' => ['nullable', 'string', 'max:255'],
             'contact_last_name' => ['nullable', 'string', 'max:255'],
