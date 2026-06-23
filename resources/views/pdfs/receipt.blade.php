@@ -207,13 +207,6 @@
             width: 65mm;
             margin-left: auto;
         }
-        .issuer-label {
-            font-size: 8pt;
-            color: #6b7280;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 10mm;
-        }
         .issuer-line {
             border-top: 1px solid #1a1a2e;
             margin-bottom: 2mm;
@@ -352,7 +345,6 @@
 
         @if($issuedBy)
         <div class="issuer-signature">
-            <div class="issuer-label">Émis par</div>
             <div class="issuer-line"></div>
             <div class="issuer-name">{{ $issuedBy }}</div>
         </div>

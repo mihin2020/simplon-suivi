@@ -73,9 +73,7 @@
         .note-box { background: #fffbeb; border-left: 4pt solid #f59e0b; padding: 3mm 5mm; margin-bottom: 7mm; font-size: 9pt; color: #78350f; }
         .note-lbl  { font-size: 7pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1mm; }
 
-        /* ── Signature ── */
         .issuer-signature { text-align: right; width: 60mm; margin-left: auto; margin-top: 10mm; margin-bottom: 4mm; }
-        .issuer-label { font-size: 7.5pt; color: #6b7280; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8mm; }
         .issuer-line { border-top: 1pt solid #1a1a2e; margin-bottom: 2mm; }
         .issuer-name { font-size: 10pt; font-weight: bold; color: #1a1a2e; }
 
@@ -177,7 +175,6 @@
 
     @if($issuedBy)
     <div class="issuer-signature">
-        <div class="issuer-label">Émis par</div>
         <div class="issuer-line"></div>
         <div class="issuer-name">{{ $issuedBy }}</div>
     </div>
