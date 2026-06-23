@@ -184,6 +184,7 @@ Route::middleware('auth')->group(function () {
         FormationController::class,
     )->shallow();
     Route::patch('formations/{formation}/referentiel', [FormationController::class, 'assignReferentiel'])->name('formations.referentiel.assign');
+    Route::post('formations/{formation}/duplicate', [FormationController::class, 'duplicate'])->name('formations.duplicate');
 
     // Import Excel — must be declared BEFORE Route::resource('learners') to avoid
     // the {learner} wildcard swallowing /learners/import and /learners/import/template

@@ -45,6 +45,8 @@
         /* Le contenu grandit pour pousser le footer en bas */
         .content {
             flex: 1;
+            display: flex;
+            flex-direction: column;
         }
 
         .header {
@@ -198,6 +200,30 @@
         .status-pending { color: #d97706; font-weight: 700; }
         .status-paid    { color: #059669; font-weight: 700; }
 
+        .issuer-signature {
+            margin-top: auto;
+            padding-top: 10mm;
+            text-align: right;
+            width: 65mm;
+            margin-left: auto;
+        }
+        .issuer-label {
+            font-size: 8pt;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10mm;
+        }
+        .issuer-line {
+            border-top: 1px solid #1a1a2e;
+            margin-bottom: 2mm;
+        }
+        .issuer-name {
+            font-size: 10pt;
+            font-weight: 600;
+            color: #1a1a2e;
+        }
+
         /* FOOTER — collé en bas de la page A4 */
         .footer {
             text-align: center;
@@ -321,6 +347,14 @@
         <div style="background:#fffbeb;border-left:4px solid #f59e0b;border-radius:4px;padding:4mm 6mm;margin-bottom:8mm;font-size:9pt;color:#78350f;">
             <div style="font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1mm;">Note</div>
             {{ $payment->notes }}
+        </div>
+        @endif
+
+        @if($issuedBy)
+        <div class="issuer-signature">
+            <div class="issuer-label">Émis par</div>
+            <div class="issuer-line"></div>
+            <div class="issuer-name">{{ $issuedBy }}</div>
         </div>
         @endif
 

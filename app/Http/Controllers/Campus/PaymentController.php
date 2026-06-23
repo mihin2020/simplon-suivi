@@ -8,9 +8,9 @@ use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Cohort;
 use App\Models\Payment;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response as HttpResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -32,32 +32,32 @@ class PaymentController extends Controller
             ->get(['learners.id', 'first_name', 'last_name']);
 
         $learnerPayments = $learners->map(function ($learner) use ($groupedPayments, $totalCost) {
-            $payments   = $groupedPayments->get($learner->id, collect());
-            $paidAmount = $payments->filter(fn($p) => $p->status === PaymentStatus::Paye)->sum('amount');
+            $payments = $groupedPayments->get($learner->id, collect());
+            $paidAmount = $payments->filter(fn ($p) => $p->status === PaymentStatus::Paye)->sum('amount');
 
             return [
-                'learner'          => $learner,
-                'payments'         => $payments->values(),
-                'paid_amount'      => $paidAmount,
+                'learner' => $learner,
+                'payments' => $payments->values(),
+                'paid_amount' => $paidAmount,
                 'remaining_amount' => max(0, $totalCost - $paidAmount),
-                'progress'         => $totalCost > 0 ? min(100, (int) round(($paidAmount / $totalCost) * 100)) : 0,
+                'progress' => $totalCost > 0 ? min(100, (int) round(($paidAmount / $totalCost) * 100)) : 0,
             ];
         });
 
         return Inertia::render('Campus/Finance/Payments', [
-            'cohort'          => $cohort,
-            'total_cost'      => $totalCost,
+            'cohort' => $cohort,
+            'total_cost' => $totalCost,
             'learnerPayments' => $learnerPayments,
-            'stats'           => [
-                'total_expected'  => $cohort->total_expected,
+            'stats' => [
+                'total_expected' => $cohort->total_expected,
                 'total_collected' => $cohort->total_collected,
                 'total_remaining' => $cohort->total_remaining,
-                'overdue_count'   => $cohort->payments()->overdue()->distinct('learner_id')->count(),
+                'overdue_count' => $cohort->payments()->overdue()->distinct('learner_id')->count(),
             ],
-            'paymentMethods' => collect(PaymentMethod::cases())->map(fn($m) => [
+            'paymentMethods' => collect(PaymentMethod::cases())->map(fn ($m) => [
                 'value' => $m->value,
                 'label' => $m->label(),
-                'icon'  => $m->icon(),
+                'icon' => $m->icon(),
             ]),
         ]);
     }
@@ -69,9 +69,9 @@ class PaymentController extends Controller
         }
 
         $data = $request->validate([
-            'learner_id'              => ['required', 'uuid', 'exists:learners,id'],
-            'installments'            => ['required', 'array', 'min:1', 'max:24'],
-            'installments.*.amount'   => ['required', 'integer', 'min:1'],
+            'learner_id' => ['required', 'uuid', 'exists:learners,id'],
+            'installments' => ['required', 'array', 'min:1', 'max:24'],
+            'installments.*.amount' => ['required', 'integer', 'min:1'],
             'installments.*.due_date' => ['nullable', 'date'],
         ]);
 
@@ -88,12 +88,12 @@ class PaymentController extends Controller
 
         foreach ($data['installments'] as $i => $installment) {
             Payment::create([
-                'cohort_id'          => $cohort->id,
-                'learner_id'         => $data['learner_id'],
-                'amount'             => $installment['amount'],
+                'cohort_id' => $cohort->id,
+                'learner_id' => $data['learner_id'],
+                'amount' => $installment['amount'],
                 'installment_number' => $nextNum + $i + 1,
-                'due_date'           => $installment['due_date'] ?? now()->addMonths($i + 1)->toDateString(),
-                'status'             => PaymentStatus::EnAttente,
+                'due_date' => $installment['due_date'] ?? now()->addMonths($i + 1)->toDateString(),
+                'status' => PaymentStatus::EnAttente,
             ]);
         }
 
@@ -109,10 +109,10 @@ class PaymentController extends Controller
         }
 
         $data = $request->validate([
-            'installments'              => ['required', 'array', 'min:1', 'max:24'],
-            'installments.*.type'       => ['required', 'in:amount,percentage'],
-            'installments.*.value'      => ['required', 'numeric', 'min:1'],
-            'installments.*.due_date'   => ['nullable', 'date'],
+            'installments' => ['required', 'array', 'min:1', 'max:24'],
+            'installments.*.type' => ['required', 'in:amount,percentage'],
+            'installments.*.value' => ['required', 'numeric', 'min:1'],
+            'installments.*.due_date' => ['nullable', 'date'],
         ]);
 
         $cohort->load(['campusFormation' => fn ($q) => $q->withTrashed()]);
@@ -142,12 +142,12 @@ class PaymentController extends Controller
                     : (int) $installment['value'];
 
                 Payment::create([
-                    'cohort_id'          => $cohort->id,
-                    'learner_id'         => $learner->id,
-                    'amount'             => max(1, $amount),
+                    'cohort_id' => $cohort->id,
+                    'learner_id' => $learner->id,
+                    'amount' => max(1, $amount),
                     'installment_number' => $nextNum + $i + 1,
-                    'due_date'           => $installment['due_date'] ?? now()->addMonths($i + 1)->toDateString(),
-                    'status'             => PaymentStatus::EnAttente,
+                    'due_date' => $installment['due_date'] ?? now()->addMonths($i + 1)->toDateString(),
+                    'status' => PaymentStatus::EnAttente,
                 ]);
             }
         }
@@ -167,11 +167,11 @@ class PaymentController extends Controller
         $totalCost = $cohort->campusFormation?->total_cost ?? 0;
 
         $data = $request->validate([
-            'learner_id'     => ['required', 'uuid', 'exists:learners,id'],
-            'amount'         => ['required', 'integer', 'min:1'],
-            'paid_at'        => ['nullable', 'date'],
+            'learner_id' => ['required', 'uuid', 'exists:learners,id'],
+            'amount' => ['required', 'integer', 'min:1'],
+            'paid_at' => ['nullable', 'date'],
             'payment_method' => ['required', 'in:especes,mobile_money'],
-            'notes'          => ['nullable', 'string'],
+            'notes' => ['nullable', 'string'],
         ]);
 
         $alreadyPaid = Payment::where('cohort_id', $cohort->id)
@@ -195,15 +195,15 @@ class PaymentController extends Controller
             ->count() + 1;
 
         Payment::create([
-            'cohort_id'          => $cohort->id,
-            'learner_id'         => $data['learner_id'],
-            'amount'             => $data['amount'],
+            'cohort_id' => $cohort->id,
+            'learner_id' => $data['learner_id'],
+            'amount' => $data['amount'],
             'installment_number' => $nextNum,
-            'due_date'           => $data['paid_at'] ?? now()->toDateString(),
-            'paid_at'            => $data['paid_at'] ?? now()->toDateString(),
-            'status'             => PaymentStatus::Paye,
-            'payment_method'     => $data['payment_method'],
-            'notes'              => $data['notes'] ?? null,
+            'due_date' => $data['paid_at'] ?? now()->toDateString(),
+            'paid_at' => $data['paid_at'] ?? now()->toDateString(),
+            'status' => PaymentStatus::Paye,
+            'payment_method' => $data['payment_method'],
+            'notes' => $data['notes'] ?? null,
         ]);
 
         return back()->with('success', 'Versement enregistré.');
@@ -212,13 +212,13 @@ class PaymentController extends Controller
     public function markPaid(Request $request, Payment $payment): RedirectResponse
     {
         $data = $request->validate([
-            'paid_at'        => ['required', 'date'],
+            'paid_at' => ['required', 'date'],
             'payment_method' => ['required', 'in:especes,mobile_money'],
         ]);
 
         $payment->update([
-            'status'         => PaymentStatus::Paye,
-            'paid_at'        => $data['paid_at'],
+            'status' => PaymentStatus::Paye,
+            'paid_at' => $data['paid_at'],
             'payment_method' => $data['payment_method'],
         ]);
 
@@ -240,41 +240,12 @@ class PaymentController extends Controller
 
         $payment->load(['learner', 'cohort' => fn ($q) => $q->with(['campusFormation' => fn ($q2) => $q2->withTrashed()])]);
 
-        $cohort    = $payment->cohort;
-        $formation = $cohort->campusFormation;
-        $learner   = $payment->learner;
-        $totalCost = $formation?->total_cost ?? 0;
-
-        $totalPaid = Payment::where('cohort_id', $cohort->id)
-            ->where('learner_id', $learner->id)
-            ->where('status', PaymentStatus::Paye->value)
-            ->sum('amount');
-
-        $remaining = max(0, $totalCost - $totalPaid);
-
-        $methodLabels = [
-            'especes'      => 'Espèces',
-            'mobile_money' => 'Mobile Money',
-        ];
-
         $receiptNumber = 'REC-'
-            . ($payment->paid_at ? $payment->paid_at->format('Ym') : now()->format('Ym'))
-            . '-'
-            . strtoupper(substr($payment->id, 0, 8));
+            .($payment->paid_at ? $payment->paid_at->format('Ym') : now()->format('Ym'))
+            .'-'
+            .strtoupper(substr($payment->id, 0, 8));
 
-        $html = view('pdfs.receipt', [
-            'payment'       => $payment,
-            'learner'       => $learner,
-            'cohort'        => $cohort,
-            'formation'     => $formation,
-            'totalCost'     => $totalCost,
-            'totalPaid'     => $totalPaid,
-            'remaining'     => $remaining,
-            'methodLabel'   => $methodLabels[$payment->payment_method?->value ?? ''] ?? '—',
-            'paidAt'        => $payment->paid_at?->format('d/m/Y') ?? '—',
-            'receiptNumber' => $receiptNumber,
-            'issuedAt'      => now()->format('d/m/Y à H:i'),
-        ])->render();
+        $html = view('pdfs.receipt', $this->receiptViewData($payment, $receiptNumber))->render();
 
         return response($html, 200)->header('Content-Type', 'text/html; charset=UTF-8');
     }
@@ -287,9 +258,22 @@ class PaymentController extends Controller
 
         $payment->load(['learner', 'cohort' => fn ($q) => $q->with(['campusFormation' => fn ($q2) => $q2->withTrashed()])]);
 
-        $cohort    = $payment->cohort;
+        $receiptNumber = 'REC-'
+            .($payment->paid_at ? $payment->paid_at->format('Ym') : now()->format('Ym'))
+            .'-'
+            .strtoupper(substr($payment->id, 0, 8));
+
+        return Pdf::loadView('pdfs.receipt-pdf', $this->receiptViewData($payment, $receiptNumber))
+            ->setPaper('a4')
+            ->download('recu-'.strtolower($receiptNumber).'.pdf');
+    }
+
+    /** @return array<string, mixed> */
+    private function receiptViewData(Payment $payment, string $receiptNumber): array
+    {
+        $cohort = $payment->cohort;
         $formation = $cohort->campusFormation;
-        $learner   = $payment->learner;
+        $learner = $payment->learner;
         $totalCost = $formation?->total_cost ?? 0;
 
         $totalPaid = Payment::where('cohort_id', $cohort->id)
@@ -300,31 +284,25 @@ class PaymentController extends Controller
         $remaining = max(0, $totalCost - $totalPaid);
 
         $methodLabels = [
-            'especes'      => 'Espèces',
+            'especes' => 'Espèces',
             'mobile_money' => 'Mobile Money',
         ];
 
-        $receiptNumber = 'REC-'
-            . ($payment->paid_at ? $payment->paid_at->format('Ym') : now()->format('Ym'))
-            . '-'
-            . strtoupper(substr($payment->id, 0, 8));
+        $user = auth()->user();
 
-        $data = [
-            'payment'       => $payment,
-            'learner'       => $learner,
-            'cohort'        => $cohort,
-            'formation'     => $formation,
-            'totalCost'     => $totalCost,
-            'totalPaid'     => $totalPaid,
-            'remaining'     => $remaining,
-            'methodLabel'   => $methodLabels[$payment->payment_method?->value ?? ''] ?? '—',
-            'paidAt'        => $payment->paid_at?->format('d/m/Y') ?? '—',
+        return [
+            'payment' => $payment,
+            'learner' => $learner,
+            'cohort' => $cohort,
+            'formation' => $formation,
+            'totalCost' => $totalCost,
+            'totalPaid' => $totalPaid,
+            'remaining' => $remaining,
+            'methodLabel' => $methodLabels[$payment->payment_method?->value ?? ''] ?? '—',
+            'paidAt' => $payment->paid_at?->format('d/m/Y') ?? '—',
             'receiptNumber' => $receiptNumber,
-            'issuedAt'      => now()->format('d/m/Y à H:i'),
+            'issuedAt' => now()->format('d/m/Y à H:i'),
+            'issuedBy' => $user ? trim("{$user->first_name} {$user->last_name}") : null,
         ];
-
-        return Pdf::loadView('pdfs.receipt-pdf', $data)
-            ->setPaper('a4')
-            ->download('recu-' . strtolower($receiptNumber) . '.pdf');
     }
 }

@@ -20,6 +20,7 @@ interface Formation {
     started_at: string
     ended_at: string | null
     status: string
+    location: string | null
     active_learners_count: number
 }
 
@@ -90,6 +91,12 @@ const destroyFormation = () => {
         onFinish: () => { confirmFormation.value = null },
     })
 }
+
+const duplicateFormation = (formation: Formation) => {
+    router.post(`/formations/${formation.id}/duplicate`, {}, {
+        preserveScroll: true,
+    })
+}
 </script>
 
 <template>
@@ -153,6 +160,7 @@ const destroyFormation = () => {
                     <thead>
                         <tr class="bg-surface border-b border-surface-container-highest">
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Formation</th>
+                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Ville</th>
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Début</th>
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Fin</th>
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-center">Apprenants</th>
@@ -162,7 +170,7 @@ const destroyFormation = () => {
                     </thead>
                     <tbody class="divide-y divide-surface-container-highest">
                         <tr v-if="project.formations.length === 0">
-                            <td colspan="6" class="px-md py-xl text-center text-secondary text-body-md">
+                            <td colspan="7" class="px-md py-xl text-center text-secondary text-body-md">
                                 Aucune formation dans ce projet.
                                 <Link :href="`/projects/${project.id}/formations/create`" class="text-primary font-semibold ml-xs">
                                     Créer la première formation →
@@ -185,6 +193,9 @@ const destroyFormation = () => {
                                     {{ formation.description }}
                                 </p>
                             </td>
+                            <td class="px-md py-sm text-body-sm text-on-surface-variant whitespace-nowrap">
+                                {{ formation.location || '—' }}
+                            </td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant whitespace-nowrap">{{ fmt(formation.started_at) }}</td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant whitespace-nowrap">{{ fmt(formation.ended_at) }}</td>
                             <td class="px-md py-sm text-center">
@@ -203,6 +214,9 @@ const destroyFormation = () => {
                                     <Link :href="`/formations/${formation.id}/edit`" class="icon-btn" title="Modifier">
                                         <span class="material-symbols-outlined" style="font-size:18px">edit</span>
                                     </Link>
+                                    <button type="button" class="icon-btn" title="Dupliquer la formation" @click="duplicateFormation(formation)">
+                                        <span class="material-symbols-outlined" style="font-size:18px">content_copy</span>
+                                    </button>
                                     <button @click="confirmFormation = formation" class="icon-btn danger" title="Supprimer">
                                         <span class="material-symbols-outlined" style="font-size:18px">delete</span>
                                     </button>

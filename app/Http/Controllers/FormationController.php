@@ -2,19 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\DuplicateFormation;
 use App\Enums\FormationStatus;
 use App\Enums\LearnerStatus;
-use App\Enums\ProjectStatus;
 use App\Http\Requests\Formation\StoreFormationRequest;
 use App\Http\Requests\Formation\UpdateFormationRequest;
 use App\Models\Formation;
-use App\Models\Learner;
 use App\Models\Project;
 use App\Models\Referentiel;
 use App\Models\Trainer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -25,14 +23,13 @@ class FormationController extends Controller
         $this->authorize('viewAny', Formation::class);
 
         $formations = $project->formations()
-            ->withCount(['learners as active_learners_count' => fn ($q) =>
-                $q->where('formation_learner.status', LearnerStatus::InProgress->value)
+            ->withCount(['learners as active_learners_count' => fn ($q) => $q->where('formation_learner.status', LearnerStatus::InProgress->value),
             ])
             ->orderByDesc('started_at')
             ->paginate(15);
 
         return Inertia::render('Formations/Index', [
-            'project'    => $project,
+            'project' => $project,
             'formations' => $formations,
         ]);
     }
@@ -42,9 +39,9 @@ class FormationController extends Controller
         $this->authorize('create', Formation::class);
 
         return Inertia::render('Formations/Create', [
-            'project'       => $project,
-            'statuses'      => collect(FormationStatus::cases())->map(fn ($s) => ['value' => $s->value, 'label' => $s->label()]),
-            'referentiels'  => Referentiel::orderBy('name')->get(['id', 'name']),
+            'project' => $project,
+            'statuses' => collect(FormationStatus::cases())->map(fn ($s) => ['value' => $s->value, 'label' => $s->label()]),
+            'referentiels' => Referentiel::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -87,11 +84,11 @@ class FormationController extends Controller
             ->get(['id', 'user_id']);
 
         return Inertia::render('Formations/Show', [
-            'formation'        => $formation,
-            'activeLearners'   => $activeLearners,
+            'formation' => $formation,
+            'activeLearners' => $activeLearners,
             'inactiveLearners' => $inactiveLearners,
             'availableTrainers' => $availableTrainers,
-            'referentiels'     => Referentiel::orderBy('name')->get(['id', 'name']),
+            'referentiels' => Referentiel::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -100,8 +97,8 @@ class FormationController extends Controller
         $this->authorize('update', $formation);
 
         return Inertia::render('Formations/Edit', [
-            'formation'    => $formation->load('project'),
-            'statuses'     => collect(FormationStatus::cases())->map(fn ($s) => ['value' => $s->value, 'label' => $s->label()]),
+            'formation' => $formation->load('project'),
+            'statuses' => collect(FormationStatus::cases())->map(fn ($s) => ['value' => $s->value, 'label' => $s->label()]),
             'referentiels' => Referentiel::orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -155,5 +152,17 @@ class FormationController extends Controller
         return redirect()
             ->route('projects.show', $formation->project_id)
             ->with('success', 'Formation supprimée.');
+    }
+
+    public function duplicate(Formation $formation, DuplicateFormation $action): RedirectResponse
+    {
+        $this->authorize('view', $formation);
+        $this->authorize('create', Formation::class);
+
+        $duplicate = $action->execute($formation);
+
+        return redirect()
+            ->route('formations.show', $duplicate)
+            ->with('success', 'Formation dupliquée avec succès.');
     }
 }

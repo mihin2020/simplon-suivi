@@ -44,6 +44,7 @@ interface Formation {
     started_at: string
     ended_at: string | null
     status: string
+    location: string | null
     project: Project
     trainers: Trainer[]
     referentiel: { id: string; name: string } | null
@@ -274,6 +275,10 @@ const filteredInactiveLearners = computed(() => {
                     <span class="flex items-center gap-xs">
                         <span class="material-symbols-outlined" style="font-size:16px">calendar_today</span>
                         {{ fmt(formation.started_at) }} → {{ fmt(formation.ended_at) }}
+                    </span>
+                    <span v-if="formation.location" class="flex items-center gap-xs">
+                        <span class="material-symbols-outlined" style="font-size:16px">location_on</span>
+                        {{ formation.location }}
                     </span>
                     <span v-if="formation.description" class="text-secondary">· {{ formation.description }}</span>
                 </div>

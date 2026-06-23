@@ -21,6 +21,7 @@ const form = useForm({
     started_at:     '',
     ended_at:       '',
     status:         'active',
+    location:       '',
     referentiel_id: '',
 })
 
@@ -69,6 +70,18 @@ const submit = () => form.post(`/projects/${props.project.id}/formations`)
                         rows="3"
                         placeholder="Objectifs et contenu de la formation..."
                     />
+                </div>
+
+                <div class="field mt-md">
+                    <label class="label">Ville</label>
+                    <input
+                        v-model="form.location"
+                        type="text"
+                        class="input"
+                        :class="{ 'input-error': form.errors.location }"
+                        placeholder="Ex : Ouagadougou, Bobo-Dioulasso, Koudougou..."
+                    />
+                    <p v-if="form.errors.location" class="error-msg">{{ form.errors.location }}</p>
                 </div>
             </div>
 

@@ -11,6 +11,7 @@ interface Formation {
     started_at: string
     ended_at: string | null
     status: string
+    location: string | null
     referentiel_id: string | null
     project: { id: string; name: string }
 }
@@ -29,6 +30,7 @@ const form = useForm({
     started_at:     toDateInput(props.formation.started_at),
     ended_at:       toDateInput(props.formation.ended_at),
     status:         props.formation.status,
+    location:       props.formation.location ?? '',
     referentiel_id: props.formation.referentiel_id ?? '',
 })
 
@@ -68,6 +70,19 @@ const submit = () => form.put(`/formations/${props.formation.id}`)
             <div class="field">
                 <label class="label">Description</label>
                 <textarea v-model="form.description" class="input" rows="3" />
+            </div>
+
+            <!-- Ville -->
+            <div class="field">
+                <label class="label">Ville</label>
+                <input
+                    v-model="form.location"
+                    type="text"
+                    class="input"
+                    :class="{ 'input-error': form.errors.location }"
+                    placeholder="Ex : Ouagadougou, Bobo-Dioulasso..."
+                />
+                <p v-if="form.errors.location" class="error-msg">{{ form.errors.location }}</p>
             </div>
 
             <!-- Dates -->
