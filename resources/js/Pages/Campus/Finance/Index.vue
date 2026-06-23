@@ -2,6 +2,7 @@
 import { router } from '@inertiajs/vue3'
 import { Head, Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import Can from '@/Components/Can.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -299,14 +300,16 @@ const totalCollected = props.globalStats.total_collected
                                 </div>
                             </td>
                             <td class="td text-right">
-                                <Link
-                                    :href="`/campus/cohorts/${cohort.id}/payments`"
-                                    class="action-link"
-                                    title="Gérer les paiements"
-                                >
-                                    <span class="material-symbols-outlined" style="font-size:16px">payments</span>
-                                    Paiements
-                                </Link>
+                                <Can :any="['campus.finance.view', 'campus.finance.collect', 'campus.finance.manage']">
+                                    <Link
+                                        :href="`/campus/cohorts/${cohort.id}/payments`"
+                                        class="action-link"
+                                        title="Gérer les paiements"
+                                    >
+                                        <span class="material-symbols-outlined" style="font-size:16px">payments</span>
+                                        Paiements
+                                    </Link>
+                                </Can>
                             </td>
                         </tr>
 

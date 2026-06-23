@@ -2,8 +2,11 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import { ref } from 'vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 defineOptions({ layout: AdminLayout })
+
+const { can } = usePermissions()
 
 const props = defineProps<{
     emails: any
@@ -78,12 +81,12 @@ function recipientsLabel(to: any[]) {
 
         <!-- ══ SIDEBAR ══ -->
         <aside class="mail-sidebar">
-            <Link href="/communication/emails/compose" class="compose-btn">
+            <Link v-if="can('communication.send')" href="/communication/emails/compose" class="compose-btn">
                 <span class="material-symbols-outlined" style="font-size:20px">edit_square</span>
                 <span>Nouveau message</span>
             </Link>
 
-            <nav class="sidebar-nav">
+            <nav v-if="can('communication.view')" class="sidebar-nav">
                 <Link href="/communication/emails" class="nav-item">
                     <span class="material-symbols-outlined nav-icon">inbox</span>
                     <span class="nav-label">Boîte de réception</span>
@@ -100,8 +103,8 @@ function recipientsLabel(to: any[]) {
                     <span class="nav-label">Archivés</span>
                     <span v-if="archivedCount > 0" class="nav-badge">{{ archivedCount }}</span>
                 </Link>
-                <div class="nav-divider"></div>
-                <Link href="/communication/whatsapp" class="nav-item">
+                <div v-if="can('whatsapp.view')" class="nav-divider"></div>
+                <Link v-if="can('whatsapp.view')" href="/communication/whatsapp" class="nav-item">
                     <span class="material-symbols-outlined nav-icon">chat</span>
                     <span class="nav-label">WhatsApp</span>
                 </Link>
@@ -163,7 +166,7 @@ function recipientsLabel(to: any[]) {
                         <template v-if="search">Essayez d'autres mots-clés.</template>
                         <template v-else>Vos emails envoyés apparaîtront ici.</template>
                     </p>
-                    <Link v-if="!search" href="/communication/emails/compose" class="compose-btn-empty">
+                    <Link v-if="!search && can('communication.send')" href="/communication/emails/compose" class="compose-btn-empty">
                         <span class="material-symbols-outlined" style="font-size:18px">edit_square</span>
                         Rédiger un message
                     </Link>
@@ -203,7 +206,7 @@ function recipientsLabel(to: any[]) {
                     <div class="thread-right">
                         <span class="thread-date">{{ fmtDate(e.sent_at) }}</span>
                     </div>
-                    <div class="row-actions" @click.stop>
+                    <div v-if="can('communication.manage')" class="row-actions" @click.stop>
                         <button class="row-act row-act-danger" title="Supprimer" @click.prevent="confirmDelete(e.id)">
                             <span class="material-symbols-outlined" style="font-size:18px">delete</span>
                         </button>

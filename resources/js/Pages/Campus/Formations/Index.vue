@@ -2,6 +2,7 @@
 import { ref, watch, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import Can from '@/Components/Can.vue'
 
 // ── Modal de confirmation / blocage ──────────────────────────────────────────
 const confirmTarget = ref<CampusFormation | null>(null)
@@ -93,10 +94,12 @@ const formatCost = (n: number) =>
                     </p>
                 </div>
             </div>
-            <Link href="/campus/formations/create" class="btn-primary">
-                <span class="material-symbols-outlined" style="font-size:18px">add</span>
-                Nouvelle formation
-            </Link>
+            <Can permission="campus.formations.create">
+                <Link href="/campus/formations/create" class="btn-primary">
+                    <span class="material-symbols-outlined" style="font-size:18px">add</span>
+                    Nouvelle formation
+                </Link>
+            </Can>
         </div>
 
 
@@ -161,12 +164,16 @@ const formatCost = (n: number) =>
                     <Link :href="`/campus/formations/${f.id}`" class="btn-secondary flex-1 text-center">
                         Voir les cohortes
                     </Link>
-                    <Link :href="`/campus/formations/${f.id}/edit`" class="icon-btn" title="Modifier">
-                        <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                    </Link>
-                    <button @click="askDelete(f)" class="icon-btn danger" title="Supprimer" type="button">
-                        <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                    </button>
+                    <Can permission="campus.formations.update">
+                        <Link :href="`/campus/formations/${f.id}/edit`" class="icon-btn" title="Modifier">
+                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                        </Link>
+                    </Can>
+                    <Can permission="campus.formations.delete">
+                        <button @click="askDelete(f)" class="icon-btn danger" title="Supprimer" type="button">
+                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                        </button>
+                    </Can>
                 </div>
             </div>
 
@@ -175,9 +182,11 @@ const formatCost = (n: number) =>
                 <span class="material-symbols-outlined" style="font-size:56px;color:#b9c7e0">local_library</span>
                 <p class="empty-title">Aucune formation trouvée</p>
                 <p class="empty-sub">Commencez par créer votre premier parcours de formation.</p>
-                <Link href="/campus/formations/create" class="btn-primary mt-md">
-                    Créer une formation
-                </Link>
+                <Can permission="campus.formations.create">
+                    <Link href="/campus/formations/create" class="btn-primary mt-md">
+                        Créer une formation
+                    </Link>
+                </Can>
             </div>
         </div>
 

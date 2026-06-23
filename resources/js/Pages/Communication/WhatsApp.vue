@@ -3,8 +3,11 @@ import { Head, Link, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import WhatsAppComposer from './Partials/WhatsAppComposer.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 defineOptions({ layout: AdminLayout })
+
+const { can } = usePermissions()
 
 interface Learner   { id: string; first_name: string; last_name: string; phone: string | null }
 interface Formation { id: string; name: string; project: { id: string; name: string }; learners: Learner[] }
@@ -626,7 +629,7 @@ function groupByDate(msgs: ThreadMsg[]) {
                         +{{ waStatus.phone }}
                     </div>
                 </div>
-                <button @click="logout" :disabled="disconnecting" class="btn-disconnect">
+                <button v-if="can('whatsapp.manage')" @click="logout" :disabled="disconnecting" class="btn-disconnect">
                     <span class="material-symbols-outlined" style="font-size:14px">logout</span>
                     {{ disconnecting ? 'Déconnexion…' : 'Déconnecter' }}
                 </button>
@@ -691,6 +694,7 @@ function groupByDate(msgs: ThreadMsg[]) {
 
         <!-- Panneau gauche : composer (composant isolé du polling) -->
         <WhatsAppComposer
+            v-if="can('whatsapp.send')"
             ref="composerRef"
             :formations="props.formations"
             :connected="waStatus.connected"
@@ -734,7 +738,7 @@ function groupByDate(msgs: ThreadMsg[]) {
                     </template>
                 </div>
 
-                <button type="button" @click="doSync(true)" :disabled="syncing || !waStatus.connected" class="sync-btn">
+                <button v-if="can('whatsapp.manage')" type="button" @click="doSync(true)" :disabled="syncing || !waStatus.connected" class="sync-btn">
                     <span class="material-symbols-outlined" :class="{ spinning: syncing }" style="font-size:16px">sync</span>
                 </button>
             </div>
@@ -766,7 +770,7 @@ function groupByDate(msgs: ThreadMsg[]) {
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0" @click.stop>
-                        <button class="del-btn" title="Supprimer cette campagne" @click="deleteBroadcast(b)">
+                        <button v-if="can('whatsapp.manage')" class="del-btn" title="Supprimer cette campagne" @click="deleteBroadcast(b)">
                             <span class="material-symbols-outlined" style="font-size:15px">delete</span>
                         </button>
                         <span class="material-symbols-outlined" style="font-size:16px;color:#d1d5db">chevron_right</span>
@@ -939,7 +943,7 @@ function groupByDate(msgs: ThreadMsg[]) {
                 </div>
 
                 <!-- Zone de réponse directe -->
-                <div class="reply-box" :class="{ 'reply-box--disabled': !waStatus.connected }">
+                <div v-if="can('whatsapp.send')" class="reply-box" :class="{ 'reply-box--disabled': !waStatus.connected }">
                     <div v-if="replyError" class="reply-error">
                         <span class="material-symbols-outlined" style="font-size:13px">error</span>
                         {{ replyError }}

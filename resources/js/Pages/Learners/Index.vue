@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import Can from '@/Components/Can.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -95,14 +96,16 @@ const photoUrl = (path: string | null) =>
                 </div>
             </div>
             <div class="flex items-center gap-sm">
-                <Link href="/learners/import" class="btn-secondary">
-                    <span class="material-symbols-outlined" style="font-size:18px">upload_file</span>
-                    Importer Excel
-                </Link>
-                <Link href="/learners/create" class="btn-primary">
-                    <span class="material-symbols-outlined" style="font-size:18px">person_add</span>
-                    Ajouter un Apprenant
-                </Link>
+                <Can permission="learners.create">
+                    <Link href="/learners/import" class="btn-secondary">
+                        <span class="material-symbols-outlined" style="font-size:18px">upload_file</span>
+                        Importer Excel
+                    </Link>
+                    <Link href="/learners/create" class="btn-primary">
+                        <span class="material-symbols-outlined" style="font-size:18px">person_add</span>
+                        Ajouter un Apprenant
+                    </Link>
+                </Can>
             </div>
         </div>
 
@@ -208,12 +211,16 @@ const photoUrl = (path: string | null) =>
                                     <Link :href="`/learners/${learner.id}`" class="icon-btn" title="Voir le profil">
                                         <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
                                     </Link>
-                                    <Link :href="`/learners/${learner.id}/edit`" class="icon-btn" title="Modifier">
-                                        <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                                    </Link>
-                                    <button @click="destroy(learner)" class="icon-btn danger" title="Supprimer">
-                                        <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                                    </button>
+                                    <Can permission="learners.update">
+                                        <Link :href="`/learners/${learner.id}/edit`" class="icon-btn" title="Modifier">
+                                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                                        </Link>
+                                    </Can>
+                                    <Can permission="learners.delete">
+                                        <button @click="destroy(learner)" class="icon-btn danger" title="Supprimer">
+                                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                                        </button>
+                                    </Can>
                                 </div>
                             </td>
                         </tr>

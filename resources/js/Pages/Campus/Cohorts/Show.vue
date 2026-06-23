@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import ConfirmModal from '@/Components/ConfirmModal.vue'
+import Can from '@/Components/Can.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -367,23 +368,29 @@ const confirmClose = () => {
                 </div>
             </div>
             <div class="flex items-center gap-sm">
-                <Link :href="`/campus/cohorts/${cohort.id}/edit`" class="btn-navy">
-                    <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                    Modifier
-                </Link>
-                <button
-                    v-if="cohort.status !== 'cloturee'"
-                    @click="showCloseModal = true"
-                    class="btn-warn"
-                    type="button"
-                >
-                    <span class="material-symbols-outlined" style="font-size:18px">lock</span>
-                    Clôturer
-                </button>
-                <Link :href="`/campus/cohorts/${cohort.id}/payments`" class="btn-brand">
-                    <span class="material-symbols-outlined" style="font-size:18px">payments</span>
-                    Paiements
-                </Link>
+                <Can permission="campus.cohorts.update">
+                    <Link :href="`/campus/cohorts/${cohort.id}/edit`" class="btn-navy">
+                        <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                        Modifier
+                    </Link>
+                </Can>
+                <Can permission="campus.cohorts.close">
+                    <button
+                        v-if="cohort.status !== 'cloturee'"
+                        @click="showCloseModal = true"
+                        class="btn-warn"
+                        type="button"
+                    >
+                        <span class="material-symbols-outlined" style="font-size:18px">lock</span>
+                        Clôturer
+                    </button>
+                </Can>
+                <Can :any="['campus.finance.view', 'campus.finance.collect', 'campus.finance.manage']">
+                    <Link :href="`/campus/cohorts/${cohort.id}/payments`" class="btn-brand">
+                        <span class="material-symbols-outlined" style="font-size:18px">payments</span>
+                        Paiements
+                    </Link>
+                </Can>
             </div>
         </div>
 
@@ -440,22 +447,24 @@ const confirmClose = () => {
                     Apprenants
                     <span class="count-badge ml-sm">{{ learners.total }}</span>
                 </h2>
-                <div v-if="cohort.status !== 'cloturee'" class="action-group">
-                    <button @click="showEnrollModal = true" class="action-btn" type="button" title="Inscrire un apprenant existant">
-                        <span class="material-symbols-outlined" style="font-size:16px">person_add</span>
-                        Inscrire
-                    </button>
-                    <div class="action-sep"></div>
-                    <button @click="showAddModal = true" class="action-btn" type="button" title="Créer et inscrire un nouvel apprenant">
-                        <span class="material-symbols-outlined" style="font-size:16px">add</span>
-                        Ajouter
-                    </button>
-                    <div class="action-sep"></div>
-                    <button @click="showImportModal = true" class="action-btn" type="button" title="Importer depuis Excel">
-                        <span class="material-symbols-outlined" style="font-size:16px">upload_file</span>
-                        Importer
-                    </button>
-                </div>
+                <Can permission="campus.workforce.enroll">
+                    <div v-if="cohort.status !== 'cloturee'" class="action-group">
+                        <button @click="showEnrollModal = true" class="action-btn" type="button" title="Inscrire un apprenant existant">
+                            <span class="material-symbols-outlined" style="font-size:16px">person_add</span>
+                            Inscrire
+                        </button>
+                        <div class="action-sep"></div>
+                        <button @click="showAddModal = true" class="action-btn" type="button" title="Créer et inscrire un nouvel apprenant">
+                            <span class="material-symbols-outlined" style="font-size:16px">add</span>
+                            Ajouter
+                        </button>
+                        <div class="action-sep"></div>
+                        <button @click="showImportModal = true" class="action-btn" type="button" title="Importer depuis Excel">
+                            <span class="material-symbols-outlined" style="font-size:16px">upload_file</span>
+                            Importer
+                        </button>
+                    </div>
+                </Can>
             </div>
 
             <!-- Barre de sélection -->
@@ -469,10 +478,12 @@ const confirmClose = () => {
                         <button @click="selectedIds = new Set()" class="btn-cancel" type="button" style="padding:6px 12px;font-size:12px">
                             Annuler
                         </button>
-                        <button @click="showBulkRemoveModal = true" class="btn-bulk-remove" type="button">
-                            <span class="material-symbols-outlined" style="font-size:15px">group_remove</span>
-                            Retirer la sélection
-                        </button>
+                        <Can permission="campus.workforce.remove">
+                            <button @click="showBulkRemoveModal = true" class="btn-bulk-remove" type="button">
+                                <span class="material-symbols-outlined" style="font-size:15px">group_remove</span>
+                                Retirer la sélection
+                            </button>
+                        </Can>
                     </div>
                 </div>
             </Transition>
@@ -535,6 +546,7 @@ const confirmClose = () => {
                             Inscrit le {{ fmt(l.pivot.enrolled_at) }}
                         </span>
                         <template v-if="cohort.status !== 'cloturee' && l.pivot?.status === 'actif'">
+                        <Can permission="campus.workforce.move">
                             <button
                                 @click="openMove(l)"
                                 class="move-btn opacity-0 group-hover:opacity-100"
@@ -543,6 +555,8 @@ const confirmClose = () => {
                             >
                                 <span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span>
                             </button>
+                        </Can>
+                        <Can permission="campus.workforce.remove">
                             <button
                                 @click="askRemove(l)"
                                 class="remove-btn opacity-0 group-hover:opacity-100"
@@ -551,6 +565,7 @@ const confirmClose = () => {
                             >
                                 <span class="material-symbols-outlined" style="font-size:16px">person_remove</span>
                             </button>
+                        </Can>
                         </template>
                     </div>
                 </div>

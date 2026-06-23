@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import PartnerCategoryBadge from '@/Components/PartnerCategoryBadge.vue'
+import Can from '@/Components/Can.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -66,10 +67,12 @@ const destroy = () => {
                     </p>
                 </div>
             </div>
-            <Link href="/partners/create" class="btn-primary">
-                <span class="material-symbols-outlined" style="font-size:18px">add</span>
-                Ajouter un partenaire
-            </Link>
+            <Can permission="partners.create">
+                <Link href="/partners/create" class="btn-primary">
+                    <span class="material-symbols-outlined" style="font-size:18px">add</span>
+                    Ajouter un partenaire
+                </Link>
+            </Can>
         </div>
 
         <!-- Filtre par catégorie -->
@@ -89,7 +92,9 @@ const destroy = () => {
             <p class="text-body-md text-secondary mt-sm">
                 {{ selectedCategory ? 'Aucun partenaire pour cette catégorie.' : 'Aucun partenaire configuré.' }}
             </p>
-            <Link v-if="!selectedCategory" href="/partners/create" class="btn-primary mt-md">Ajouter le premier</Link>
+            <Can permission="partners.create">
+                <Link v-if="!selectedCategory" href="/partners/create" class="btn-primary mt-md">Ajouter le premier</Link>
+            </Can>
         </div>
 
         <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md">
@@ -119,12 +124,16 @@ const destroy = () => {
 
                 <!-- Actions -->
                 <div class="partner-actions opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Link :href="`/partners/${partner.id}/edit`" class="icon-btn" title="Modifier">
-                        <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                    </Link>
-                    <button @click="confirmTarget = partner" class="icon-btn danger" title="Supprimer">
-                        <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                    </button>
+                    <Can permission="partners.update">
+                        <Link :href="`/partners/${partner.id}/edit`" class="icon-btn" title="Modifier">
+                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                        </Link>
+                    </Can>
+                    <Can permission="partners.delete">
+                        <button @click="confirmTarget = partner" class="icon-btn danger" title="Supprimer">
+                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                        </button>
+                    </Can>
                 </div>
             </div>
         </div>

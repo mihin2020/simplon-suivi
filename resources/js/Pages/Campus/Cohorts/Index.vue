@@ -3,6 +3,7 @@ import { ref, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import ConfirmModal from '@/Components/ConfirmModal.vue'
+import Can from '@/Components/Can.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -116,10 +117,12 @@ const cancelDelete = () => {
                     </p>
                 </div>
             </div>
-            <Link href="/campus/cohorts/create" class="btn-primary">
-                <span class="material-symbols-outlined" style="font-size:18px">add</span>
-                Nouvelle cohorte
-            </Link>
+            <Can permission="campus.cohorts.create">
+                <Link href="/campus/cohorts/create" class="btn-primary">
+                    <span class="material-symbols-outlined" style="font-size:18px">add</span>
+                    Nouvelle cohorte
+                </Link>
+            </Can>
         </div>
 
         <!-- Filtres -->
@@ -187,29 +190,37 @@ const cancelDelete = () => {
                                     <Link :href="`/campus/cohorts/${c.id}`" class="icon-btn" title="Voir">
                                         <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
                                     </Link>
-                                    <Link :href="`/campus/cohorts/${c.id}/edit`" class="icon-btn" title="Modifier">
-                                        <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                                    </Link>
-                                    <Link :href="`/campus/cohorts/${c.id}/payments`" class="icon-btn" title="Paiements">
-                                        <span class="material-symbols-outlined" style="font-size:18px">payments</span>
-                                    </Link>
-                                    <button
-                                        v-if="c.status !== 'cloturee'"
-                                        @click="askClose(c)"
-                                        class="icon-btn warn"
-                                        title="Clôturer"
-                                        type="button"
-                                    >
-                                        <span class="material-symbols-outlined" style="font-size:18px">lock</span>
-                                    </button>
-                                    <button
-                                        @click="askDelete(c)"
-                                        class="icon-btn danger"
-                                        title="Supprimer"
-                                        type="button"
-                                    >
-                                        <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                                    </button>
+                                    <Can permission="campus.cohorts.update">
+                                        <Link :href="`/campus/cohorts/${c.id}/edit`" class="icon-btn" title="Modifier">
+                                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                                        </Link>
+                                    </Can>
+                                    <Can :any="['campus.finance.view', 'campus.finance.collect', 'campus.finance.manage']">
+                                        <Link :href="`/campus/cohorts/${c.id}/payments`" class="icon-btn" title="Paiements">
+                                            <span class="material-symbols-outlined" style="font-size:18px">payments</span>
+                                        </Link>
+                                    </Can>
+                                    <Can permission="campus.cohorts.close">
+                                        <button
+                                            v-if="c.status !== 'cloturee'"
+                                            @click="askClose(c)"
+                                            class="icon-btn warn"
+                                            title="Clôturer"
+                                            type="button"
+                                        >
+                                            <span class="material-symbols-outlined" style="font-size:18px">lock</span>
+                                        </button>
+                                    </Can>
+                                    <Can permission="campus.cohorts.delete">
+                                        <button
+                                            @click="askDelete(c)"
+                                            class="icon-btn danger"
+                                            title="Supprimer"
+                                            type="button"
+                                        >
+                                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                                        </button>
+                                    </Can>
                                 </div>
                             </td>
                         </tr>

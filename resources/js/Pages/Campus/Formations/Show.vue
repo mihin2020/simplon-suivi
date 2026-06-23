@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import ConfirmModal from '@/Components/ConfirmModal.vue'
+import Can from '@/Components/Can.vue'
 import { ref } from 'vue'
 
 defineOptions({ layout: AdminLayout })
@@ -84,10 +85,12 @@ const confirmDelete = () => {
                     <p v-if="formation.description" class="text-body-md text-secondary mt-xs">{{ formation.description }}</p>
                 </div>
             </div>
-            <Link :href="`/campus/formations/${formation.id}/edit`" class="btn-secondary">
-                <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                Modifier
-            </Link>
+            <Can permission="campus.formations.update">
+                <Link :href="`/campus/formations/${formation.id}/edit`" class="btn-secondary">
+                    <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                    Modifier
+                </Link>
+            </Can>
         </div>
 
         <!-- Infos rapides -->
@@ -122,10 +125,12 @@ const confirmDelete = () => {
                     Cohortes
                     <span class="count-badge ml-sm">{{ formation.cohorts.length }}</span>
                 </h2>
-                <Link :href="`/campus/cohorts/create?formation=${formation.id}`" class="btn-primary">
-                    <span class="material-symbols-outlined" style="font-size:16px">add</span>
-                    Nouvelle cohorte
-                </Link>
+                <Can permission="campus.cohorts.create">
+                    <Link :href="`/campus/cohorts/create?formation=${formation.id}`" class="btn-primary">
+                        <span class="material-symbols-outlined" style="font-size:16px">add</span>
+                        Nouvelle cohorte
+                    </Link>
+                </Can>
             </div>
 
             <div class="divide-y divide-surface-container-highest">
@@ -158,12 +163,16 @@ const confirmDelete = () => {
                         <Link :href="`/campus/cohorts/${c.id}`" class="icon-btn" title="Voir">
                             <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
                         </Link>
-                        <Link :href="`/campus/cohorts/${c.id}/edit`" class="icon-btn" title="Modifier">
-                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                        </Link>
-                        <button @click="askDelete(c)" class="icon-btn danger" title="Supprimer" type="button">
-                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                        </button>
+                        <Can permission="campus.cohorts.update">
+                            <Link :href="`/campus/cohorts/${c.id}/edit`" class="icon-btn" title="Modifier">
+                                <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                            </Link>
+                        </Can>
+                        <Can permission="campus.cohorts.delete">
+                            <button @click="askDelete(c)" class="icon-btn danger" title="Supprimer" type="button">
+                                <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                            </button>
+                        </Can>
                     </div>
                 </div>
             </div>

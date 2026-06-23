@@ -2,6 +2,7 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import Can from '@/Components/Can.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -56,10 +57,12 @@ const destroy = () => {
                     </p>
                 </div>
             </div>
-            <Link href="/projects/create" class="btn-primary">
-                <span class="material-symbols-outlined" style="font-size:18px">add_circle</span>
-                Ajouter un Projet
-            </Link>
+            <Can permission="projects.create">
+                <Link href="/projects/create" class="btn-primary">
+                    <span class="material-symbols-outlined" style="font-size:18px">add_circle</span>
+                    Ajouter un Projet
+                </Link>
+            </Can>
         </div>
 
         <!-- Tableau -->
@@ -108,16 +111,20 @@ const destroy = () => {
                             </td>
                             <td class="px-md py-sm text-right">
                                 <div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Link
-                                        :href="`/projects/${project.id}/edit`"
-                                        class="icon-btn"
-                                        title="Modifier"
-                                    >
-                                        <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                                    </Link>
-                                    <button @click="confirmTarget = project" class="icon-btn danger" title="Supprimer">
-                                        <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                                    </button>
+                                    <Can permission="projects.update">
+                                        <Link
+                                            :href="`/projects/${project.id}/edit`"
+                                            class="icon-btn"
+                                            title="Modifier"
+                                        >
+                                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                                        </Link>
+                                    </Can>
+                                    <Can permission="projects.delete">
+                                        <button @click="confirmTarget = project" class="icon-btn danger" title="Supprimer">
+                                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                                        </button>
+                                    </Can>
                                 </div>
                             </td>
                         </tr>

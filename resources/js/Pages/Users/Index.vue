@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref, watch, computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import Can from '@/Components/Can.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -213,10 +214,12 @@ watch(() => props.users, () => {
                     </p>
                 </div>
             </div>
-            <Link href="/users/create" class="btn-primary">
-                <span class="material-symbols-outlined" style="font-size:18px">person_add</span>
-                Inviter un Utilisateur
-            </Link>
+            <Can permission="users.create">
+                <Link href="/users/create" class="btn-primary">
+                    <span class="material-symbols-outlined" style="font-size:18px">person_add</span>
+                    Inviter un Utilisateur
+                </Link>
+            </Can>
         </div>
 
         <!-- Barre de recherche + filtres -->
@@ -408,33 +411,39 @@ watch(() => props.users, () => {
                         </div>
 
                         <div class="drawer-footer">
-                            <Link :href="`/users/${drawerUser.id}/edit`" class="drawer-action-btn">
-                                <span class="material-symbols-outlined" style="font-size:16px">edit</span>
-                                Modifier
-                            </Link>
+                            <Can permission="users.update">
+                                <Link :href="`/users/${drawerUser.id}/edit`" class="drawer-action-btn">
+                                    <span class="material-symbols-outlined" style="font-size:16px">edit</span>
+                                    Modifier
+                                </Link>
+                            </Can>
                             <Link v-if="drawerUser.role === 'trainer' && drawerUser.trainer" :href="`/trainers/${drawerUser.trainer.id}`" class="drawer-action-btn">
                                 <span class="material-symbols-outlined" style="font-size:16px">visibility</span>
                                 Voir le profil
                             </Link>
-                            <button
-                                v-if="drawerUser.role !== 'super_admin'"
-                                @click="toggleTarget = drawerUser"
-                                class="drawer-action-btn"
-                                :class="drawerUser.is_active ? 'warn' : 'ok'"
-                            >
-                                <span class="material-symbols-outlined" style="font-size:16px">
-                                    {{ drawerUser.is_active ? 'block' : 'check_circle' }}
-                                </span>
-                                {{ drawerUser.is_active ? 'Désactiver' : 'Activer' }}
-                            </button>
-                            <button
-                                v-if="drawerUser.role !== 'super_admin'"
-                                @click="deleteTarget = drawerUser"
-                                class="drawer-action-btn danger"
-                            >
-                                <span class="material-symbols-outlined" style="font-size:16px">delete</span>
-                                Supprimer
-                            </button>
+                            <Can permission="users.update">
+                                <button
+                                    v-if="drawerUser.role !== 'super_admin'"
+                                    @click="toggleTarget = drawerUser"
+                                    class="drawer-action-btn"
+                                    :class="drawerUser.is_active ? 'warn' : 'ok'"
+                                >
+                                    <span class="material-symbols-outlined" style="font-size:16px">
+                                        {{ drawerUser.is_active ? 'block' : 'check_circle' }}
+                                    </span>
+                                    {{ drawerUser.is_active ? 'Désactiver' : 'Activer' }}
+                                </button>
+                            </Can>
+                            <Can permission="users.delete">
+                                <button
+                                    v-if="drawerUser.role !== 'super_admin'"
+                                    @click="deleteTarget = drawerUser"
+                                    class="drawer-action-btn danger"
+                                >
+                                    <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                                    Supprimer
+                                </button>
+                            </Can>
                         </div>
                     </div>
                 </Transition>

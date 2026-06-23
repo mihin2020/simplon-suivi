@@ -3,6 +3,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import PartnerCategoryBadge from '@/Components/PartnerCategoryBadge.vue'
+import Can from '@/Components/Can.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -128,21 +129,26 @@ const duplicateFormation = (formation: Formation) => {
                 </div>
             </div>
             <div class="flex items-center gap-sm flex-wrap">
-                <!-- Onglet Partenaires -->
-                <button class="tab-partners" @click="showPartnersModal = true">
-                    <span class="material-symbols-outlined" style="font-size:18px">handshake</span>
-                    Partenaires
-                    <span class="tab-count">{{ project.partners?.length ?? 0 }}</span>
-                </button>
+                <Can permission="partners.view">
+                    <button class="tab-partners" @click="showPartnersModal = true">
+                        <span class="material-symbols-outlined" style="font-size:18px">handshake</span>
+                        Partenaires
+                        <span class="tab-count">{{ project.partners?.length ?? 0 }}</span>
+                    </button>
+                </Can>
 
-                <Link :href="`/projects/${project.id}/edit`" class="btn-navy">
-                    <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                    Modifier
-                </Link>
-                <Link :href="`/projects/${project.id}/formations/create`" class="btn-primary">
-                    <span class="material-symbols-outlined" style="font-size:18px">add_circle</span>
-                    Ajouter une Formation
-                </Link>
+                <Can permission="projects.update">
+                    <Link :href="`/projects/${project.id}/edit`" class="btn-navy">
+                        <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                        Modifier
+                    </Link>
+                </Can>
+                <Can permission="formations.create">
+                    <Link :href="`/projects/${project.id}/formations/create`" class="btn-primary">
+                        <span class="material-symbols-outlined" style="font-size:18px">add_circle</span>
+                        Ajouter une Formation
+                    </Link>
+                </Can>
             </div>
         </div>
 
@@ -172,9 +178,11 @@ const duplicateFormation = (formation: Formation) => {
                         <tr v-if="project.formations.length === 0">
                             <td colspan="7" class="px-md py-xl text-center text-secondary text-body-md">
                                 Aucune formation dans ce projet.
-                                <Link :href="`/projects/${project.id}/formations/create`" class="text-primary font-semibold ml-xs">
-                                    Créer la première formation →
-                                </Link>
+                                <Can permission="formations.create">
+                                    <Link :href="`/projects/${project.id}/formations/create`" class="text-primary font-semibold ml-xs">
+                                        Créer la première formation →
+                                    </Link>
+                                </Can>
                             </td>
                         </tr>
                         <tr
@@ -208,18 +216,26 @@ const duplicateFormation = (formation: Formation) => {
                             </td>
                             <td class="px-md py-sm text-right">
                                 <div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Link :href="`/formations/${formation.id}/attendances`" class="icon-btn" title="Saisir les présences">
-                                        <span class="material-symbols-outlined" style="font-size:18px">fact_check</span>
-                                    </Link>
-                                    <Link :href="`/formations/${formation.id}/edit`" class="icon-btn" title="Modifier">
-                                        <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                                    </Link>
-                                    <button type="button" class="icon-btn" title="Dupliquer la formation" @click="duplicateFormation(formation)">
-                                        <span class="material-symbols-outlined" style="font-size:18px">content_copy</span>
-                                    </button>
-                                    <button @click="confirmFormation = formation" class="icon-btn danger" title="Supprimer">
-                                        <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                                    </button>
+                                    <Can permission="attendances.view">
+                                        <Link :href="`/formations/${formation.id}/attendances`" class="icon-btn" title="Saisir les présences">
+                                            <span class="material-symbols-outlined" style="font-size:18px">fact_check</span>
+                                        </Link>
+                                    </Can>
+                                    <Can permission="formations.update">
+                                        <Link :href="`/formations/${formation.id}/edit`" class="icon-btn" title="Modifier">
+                                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                                        </Link>
+                                    </Can>
+                                    <Can permission="formations.create">
+                                        <button type="button" class="icon-btn" title="Dupliquer la formation" @click="duplicateFormation(formation)">
+                                            <span class="material-symbols-outlined" style="font-size:18px">content_copy</span>
+                                        </button>
+                                    </Can>
+                                    <Can permission="formations.delete">
+                                        <button @click="confirmFormation = formation" class="icon-btn danger" title="Supprimer">
+                                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                                        </button>
+                                    </Can>
                                 </div>
                             </td>
                         </tr>

@@ -2,6 +2,7 @@
 import { Head, useForm, Link, router } from '@inertiajs/vue3'
 import { ref, reactive } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import Can from '@/Components/Can.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -96,14 +97,18 @@ const confirmDelete = () => {
                 </div>
             </div>
             <div class="flex items-center gap-sm">
-                <button v-if="!editing" @click="editing = true" class="btn-navy">
-                    <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                    Modifier
-                </button>
-                <button v-if="!editing" @click="showDeleteModal = true" class="btn-danger">
-                    <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                    Supprimer
-                </button>
+                <Can permission="referentiels.update">
+                    <button v-if="!editing" @click="editing = true" class="btn-navy">
+                        <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                        Modifier
+                    </button>
+                </Can>
+                <Can permission="referentiels.delete">
+                    <button v-if="!editing" @click="showDeleteModal = true" class="btn-danger">
+                        <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                        Supprimer
+                    </button>
+                </Can>
             </div>
         </div>
 
@@ -135,10 +140,12 @@ const confirmDelete = () => {
                     <div v-if="referentiel.blocks.length === 0" class="empty-blocks">
                         <span class="material-symbols-outlined" style="font-size:40px; color:#e0e3e5">checklist</span>
                         <p class="text-secondary text-body-md mt-md">Aucun bloc de compétences défini.</p>
-                        <button @click="editing = true" class="btn-secondary mt-md">
-                            <span class="material-symbols-outlined" style="font-size:16px">add</span>
-                            Ajouter des blocs
-                        </button>
+                        <Can permission="referentiels.update">
+                            <button @click="editing = true" class="btn-secondary mt-md">
+                                <span class="material-symbols-outlined" style="font-size:16px">add</span>
+                                Ajouter des blocs
+                            </button>
+                        </Can>
                     </div>
 
                     <div v-else class="space-y-md">

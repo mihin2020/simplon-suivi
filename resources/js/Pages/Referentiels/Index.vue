@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import Can from '@/Components/Can.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -34,10 +35,12 @@ defineProps<{
                     </p>
                 </div>
             </div>
-            <Link href="/referentiels/create" class="btn-primary">
-                <span class="material-symbols-outlined" style="font-size:18px">add_circle</span>
-                Nouveau référentiel
-            </Link>
+            <Can permission="referentiels.create">
+                <Link href="/referentiels/create" class="btn-primary">
+                    <span class="material-symbols-outlined" style="font-size:18px">add_circle</span>
+                    Nouveau référentiel
+                </Link>
+            </Can>
         </div>
 
         <!-- Liste vide -->
@@ -47,10 +50,12 @@ defineProps<{
             <p class="text-body-md text-secondary mt-xs">
                 Créez votre premier référentiel pour l'associer à des formations.
             </p>
-            <Link href="/referentiels/create" class="btn-primary mt-lg inline-flex">
-                <span class="material-symbols-outlined" style="font-size:18px">add_circle</span>
-                Créer un référentiel
-            </Link>
+            <Can permission="referentiels.create">
+                <Link href="/referentiels/create" class="btn-primary mt-lg inline-flex">
+                    <span class="material-symbols-outlined" style="font-size:18px">add_circle</span>
+                    Créer un référentiel
+                </Link>
+            </Can>
         </div>
 
         <!-- Grille -->

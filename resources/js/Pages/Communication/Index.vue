@@ -2,8 +2,11 @@
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 defineOptions({ layout: AdminLayout })
+
+const { can } = usePermissions()
 
 const props = defineProps<{
     threads: any
@@ -162,13 +165,13 @@ onUnmounted(() => {
         <aside class="mail-sidebar">
 
             <!-- Composer -->
-            <Link href="/communication/emails/compose" class="compose-btn">
+            <Link v-if="can('communication.send')" href="/communication/emails/compose" class="compose-btn">
                 <span class="material-symbols-outlined" style="font-size:20px">edit_square</span>
                 <span>Nouveau message</span>
             </Link>
 
             <!-- Navigation -->
-            <nav class="sidebar-nav">
+            <nav v-if="can('communication.view')" class="sidebar-nav">
                 <Link
                     href="/communication/emails"
                     class="nav-item"
@@ -199,9 +202,10 @@ onUnmounted(() => {
                     <span v-if="archivedCount > 0" class="nav-badge">{{ archivedCount }}</span>
                 </Link>
 
-                <div class="nav-divider"></div>
+                <div v-if="can('whatsapp.view')" class="nav-divider"></div>
 
                 <Link
+                    v-if="can('whatsapp.view')"
                     href="/communication/whatsapp"
                     class="nav-item"
                 >
@@ -211,7 +215,7 @@ onUnmounted(() => {
             </nav>
 
             <!-- Sync -->
-            <div class="sidebar-footer">
+            <div v-if="can('communication.manage')" class="sidebar-footer">
                 <button @click="sync(false)" :disabled="syncing" class="sync-btn" :title="syncing ? 'Synchronisation en cours…' : 'Actualiser'">
                     <span class="material-symbols-outlined" style="font-size:18px" :class="{ 'spin-icon': syncing }">sync</span>
                     <span>{{ syncing ? 'En cours…' : 'Actualiser' }}</span>
@@ -255,7 +259,7 @@ onUnmounted(() => {
                     />
                     <!-- Actions sélection (apparaissent si sélection) -->
                     <Transition name="fade" mode="out-in">
-                        <div v-if="selected.length > 0" class="sel-actions" key="sel">
+                        <div v-if="selected.length > 0 && can('communication.manage')" class="sel-actions" key="sel">
                             <span class="sel-count">{{ selected.length }} sélectionné{{ selected.length > 1 ? 's' : '' }}</span>
                             <button v-if="filter !== 'archived'" @click="archiveSelected" class="sel-btn" title="Archiver">
                                 <span class="material-symbols-outlined" style="font-size:17px">archive</span>
@@ -270,7 +274,7 @@ onUnmounted(() => {
                                 Supprimer
                             </button>
                         </div>
-                        <button v-else key="refresh" @click="sync(false)" :disabled="syncing" class="refresh-btn" title="Actualiser">
+                        <button v-else-if="can('communication.manage')" key="refresh" @click="sync(false)" :disabled="syncing" class="refresh-btn" title="Actualiser">
                             <span class="material-symbols-outlined" style="font-size:19px" :class="{ 'spin-icon': syncing }">refresh</span>
                         </button>
                     </Transition>
@@ -362,7 +366,7 @@ onUnmounted(() => {
                     </div>
 
                     <!-- Actions rapides au survol -->
-                    <div v-if="t.last_email?.id" class="row-actions" @click.stop>
+                    <div v-if="t.last_email?.id && can('communication.manage')" class="row-actions" @click.stop>
                         <button v-if="filter !== 'archived'" class="row-act" title="Archiver" @click.prevent="quickArchive(t.last_email.id)">
                             <span class="material-symbols-outlined" style="font-size:18px">archive</span>
                         </button>

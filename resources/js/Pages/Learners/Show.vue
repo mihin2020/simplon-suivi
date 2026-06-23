@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import Can from '@/Components/Can.vue'
 import ContractTypeModal from '@/Components/ContractTypeModal.vue'
 import InsertionRecordForm from '@/Components/InsertionRecordForm.vue'
 
@@ -343,8 +344,12 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                 </div>
             </div>
             <div class="flex items-center gap-sm">
-                <Link :href="`/learners/${learner.id}/move`" class="btn-move"><span class="material-symbols-outlined" style="font-size:18px">swap_horiz</span>Déplacer</Link>
-                <Link :href="`/learners/${learner.id}/edit`" class="btn-navy"><span class="material-symbols-outlined" style="font-size:18px">edit</span>Modifier</Link>
+                <Can permission="learners.move">
+                    <Link :href="`/learners/${learner.id}/move`" class="btn-move"><span class="material-symbols-outlined" style="font-size:18px">swap_horiz</span>Déplacer</Link>
+                </Can>
+                <Can permission="learners.update">
+                    <Link :href="`/learners/${learner.id}/edit`" class="btn-navy"><span class="material-symbols-outlined" style="font-size:18px">edit</span>Modifier</Link>
+                </Can>
             </div>
         </div>
 
@@ -475,12 +480,14 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                                 <p class="stage-active-label">Stage en cours</p>
                                 <p class="stage-active-company">{{ latestStage.internship_company || 'Entreprise non spécifiée' }}</p>
                             </div>
-                            <div class="stage-active-actions">
-                                <button type="button" class="card-action-btn" @click="editRecord(latestStage)">
-                                    <span class="material-symbols-outlined" style="font-size:16px">edit</span>
-                                    Modifier
-                                </button>
-                            </div>
+                            <Can permission="learners.update">
+                                <div class="stage-active-actions">
+                                    <button type="button" class="card-action-btn" @click="editRecord(latestStage)">
+                                        <span class="material-symbols-outlined" style="font-size:16px">edit</span>
+                                        Modifier
+                                    </button>
+                                </div>
+                            </Can>
                         </div>
                         <div class="stage-active-chips">
                             <span v-if="latestStage.internship_paid" class="chip chip-paid">
@@ -583,12 +590,16 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                                         {{ record.recorder.first_name }} {{ record.recorder.last_name }}
                                     </span>
                                     <div class="history-actions">
-                                        <button type="button" @click="editRecord(record)" class="edit-btn" title="Modifier">
-                                            <span class="material-symbols-outlined">edit</span>
-                                        </button>
-                                        <button type="button" @click="deleteTargetId = record.id" class="delete-btn" title="Supprimer">
-                                            <span class="material-symbols-outlined">delete_outline</span>
-                                        </button>
+                                        <Can permission="learners.update">
+                                            <button type="button" @click="editRecord(record)" class="edit-btn" title="Modifier">
+                                                <span class="material-symbols-outlined">edit</span>
+                                            </button>
+                                        </Can>
+                                        <Can permission="learners.delete">
+                                            <button type="button" @click="deleteTargetId = record.id" class="delete-btn" title="Supprimer">
+                                                <span class="material-symbols-outlined">delete_outline</span>
+                                            </button>
+                                        </Can>
                                     </div>
                                 </div>
                             </div>
@@ -628,12 +639,14 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                                 <p class="stage-active-company">{{ latestEmployment.employment_company || 'Entreprise non spécifiée' }}</p>
                                 <p v-if="latestEmployment.employment_position" class="stage-active-position">{{ latestEmployment.employment_position }}</p>
                             </div>
-                            <div class="stage-active-actions">
-                                <button type="button" class="card-action-btn card-action-btn-navy" @click="editRecord(latestEmployment)">
-                                    <span class="material-symbols-outlined" style="font-size:16px">edit</span>
-                                    Modifier
-                                </button>
-                            </div>
+                            <Can permission="learners.update">
+                                <div class="stage-active-actions">
+                                    <button type="button" class="card-action-btn card-action-btn-navy" @click="editRecord(latestEmployment)">
+                                        <span class="material-symbols-outlined" style="font-size:16px">edit</span>
+                                        Modifier
+                                    </button>
+                                </div>
+                            </Can>
                         </div>
                         <div class="stage-active-chips">
                             <span v-if="latestEmployment.employment_contract_type" class="chip chip-contract">{{ latestEmployment.employment_contract_type }}</span>
@@ -732,12 +745,16 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                                         {{ record.recorder.first_name }} {{ record.recorder.last_name }}
                                     </span>
                                     <div class="history-actions">
-                                        <button type="button" @click="editRecord(record)" class="edit-btn" title="Modifier">
-                                            <span class="material-symbols-outlined">edit</span>
-                                        </button>
-                                        <button type="button" @click="deleteTargetId = record.id" class="delete-btn" title="Supprimer">
-                                            <span class="material-symbols-outlined">delete_outline</span>
-                                        </button>
+                                        <Can permission="learners.update">
+                                            <button type="button" @click="editRecord(record)" class="edit-btn" title="Modifier">
+                                                <span class="material-symbols-outlined">edit</span>
+                                            </button>
+                                        </Can>
+                                        <Can permission="learners.delete">
+                                            <button type="button" @click="deleteTargetId = record.id" class="delete-btn" title="Supprimer">
+                                                <span class="material-symbols-outlined">delete_outline</span>
+                                            </button>
+                                        </Can>
                                     </div>
                                 </div>
                             </div>

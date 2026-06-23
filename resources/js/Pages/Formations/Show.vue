@@ -2,6 +2,7 @@
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import Can from '@/Components/Can.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -283,34 +284,46 @@ const filteredInactiveLearners = computed(() => {
                     <span v-if="formation.description" class="text-secondary">· {{ formation.description }}</span>
                 </div>
                 <div class="flex items-center gap-sm flex-wrap min-w-0">
-                <Link :href="`/formations/${formation.id}/attendances`" class="btn-navy">
-                    <span class="material-symbols-outlined" style="font-size:18px">fact_check</span>
-                    Présences
-                </Link>
-                <Link :href="`/formations/${formation.id}/expenses`" class="btn-navy">
-                    <span class="material-symbols-outlined" style="font-size:18px">payments</span>
-                    Finance
-                </Link>
-                <button class="btn-navy" @click="openReferentielModal" :title="formation.referentiel ? formation.referentiel.name : 'Assigner un référentiel'">
-                    <span class="material-symbols-outlined" style="font-size:18px">menu_book</span>
-                    {{ formation.referentiel ? 'Référentiel' : 'Assigner un référentiel' }}
-                </button>
-                <Link :href="`/formations/${formation.id}/edit`" class="btn-navy">
-                    <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                    Modifier
-                </Link>
-                <Link :href="`/formations/${formation.id}/learners/enroll`" class="btn-navy">
-                    <span class="material-symbols-outlined" style="font-size:18px">search</span>
-                    Apprenant existant
-                </Link>
-                <Link :href="`/formations/${formation.id}/medias`" class="btn-navy">
-                    <span class="material-symbols-outlined" style="font-size:18px">photo_library</span>
-                    Médiathèque
-                </Link>
-                <Link :href="`/formations/${formation.id}/learners/new`" class="btn-primary">
-                    <span class="material-symbols-outlined" style="font-size:18px">person_add</span>
-                    Créer &amp; Inscrire
-                </Link>
+                <Can permission="attendances.view">
+                    <Link :href="`/formations/${formation.id}/attendances`" class="btn-navy">
+                        <span class="material-symbols-outlined" style="font-size:18px">fact_check</span>
+                        Présences
+                    </Link>
+                </Can>
+                <Can permission="expenses.view">
+                    <Link :href="`/formations/${formation.id}/expenses`" class="btn-navy">
+                        <span class="material-symbols-outlined" style="font-size:18px">payments</span>
+                        Finance
+                    </Link>
+                </Can>
+                <Can permission="formations.update">
+                    <button class="btn-navy" @click="openReferentielModal" :title="formation.referentiel ? formation.referentiel.name : 'Assigner un référentiel'">
+                        <span class="material-symbols-outlined" style="font-size:18px">menu_book</span>
+                        {{ formation.referentiel ? 'Référentiel' : 'Assigner un référentiel' }}
+                    </button>
+                    <Link :href="`/formations/${formation.id}/edit`" class="btn-navy">
+                        <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                        Modifier
+                    </Link>
+                </Can>
+                <Can permission="learners.create">
+                    <Link :href="`/formations/${formation.id}/learners/enroll`" class="btn-navy">
+                        <span class="material-symbols-outlined" style="font-size:18px">search</span>
+                        Apprenant existant
+                    </Link>
+                </Can>
+                <Can permission="formations.view">
+                    <Link :href="`/formations/${formation.id}/medias`" class="btn-navy">
+                        <span class="material-symbols-outlined" style="font-size:18px">photo_library</span>
+                        Médiathèque
+                    </Link>
+                </Can>
+                <Can permission="learners.create">
+                    <Link :href="`/formations/${formation.id}/learners/new`" class="btn-primary">
+                        <span class="material-symbols-outlined" style="font-size:18px">person_add</span>
+                        Créer &amp; Inscrire
+                    </Link>
+                </Can>
                 </div><!-- /boutons -->
             </div><!-- /ligne 2 -->
         </div><!-- /en-tête -->
@@ -324,13 +337,15 @@ const filteredInactiveLearners = computed(() => {
                         <h2 class="text-h2 font-semibold text-on-surface">Formateurs</h2>
                         <span class="count-badge">{{ formation.trainers.length }}</span>
                     </div>
-                    <button
-                        @click="openTrainerModal"
-                        class="btn-assign"
-                        title="Assigner un formateur"
-                    >
-                        <span class="material-symbols-outlined" style="font-size:18px">add</span>
-                    </button>
+                    <Can permission="formations.update">
+                        <button
+                            @click="openTrainerModal"
+                            class="btn-assign"
+                            title="Assigner un formateur"
+                        >
+                            <span class="material-symbols-outlined" style="font-size:18px">add</span>
+                        </button>
+                    </Can>
                 </div>
                 <div class="divide-y divide-surface-container-highest">
                     <div v-if="formation.trainers.length === 0" class="px-lg py-xl text-center text-secondary text-body-sm">
@@ -351,13 +366,15 @@ const filteredInactiveLearners = computed(() => {
                             </p>
                             <p v-if="trainer.specialty" class="text-body-sm text-secondary truncate">{{ trainer.specialty }}</p>
                         </div>
-                        <button
-                            @click="unassignTrainer(trainer)"
-                            class="btn-unassign opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="Retirer de la formation"
-                        >
-                            <span class="material-symbols-outlined" style="font-size:16px">close</span>
-                        </button>
+                        <Can permission="formations.update">
+                            <button
+                                @click="unassignTrainer(trainer)"
+                                class="btn-unassign opacity-0 group-hover:opacity-100 transition-opacity"
+                                title="Retirer de la formation"
+                            >
+                                <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                            </button>
+                        </Can>
                     </div>
                 </div>
             </div>
@@ -450,12 +467,14 @@ const filteredInactiveLearners = computed(() => {
                                             <Link :href="`/learners/${learner.id}`" class="icon-btn" title="Voir le profil">
                                                 <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
                                             </Link>
-                                            <button @click="openAbandonModal(learner)" class="icon-btn warning" title="Marquer comme abandonné">
-                                                <span class="material-symbols-outlined" style="font-size:18px">logout</span>
-                                            </button>
-                                            <button @click="openWithdrawModal(learner)" class="icon-btn danger" title="Retirer de la formation">
-                                                <span class="material-symbols-outlined" style="font-size:18px">person_remove</span>
-                                            </button>
+                                            <Can permission="learners.update">
+                                                <button @click="openAbandonModal(learner)" class="icon-btn warning" title="Marquer comme abandonné">
+                                                    <span class="material-symbols-outlined" style="font-size:18px">logout</span>
+                                                </button>
+                                                <button @click="openWithdrawModal(learner)" class="icon-btn danger" title="Retirer de la formation">
+                                                    <span class="material-symbols-outlined" style="font-size:18px">person_remove</span>
+                                                </button>
+                                            </Can>
                                         </div>
                                     </td>
                                 </tr>

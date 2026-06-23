@@ -4,8 +4,10 @@ import { Link, usePage, router } from '@inertiajs/vue3'
 import NotificationBell from '@/Components/NotificationBell.vue'
 import AiChatbot from '@/Components/AiChatbot.vue'
 import { chatStore } from '@/stores/chatStore'
+import { usePermissions } from '@/composables/usePermissions'
 
 const page = usePage()
+const { canAny, isSuperAdmin, userRole } = usePermissions()
 
 const auth  = page.props.auth  as { user?: { full_name?: string; role?: string; role_label?: string } }
 const flash = computed(() => page.props.flash as { success?: string; warning?: string; error?: string })
@@ -17,8 +19,13 @@ watch(flash, (f) => {
     setTimeout(() => { visibleFlash.value = {} }, 4000)
 }, { immediate: true })
 
-const userRole  = auth.user?.role as string | undefined
-const isTrainer = userRole === 'trainer'
+const userRoleLegacy  = auth.user?.role as string | undefined
+const isTrainer = userRoleLegacy === 'trainer'
+
+const showConfiguration = computed(() =>
+    !isTrainer && canAny(['configuration.view', 'configuration.manage'])
+)
+const showAiChatbot = computed(() => showConfiguration.value)
 
 // ─── Sidebar collapse (persisted in localStorage) ───────────────────────────
 const getStoredCollapsed = (): boolean => {
@@ -44,6 +51,7 @@ interface NavItem {
     href: string
     prefix: string
     roles: string[]
+    permissions?: string[]
     badge?: string
 }
 
@@ -62,14 +70,14 @@ const allNavGroups: NavGroup[] = [
         collapsible: false,
         items: [
             { label: 'Tableau de Bord', icon: 'dashboard',            href: '/',                     prefix: 'Dashboard/',     roles: ['super_admin', 'admin', 'trainer'] },
-            { label: 'Utilisateurs',    icon: 'admin_panel_settings', href: '/users',                prefix: 'Users/',         roles: ['super_admin'] },
-            { label: 'Projets',         icon: 'folder_open',          href: '/projects',             prefix: 'Projects/',      roles: ['super_admin', 'admin'] },
-            { label: 'Apprenants',      icon: 'person_book',          href: '/learners',             prefix: 'Learners/',      roles: ['super_admin', 'admin'] },
-            { label: 'Présences',       icon: 'fact_check',           href: '/presences',            prefix: 'Attendances/',   roles: ['super_admin', 'admin', 'trainer'] },
-            { label: 'Référentiels',    icon: 'menu_book',            href: '/referentiels',         prefix: 'Referentiels/',  roles: ['super_admin', 'admin'] },
-            { label: 'Partenaires',     icon: 'handshake',            href: '/partners',             prefix: 'Partners/',      roles: ['super_admin', 'admin'] },
-            { label: 'Statistiques',    icon: 'bar_chart',            href: '/statistics',           prefix: 'Statistics/',    roles: ['super_admin', 'admin'] },
-            { label: 'Communication',   icon: 'chat',                 href: '/communication/emails', prefix: 'Communication/', roles: ['super_admin', 'admin'] },
+            { label: 'Utilisateurs',    icon: 'admin_panel_settings', href: '/users',                prefix: 'Users/',         roles: ['super_admin', 'admin'], permissions: ['users.view'] },
+            { label: 'Projets',         icon: 'folder_open',          href: '/projects',             prefix: 'Projects/',      roles: ['super_admin', 'admin'], permissions: ['projects.view'] },
+            { label: 'Apprenants',      icon: 'person_book',          href: '/learners',             prefix: 'Learners/',      roles: ['super_admin', 'admin'], permissions: ['learners.view'] },
+            { label: 'Présences',       icon: 'fact_check',           href: '/presences',            prefix: 'Attendances/',   roles: ['super_admin', 'admin', 'trainer'], permissions: ['attendances.view'] },
+            { label: 'Référentiels',    icon: 'menu_book',            href: '/referentiels',         prefix: 'Referentiels/',  roles: ['super_admin', 'admin'], permissions: ['referentiels.view'] },
+            { label: 'Partenaires',     icon: 'handshake',            href: '/partners',             prefix: 'Partners/',      roles: ['super_admin', 'admin'], permissions: ['partners.view'] },
+            { label: 'Statistiques',    icon: 'bar_chart',            href: '/statistics',           prefix: 'Statistics/',    roles: ['super_admin', 'admin'], permissions: ['statistics.view'] },
+            { label: 'Communication',   icon: 'chat',                 href: '/communication/emails', prefix: 'Communication/', roles: ['super_admin', 'admin'], permissions: ['communication.view', 'communication.send', 'communication.manage', 'whatsapp.view', 'whatsapp.send', 'whatsapp.manage'] },
         ],
     },
     {
@@ -78,9 +86,9 @@ const allNavGroups: NavGroup[] = [
         icon: 'domain',
         collapsible: true,
         items: [
-            { label: 'Formations', icon: 'local_library', href: '/campus/formations', prefix: 'Campus/Formations/', roles: ['super_admin', 'admin'] },
-            { label: 'Cohortes',   icon: 'groups',        href: '/campus/cohorts',    prefix: 'Campus/Cohorts/',    roles: ['super_admin', 'admin'] },
-            { label: 'Finance',    icon: 'payments',      href: '/campus/finance',    prefix: 'Campus/Finance/',    roles: ['super_admin', 'admin'] },
+            { label: 'Formations', icon: 'local_library', href: '/campus/formations', prefix: 'Campus/Formations/', roles: ['super_admin', 'admin'], permissions: ['campus.formations.view'] },
+            { label: 'Cohortes',   icon: 'groups',        href: '/campus/cohorts',    prefix: 'Campus/Cohorts/',    roles: ['super_admin', 'admin'], permissions: ['campus.cohorts.view'] },
+            { label: 'Finance',    icon: 'payments',      href: '/campus/finance',    prefix: 'Campus/Finance/',    roles: ['super_admin', 'admin'], permissions: ['campus.finance.view', 'campus.finance.collect', 'campus.finance.manage', 'campus.finance.dashboard'] },
         ],
     },
 ]
@@ -128,12 +136,21 @@ const toggleGroup = (id: string) => {
     try { localStorage.setItem(`sidebar_group_${id}`, JSON.stringify(openGroups.value[id])) } catch {}
 }
 
-// ─── Filtered groups by role ─────────────────────────────────────────────────
+// ─── Filtered groups by role & permissions ─────────────────────────────────
+const canSeeNavItem = (item: NavItem): boolean => {
+    const role = userRole.value ?? userRoleLegacy
+    if (!role || !item.roles.includes(role)) return false
+    if (isSuperAdmin.value) return true
+    if (role === 'trainer') return true
+    if (!item.permissions?.length) return true
+    return canAny(item.permissions)
+}
+
 const navGroups = computed(() =>
     allNavGroups
         .map(g => ({
             ...g,
-            items: g.items.filter(item => !userRole || item.roles.includes(userRole)),
+            items: g.items.filter(canSeeNavItem),
         }))
         .filter(g => g.items.length > 0)
 )
@@ -247,7 +264,7 @@ const logout = () => router.post('/deconnexion', {}, {
             <!-- Bottom actions -->
             <div class="border-t border-white/10 pt-sm pb-md flex flex-col gap-xs">
                 <Link
-                    v-if="!isTrainer"
+                    v-if="showConfiguration"
                     href="/configuration"
                     class="nav-link nav-inactive"
                     :class="[isActive('Configuration/') ? 'nav-active' : 'nav-inactive', sidebarCollapsed ? 'justify-center' : '']"
@@ -281,7 +298,7 @@ const logout = () => router.post('/deconnexion', {}, {
                 :style="{ width: `calc(100% - ${sidebarWidth})` }"
             >
                 <div class="flex items-center gap-md">
-                    <AiChatbot v-if="!isTrainer" />
+                    <AiChatbot v-if="showAiChatbot" />
                     <NotificationBell :initial-count="($page.props.unread_notifications_count as number) ?? 0" />
                     <div class="h-6 w-px bg-surface-container-highest mx-xs"></div>
                     <Link href="/profil" class="flex items-center gap-sm hover:opacity-80 transition-opacity">
