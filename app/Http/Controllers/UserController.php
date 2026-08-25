@@ -100,7 +100,7 @@ class UserController extends Controller
 
         return redirect()
             ->route('users.index')
-            ->with('success', 'Utilisateur invité avec succès. Un email d\'activation a été envoyé.');
+            ->with('success', 'Utilisateur créé. L\'email d\'activation sera envoyé dans quelques instants.');
     }
 
     public function edit(User $user): Response

@@ -79,12 +79,10 @@ class TrainerController extends Controller
             'expires_at' => now()->addHours(72),
         ]);
 
-        // Renvoyer l'email
-        Mail::to($user->email)->queue(
-            (new UserInvitation($user, $plainToken))->onConnection('database')
-        );
+        // Renvoyer l'email (queued — avoids SMTP timeout on the web request)
+        Mail::to($user->email)->queue(new UserInvitation($user, $plainToken));
 
-        return back()->with('success', 'L\'invitation a été renvoyée avec succès.');
+        return back()->with('success', 'L\'invitation a été mise en file d\'attente. Elle sera envoyée sous peu.');
     }
 
     /**

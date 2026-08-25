@@ -11,7 +11,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
-use RuntimeException;
 use Throwable;
 
 class InviteUser
@@ -54,18 +53,16 @@ class InviteUser
         });
 
         try {
-            Mail::to($email)->send(new UserInvitation($user, $plainToken));
+            // Queued: avoids PHP max_execution_time fatal on slow/blocked SMTP from Railway.
+            Mail::to($email)->queue(new UserInvitation($user, $plainToken));
         } catch (Throwable $e) {
-            Log::error('Invitation email failed', [
+            Log::error('Failed to queue invitation email', [
                 'email' => $email,
                 'user_id' => $user->id,
                 'message' => $e->getMessage(),
             ]);
 
-            throw new RuntimeException(
-                "L'utilisateur a été créé, mais l'email d'invitation n'a pas pu être envoyé. Vérifiez la configuration SMTP (MAIL_HOST, MAIL_SCHEME, identifiants). Détail : ".$e->getMessage(),
-                previous: $e,
-            );
+            throw $e;
         }
 
         return $user;
