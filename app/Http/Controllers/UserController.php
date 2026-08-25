@@ -90,10 +90,12 @@ class UserController extends Controller
                     $user->permissions()->sync($request->validated('permissions'));
                 }
             }
-        } catch (\RuntimeException $e) {
+        } catch (\Throwable $e) {
+            report($e);
+
             return redirect()
                 ->route('users.index')
-                ->with('warning', $e->getMessage());
+                ->with('warning', "Impossible d'envoyer l'invitation : ".$e->getMessage());
         }
 
         return redirect()

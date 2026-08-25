@@ -39,7 +39,10 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            'scheme' => env('MAIL_SCHEME'),
+            // Railway/dotenv often stores the literal string "null" — treat it as real null.
+            'scheme' => (($scheme = env('MAIL_SCHEME')) === null || $scheme === '' || strtolower((string) $scheme) === 'null')
+                ? null
+                : $scheme,
             'url' => env('MAIL_URL'),
             'host' => env('MAIL_HOST', '127.0.0.1'),
             'port' => env('MAIL_PORT', 2525),
