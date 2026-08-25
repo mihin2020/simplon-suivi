@@ -6,13 +6,15 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
+        "ext-gd": "*",
+        "ext-zip": "*",
         "barryvdh/laravel-dompdf": "^3.1",
         "cloudinary-labs/cloudinary-laravel": "^3.0",
         "inertiajs/inertia-laravel": "^3.1",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
-        "maatwebsite/excel": "*",
+        "maatwebsite/excel": "^3.1",
         "maennchen/zipstream-php": "^3.2",
         "twilio/sdk": "^8.11",
         "webklex/laravel-imap": "^6.2"
