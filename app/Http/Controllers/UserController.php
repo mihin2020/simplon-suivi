@@ -63,29 +63,37 @@ class UserController extends Controller
         InviteUser $inviteUser,
         CreateTrainerAction $createTrainer,
     ): RedirectResponse {
+        $this->authorize('create', User::class);
+
         $role = UserRole::from($request->validated('role'));
 
-        if ($role === UserRole::Trainer) {
-            $createTrainer->execute(
-                firstName: $request->validated('first_name'),
-                lastName:  $request->validated('last_name'),
-                email:     $request->validated('email'),
-                profileId: $request->validated('profile_id'),
-                phone:     $request->validated('phone'),
-                phone2:    $request->validated('phone2'),
-                cv:        $request->file('cv'),
-            );
-        } else {
-            $user = $inviteUser->execute(
-                firstName: $request->validated('first_name'),
-                lastName:  $request->validated('last_name'),
-                email:     $request->validated('email'),
-                role:      $role,
-            );
+        try {
+            if ($role === UserRole::Trainer) {
+                $createTrainer->execute(
+                    firstName: $request->validated('first_name'),
+                    lastName:  $request->validated('last_name'),
+                    email:     $request->validated('email'),
+                    profileId: $request->validated('profile_id'),
+                    phone:     $request->validated('phone'),
+                    phone2:    $request->validated('phone2'),
+                    cv:        $request->file('cv'),
+                );
+            } else {
+                $user = $inviteUser->execute(
+                    firstName: $request->validated('first_name'),
+                    lastName:  $request->validated('last_name'),
+                    email:     $request->validated('email'),
+                    role:      $role,
+                );
 
-            if ($request->filled('permissions')) {
-                $user->permissions()->sync($request->validated('permissions'));
+                if ($request->filled('permissions')) {
+                    $user->permissions()->sync($request->validated('permissions'));
+                }
             }
+        } catch (\RuntimeException $e) {
+            return redirect()
+                ->route('users.index')
+                ->with('warning', $e->getMessage());
         }
 
         return redirect()
