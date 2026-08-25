@@ -14,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Railway (and other reverse proxies) terminate TLS; trust X-Forwarded-* headers.
+        $middleware->trustProxies(at: '*');
+
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
