@@ -26,6 +26,7 @@ class Formation extends Model
         'status',
         'capacity',
         'location',
+        'venue',
         'referentiel_id',
     ];
 

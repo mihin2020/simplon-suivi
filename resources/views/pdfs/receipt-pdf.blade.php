@@ -13,7 +13,18 @@
             line-height: 1.5;
         }
 
-        .page { width: 100%; padding: 14mm 18mm; }
+        .page {
+            width: 100%;
+            padding: 14mm 18mm;
+            min-height: 297mm;
+            display: flex;
+            flex-direction: column;
+        }
+        .page-body {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
 
         /* ── Header ── */
         .header-table { width: 100%; border-collapse: collapse; margin-bottom: 6mm; }
@@ -60,7 +71,7 @@
         }
 
         /* ── Recap ── */
-        .recap { width: 100%; border-collapse: collapse; margin-bottom: 8mm; }
+        .recap { width: 100%; border-collapse: collapse; margin-bottom: 4mm; }
         .recap td { padding: 2.5mm 0; font-size: 10pt; }
         .recap .r-lbl { color: #515f74; }
         .recap .r-val { text-align: right; font-weight: bold; color: #1a1a2e; white-space: nowrap; }
@@ -73,9 +84,13 @@
         .note-box { background: #fffbeb; border-left: 4pt solid #f59e0b; padding: 3mm 5mm; margin-bottom: 7mm; font-size: 9pt; color: #78350f; }
         .note-lbl  { font-size: 7pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1mm; }
 
-        .issuer-signature { text-align: right; width: 60mm; margin-left: auto; margin-top: 10mm; margin-bottom: 4mm; }
-        .issuer-line { border-top: 1pt solid #1a1a2e; margin-bottom: 2mm; }
-        .issuer-name { font-size: 10pt; font-weight: bold; color: #1a1a2e; }
+        .issuer-bottom-zone { margin-top: auto; width: 60mm; margin-left: auto; }
+        .issuer-caisse-block { text-align: right; margin-right: 5mm; }
+        .issuer-stamp-zone { height: 40mm; width: 100%; }
+        .issuer-role { font-size: 9pt; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5pt; color: #515f74; }
+        .issuer-name-footer { text-align: right; }
+        .issuer-name { font-size: 10pt; font-weight: bold; color: #1a1a2e; margin-bottom: 2mm; }
+        .issuer-line { border-top: 1pt solid #1a1a2e; }
 
         /* ── Footer ── */
         .footer { text-align: center; font-size: 8pt; color: #9aa3b2; border-top: 1pt solid #e5e7eb; padding-top: 3mm; margin-top: 6mm; }
@@ -84,6 +99,7 @@
 </head>
 <body>
 <div class="page">
+<div class="page-body">
 
     {{-- Header --}}
     <table class="header-table">
@@ -174,11 +190,19 @@
     @endif
 
     @if($issuedBy)
-    <div class="issuer-signature">
-        <div class="issuer-line"></div>
-        <div class="issuer-name">{{ $issuedBy }}</div>
+    <div class="issuer-bottom-zone">
+        <div class="issuer-caisse-block">
+            <div class="issuer-role">La caisse</div>
+        </div>
+        <div class="issuer-stamp-zone"></div>
+        <div class="issuer-name-footer">
+            <div class="issuer-name">{{ $issuedBy }}</div>
+            <div class="issuer-line"></div>
+        </div>
     </div>
     @endif
+
+</div>
 
     <div class="footer">
         <strong>Simplon Burkina Faso</strong> &nbsp;·&nbsp;

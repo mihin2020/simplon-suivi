@@ -22,6 +22,7 @@ const form = useForm({
     ended_at:       '',
     status:         'active',
     location:       '',
+    venue:          '',
     referentiel_id: '',
 })
 
@@ -72,16 +73,29 @@ const submit = () => form.post(`/projects/${props.project.id}/formations`)
                     />
                 </div>
 
-                <div class="field mt-md">
-                    <label class="label">Ville</label>
-                    <input
-                        v-model="form.location"
-                        type="text"
-                        class="input"
-                        :class="{ 'input-error': form.errors.location }"
-                        placeholder="Ex : Ouagadougou, Bobo-Dioulasso, Koudougou..."
-                    />
-                    <p v-if="form.errors.location" class="error-msg">{{ form.errors.location }}</p>
+                <div class="grid-2 mt-md">
+                    <div class="field">
+                        <label class="label">Ville</label>
+                        <input
+                            v-model="form.location"
+                            type="text"
+                            class="input"
+                            :class="{ 'input-error': form.errors.location }"
+                            placeholder="Ex : Ouagadougou, Bobo-Dioulasso..."
+                        />
+                        <p v-if="form.errors.location" class="error-msg">{{ form.errors.location }}</p>
+                    </div>
+                    <div class="field">
+                        <label class="label">Lieu</label>
+                        <input
+                            v-model="form.venue"
+                            type="text"
+                            class="input"
+                            :class="{ 'input-error': form.errors.venue }"
+                            placeholder="Ex : Simplon Ouaga, Fablab..."
+                        />
+                        <p v-if="form.errors.venue" class="error-msg">{{ form.errors.venue }}</p>
+                    </div>
                 </div>
             </div>
 

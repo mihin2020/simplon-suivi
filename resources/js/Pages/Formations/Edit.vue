@@ -12,6 +12,7 @@ interface Formation {
     ended_at: string | null
     status: string
     location: string | null
+    venue: string | null
     referentiel_id: string | null
     project: { id: string; name: string }
 }
@@ -31,6 +32,7 @@ const form = useForm({
     ended_at:       toDateInput(props.formation.ended_at),
     status:         props.formation.status,
     location:       props.formation.location ?? '',
+    venue:          props.formation.venue ?? '',
     referentiel_id: props.formation.referentiel_id ?? '',
 })
 
@@ -72,17 +74,30 @@ const submit = () => form.put(`/formations/${props.formation.id}`)
                 <textarea v-model="form.description" class="input" rows="3" />
             </div>
 
-            <!-- Ville -->
-            <div class="field">
-                <label class="label">Ville</label>
-                <input
-                    v-model="form.location"
-                    type="text"
-                    class="input"
-                    :class="{ 'input-error': form.errors.location }"
-                    placeholder="Ex : Ouagadougou, Bobo-Dioulasso..."
-                />
-                <p v-if="form.errors.location" class="error-msg">{{ form.errors.location }}</p>
+            <!-- Ville & Lieu -->
+            <div class="grid grid-cols-2 gap-md">
+                <div class="field">
+                    <label class="label">Ville</label>
+                    <input
+                        v-model="form.location"
+                        type="text"
+                        class="input"
+                        :class="{ 'input-error': form.errors.location }"
+                        placeholder="Ex : Ouagadougou, Bobo-Dioulasso..."
+                    />
+                    <p v-if="form.errors.location" class="error-msg">{{ form.errors.location }}</p>
+                </div>
+                <div class="field">
+                    <label class="label">Lieu</label>
+                    <input
+                        v-model="form.venue"
+                        type="text"
+                        class="input"
+                        :class="{ 'input-error': form.errors.venue }"
+                        placeholder="Ex : Simplon Ouaga, Fablab..."
+                    />
+                    <p v-if="form.errors.venue" class="error-msg">{{ form.errors.venue }}</p>
+                </div>
             </div>
 
             <!-- Dates -->

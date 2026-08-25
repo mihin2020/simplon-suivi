@@ -22,6 +22,7 @@ interface Formation {
     ended_at: string | null
     status: string
     location: string | null
+    venue: string | null
     active_learners_count: number
 }
 
@@ -167,6 +168,7 @@ const duplicateFormation = (formation: Formation) => {
                         <tr class="bg-surface border-b border-surface-container-highest">
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Formation</th>
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Ville</th>
+                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Lieu</th>
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Début</th>
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Fin</th>
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-center">Apprenants</th>
@@ -176,7 +178,7 @@ const duplicateFormation = (formation: Formation) => {
                     </thead>
                     <tbody class="divide-y divide-surface-container-highest">
                         <tr v-if="project.formations.length === 0">
-                            <td colspan="7" class="px-md py-xl text-center text-secondary text-body-md">
+                            <td colspan="8" class="px-md py-xl text-center text-secondary text-body-md">
                                 Aucune formation dans ce projet.
                                 <Can permission="formations.create">
                                     <Link :href="`/projects/${project.id}/formations/create`" class="text-primary font-semibold ml-xs">
@@ -203,6 +205,9 @@ const duplicateFormation = (formation: Formation) => {
                             </td>
                             <td class="px-md py-sm text-body-sm text-on-surface-variant whitespace-nowrap">
                                 {{ formation.location || '—' }}
+                            </td>
+                            <td class="px-md py-sm text-body-sm text-on-surface-variant whitespace-nowrap">
+                                {{ formation.venue || '—' }}
                             </td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant whitespace-nowrap">{{ fmt(formation.started_at) }}</td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant whitespace-nowrap">{{ fmt(formation.ended_at) }}</td>

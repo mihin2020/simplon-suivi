@@ -180,7 +180,7 @@
         .recap {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10mm;
+            margin-bottom: 4mm;
             font-size: 10pt;
         }
         .recap td { padding: 3mm 0; }
@@ -200,21 +200,37 @@
         .status-pending { color: #d97706; font-weight: 700; }
         .status-paid    { color: #059669; font-weight: 700; }
 
-        .issuer-signature {
+        .issuer-bottom-zone {
             margin-top: auto;
-            padding-top: 10mm;
-            text-align: right;
-            width: 65mm;
             margin-left: auto;
+            width: 65mm;
         }
-        .issuer-line {
-            border-top: 1px solid #1a1a2e;
-            margin-bottom: 2mm;
+        .issuer-caisse-block {
+            text-align: right;
+            margin-right: 5mm;
+        }
+        .issuer-stamp-zone {
+            height: 40mm;
+            width: 100%;
+        }
+        .issuer-role {
+            font-size: 9pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #515f74;
+        }
+        .issuer-name-footer {
+            text-align: right;
         }
         .issuer-name {
             font-size: 10pt;
             font-weight: 600;
             color: #1a1a2e;
+            margin-bottom: 2mm;
+        }
+        .issuer-line {
+            border-top: 1px solid #1a1a2e;
         }
 
         /* FOOTER — collé en bas de la page A4 */
@@ -344,9 +360,15 @@
         @endif
 
         @if($issuedBy)
-        <div class="issuer-signature">
-            <div class="issuer-line"></div>
-            <div class="issuer-name">{{ $issuedBy }}</div>
+        <div class="issuer-bottom-zone">
+            <div class="issuer-caisse-block">
+                <div class="issuer-role">La caisse</div>
+            </div>
+            <div class="issuer-stamp-zone"></div>
+            <div class="issuer-name-footer">
+                <div class="issuer-name">{{ $issuedBy }}</div>
+                <div class="issuer-line"></div>
+            </div>
         </div>
         @endif
 

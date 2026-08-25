@@ -18,6 +18,7 @@ class DuplicateFormation
             'status' => FormationStatus::Active,
             'capacity' => $formation->capacity,
             'location' => $formation->location,
+            'venue' => $formation->venue,
             'referentiel_id' => $formation->referentiel_id,
         ]);
     }
