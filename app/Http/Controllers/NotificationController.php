@@ -19,6 +19,18 @@ class NotificationController extends Controller
         ]);
     }
 
+    public function recent()
+    {
+        $notifications = auth()->user()->notifications()
+            ->orderByDesc('created_at')
+            ->limit(15)
+            ->get(['id', 'type', 'title', 'message', 'data', 'read_at', 'created_at']);
+
+        return response()->json([
+            'notifications' => $notifications,
+        ]);
+    }
+
     public function unreadCount()
     {
         return response()->json([
@@ -28,7 +40,10 @@ class NotificationController extends Controller
 
     public function markAsRead(Notification $notification)
     {
+        abort_unless($notification->user_id === auth()->id(), 403);
+
         $notification->update(['read_at' => now()]);
+
         return back();
     }
 

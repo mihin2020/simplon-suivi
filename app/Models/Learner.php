@@ -98,6 +98,11 @@ class Learner extends Model
         return $this->hasMany(InsertionRecord::class)->orderBy('status_changed_at', 'desc');
     }
 
+    public function interviews(): HasMany
+    {
+        return $this->hasMany(LearnerInterview::class)->chronological();
+    }
+
     public function latestInsertionRecord(): ?InsertionRecord
     {
         return $this->insertionRecords()->first();

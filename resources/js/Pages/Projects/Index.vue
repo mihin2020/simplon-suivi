@@ -3,6 +3,7 @@ import { Head, Link, router } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import Can from '@/Components/Can.vue'
+import ProgressBar from '@/Components/Planning/ProgressBar.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -14,6 +15,7 @@ interface Project {
     ended_at: string | null
     status: string
     formations_count: number
+    progress_percentage?: number
 }
 
 interface Paginated {
@@ -75,13 +77,14 @@ const destroy = () => {
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Début</th>
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Fin</th>
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-right">Formations</th>
+                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Avancement</th>
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Statut</th>
                             <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-surface-container-highest">
                         <tr v-if="projects.data.length === 0">
-                            <td colspan="6" class="px-md py-xl text-center text-secondary text-body-md">
+                            <td colspan="7" class="px-md py-xl text-center text-secondary text-body-md">
                                 Aucun projet trouvé.
                             </td>
                         </tr>
@@ -104,6 +107,9 @@ const destroy = () => {
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant whitespace-nowrap">{{ fmt(project.started_at) }}</td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant whitespace-nowrap">{{ fmt(project.ended_at) }}</td>
                             <td class="px-md py-sm text-data-tabular text-on-surface text-right">{{ project.formations_count }}</td>
+                            <td class="px-md py-sm" style="min-width: 160px">
+                                <ProgressBar :percentage="project.progress_percentage ?? 0" size="sm" />
+                            </td>
                             <td class="px-md py-sm">
                                 <span class="status-badge" :class="`status-${project.status}`">
                                     {{ statuses.find(s => s.value === project.status)?.label ?? project.status }}

@@ -20,7 +20,7 @@ class PermissionSeeder extends Seeder
             // Projets
             ['name' => 'Voir les projets',            'slug' => 'projects.view',    'group' => 'Projets'],
             ['name' => 'Créer un projet',             'slug' => 'projects.create',  'group' => 'Projets'],
-            ['name' => 'Modifier un projet',          'slug' => 'projects.update',  'group' => 'Projets'],
+            ['name' => 'Modifier un projet et gérer la planification', 'slug' => 'projects.update',  'group' => 'Projets'],
             ['name' => 'Supprimer un projet',         'slug' => 'projects.delete',  'group' => 'Projets'],
 
             // Formations
@@ -109,7 +109,7 @@ class PermissionSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::firstOrCreate(['slug' => $permission['slug']], $permission);
+            Permission::updateOrCreate(['slug' => $permission['slug']], $permission);
         }
 
         // Rôles système

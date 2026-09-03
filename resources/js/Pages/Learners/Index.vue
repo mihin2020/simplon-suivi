@@ -18,6 +18,7 @@ interface Learner {
         name: string
         project: { id: string; name: string }
     }>
+    interviews_count?: number
 }
 
 interface Paginated {
@@ -211,6 +212,9 @@ const photoUrl = (path: string | null) =>
                                     <Link :href="`/learners/${learner.id}`" class="icon-btn" title="Voir le profil">
                                         <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
                                     </Link>
+                                    <Link :href="`/learners/${learner.id}?tab=interviews`" class="icon-btn interviews" title="Entretiens">
+                                        <span class="material-symbols-outlined" style="font-size:18px">forum</span>
+                                    </Link>
                                     <Can permission="learners.update">
                                         <Link :href="`/learners/${learner.id}/edit`" class="icon-btn" title="Modifier">
                                             <span class="material-symbols-outlined" style="font-size:18px">edit</span>
@@ -342,6 +346,7 @@ const photoUrl = (path: string | null) =>
     display: inline-flex;
 }
 .icon-btn:hover { color: #E5004C; }
+.icon-btn.interviews:hover { color: #1F3A4D; }
 .icon-btn.danger:hover { color: #ba1a1a; }
 
 .page-btn {

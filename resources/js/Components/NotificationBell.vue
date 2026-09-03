@@ -22,9 +22,15 @@ async function fetchCount() {
 
 async function fetchNotifications() {
     try {
-        const res = await fetch('/notifications')
+        const res = await fetch('/notifications/recent', {
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+        if (!res.ok) return
         const data = await res.json()
-        notifications.value = data.notifications?.data ?? []
+        notifications.value = data.notifications ?? []
     } catch {
         // ignore
     }

@@ -87,7 +87,19 @@ const removeExistingCv = () => {
 }
 
 const submit = () => {
-    form.post(`/users/${props.user.id}?_method=PUT`, { forceFormData: true })
+    if (form.role !== 'trainer') {
+        form.profile_id = ''
+        form.phone = ''
+        form.phone2 = ''
+        form.cv = null
+        form.remove_cv = false
+    }
+    form.post(`/users/${props.user.id}?_method=PUT`, {
+        forceFormData: true,
+        onError: () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        },
+    })
 }
 
 

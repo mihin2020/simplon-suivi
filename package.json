@@ -21,7 +21,9 @@
         "@tiptap/pm": "^3.22.5",
         "@tiptap/starter-kit": "^3.22.5",
         "@tiptap/vue-3": "^3.22.5",
+        "@types/sortablejs": "^1.15.9",
         "@vitejs/plugin-vue": "^6.0.6",
+        "sortablejs": "^1.15.7",
         "vue": "^3.5.34"
     }
 }

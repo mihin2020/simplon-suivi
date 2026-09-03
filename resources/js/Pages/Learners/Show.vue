@@ -5,6 +5,8 @@ import AdminLayout from '@/Layouts/AdminLayout.vue'
 import Can from '@/Components/Can.vue'
 import ContractTypeModal from '@/Components/ContractTypeModal.vue'
 import InsertionRecordForm from '@/Components/InsertionRecordForm.vue'
+import LearnerInterviews from '@/Components/Learners/LearnerInterviews.vue'
+import { usePermissions } from '@/composables/usePermissions'
 
 interface FormData {
     status: string
@@ -114,16 +116,33 @@ interface Learner {
 interface ContractTypeItem { id: string; name: string }
 interface WorkModeOption { value: string; label: string; icon: string }
 
+interface InterviewUser { id: string; first_name: string; last_name: string; email: string }
+interface Interview {
+    id: string
+    conducted_at: string
+    subject: string
+    notes: string | null
+    recommendation: string | null
+    next_follow_up_at: string | null
+    is_important: boolean
+    custom_fields?: { label: string; value: string }[]
+    conductor: { id: string; first_name: string; last_name: string } | null
+}
+
 const props = defineProps<{
     learner: Learner
     insertionRecords: InsertionRecord[]
     latestInsertion: InsertionRecord | null
+    interviews: Interview[]
+    interviewUsers: InterviewUser[]
     insertionStatuses: InsertionStatus[]
     internshipContractTypes: ContractTypeItem[]
     employmentContractTypes: ContractTypeItem[]
     workModes: WorkModeOption[]
     canManageContractTypes: boolean
 }>()
+
+const { authUser } = usePermissions()
 
 const today = new Date().toISOString().split('T')[0]
 
@@ -279,7 +298,18 @@ const submitForm = () => {
     }
 }
 
-const activeTab = ref<'info' | 'formations' | 'stage' | 'employment'>('info')
+const activeTab = ref<'info' | 'formations' | 'interviews' | 'stage' | 'employment'>((() => {
+    const tab = new URLSearchParams(window.location.search).get('tab')
+    if (tab === 'interviews' || tab === 'formations' || tab === 'stage' || tab === 'employment') return tab
+    return 'info'
+})())
+
+watch(activeTab, (tab) => {
+    const url = new URL(window.location.href)
+    if (tab === 'info') url.searchParams.delete('tab')
+    else url.searchParams.set('tab', tab)
+    window.history.replaceState({}, '', url.toString())
+})
 const showStageForm = ref(false)
 const showEmploymentForm = ref(false)
 const contractTypeModal = ref<'internship' | 'employment' | null>(null)
@@ -357,6 +387,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
         <div class="tabs-bar">
             <button @click="activeTab = 'info'" class="tab-btn" :class="{ 'tab-active': activeTab === 'info' }"><span class="material-symbols-outlined" style="font-size:18px">person</span>Profil</button>
             <button @click="activeTab = 'formations'" class="tab-btn" :class="{ 'tab-active': activeTab === 'formations' }"><span class="material-symbols-outlined" style="font-size:18px">school</span>Formations<span class="tab-badge">{{ learner.formations.length }}</span></button>
+            <button @click="activeTab = 'interviews'" class="tab-btn" :class="{ 'tab-active': activeTab === 'interviews' }"><span class="material-symbols-outlined" style="font-size:18px">forum</span>Entretiens<span class="tab-badge">{{ (interviews ?? []).length }}</span></button>
             <button @click="activeTab = 'stage'" class="tab-btn" :class="{ 'tab-active': activeTab === 'stage' }"><span class="material-symbols-outlined" style="font-size:18px">business_center</span>Stage<span class="tab-badge">{{ stageRecords.length }}</span></button>
             <button @click="activeTab = 'employment'" class="tab-btn" :class="{ 'tab-active': activeTab === 'employment' }"><span class="material-symbols-outlined" style="font-size:18px">work</span>Emploi<span class="tab-badge">{{ employmentRecords.length }}</span></button>
         </div>
@@ -447,6 +478,21 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                     </div>
                     <span class="enrollment-badge" :class="`enrollment-${formation.pivot.status}`">{{ enrollmentStatusLabels[formation.pivot.status] ?? formation.pivot.status }}</span>
                 </div>
+            </div>
+
+            <!-- Tab: Entretiens -->
+            <div v-if="activeTab === 'interviews'">
+                <LearnerInterviews
+                    :learner-id="learner.id"
+                    :learner-name="learner.full_name"
+                    :current-status="enrollmentStatusLabels[currentFormation?.pivot.status ?? ''] ?? 'Aucun statut de formation'"
+                    :interviews="interviews ?? []"
+                    :interview-users="interviewUsers ?? []"
+                    :current-user-id="authUser?.id"
+                    :has-stage="stageRecords.length > 0"
+                    :has-employment="employmentRecords.length > 0"
+                    @switch-tab="activeTab = $event"
+                />
             </div>
 
             <!-- Tab: Stage -->

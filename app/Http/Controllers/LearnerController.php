@@ -14,6 +14,7 @@ use App\Models\Formation;
 use App\Models\LastDiploma;
 use App\Models\Learner;
 use App\Models\Project;
+use App\Models\User;
 use App\Models\Vulnerability;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,6 +42,7 @@ class LearnerController extends Controller
                     ->with('project:id,name')
                     ->orderByPivot('enrolled_at', 'desc'),
             ])
+            ->withCount('interviews')
             ->when($filters['search'] ?? null, fn ($q, $s) => $q->search($s))
             ->when($filters['project_id'] ?? null, function ($q, $projectId) {
                 $q->whereHas('formations', fn ($fq) => $fq->where('project_id', $projectId));
@@ -103,6 +105,14 @@ class LearnerController extends Controller
     {
         $this->authorize('view', $learner);
 
+        // Fast path for interview CRUD partial reloads (only interviews prop).
+        $partial = array_filter(array_map('trim', explode(',', (string) $request->header('X-Inertia-Partial-Data', ''))));
+        if ($partial !== [] && ! array_diff($partial, ['interviews', 'flash', 'errors'])) {
+            return Inertia::render('Learners/Show', [
+                'interviews' => $this->interviewPayload($learner),
+            ]);
+        }
+
         $learner->load([
             'educationLevel',
             'ageRange',
@@ -128,6 +138,12 @@ class LearnerController extends Controller
             'learner' => $learner,
             'insertionRecords' => $insertionRecords,
             'latestInsertion' => $latestInsertion,
+            'interviews' => $this->interviewPayload($learner),
+            'interviewUsers' => User::query()
+                ->assignableToPlanning()
+                ->orderBy('first_name')
+                ->orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name', 'email']),
             'insertionStatuses' => collect(InsertionStatus::cases())->map(fn ($s) => [
                 'value' => $s->value,
                 'label' => $s->label(),
@@ -230,5 +246,13 @@ class LearnerController extends Controller
             ->get();
 
         return response()->json($learners);
+    }
+
+    private function interviewPayload(Learner $learner)
+    {
+        return $learner->interviews()
+            ->with('conductor:id,first_name,last_name')
+            ->chronological()
+            ->get();
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\AgeRangeController;
 use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AttendanceController;
@@ -27,14 +28,18 @@ use App\Http\Controllers\Learner\ImportLearnerController;
 use App\Http\Controllers\Learner\MoveLearnerController;
 use App\Http\Controllers\Learner\WithdrawLearnerController;
 use App\Http\Controllers\LearnerController;
+use App\Http\Controllers\LearnerInterviewController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PartnerController;
+use App\Http\Controllers\PhaseController;
 use App\Http\Controllers\PresenceRedirectController;
+use App\Http\Controllers\ReorderController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReferentielController;
 use App\Http\Controllers\StatisticsController;
+use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TrainerController;
 use App\Http\Controllers\TrainerProfileController;
 use App\Http\Controllers\UserController;
@@ -175,6 +180,23 @@ Route::middleware('auth')->group(function () {
     Route::resource('projects', ProjectController::class);
     Route::patch('projects/{project}/partners', [ProjectController::class, 'syncPartners'])->name('projects.partners.sync');
 
+    Route::post('projects/{project}/phases', [PhaseController::class, 'store'])->name('projects.phases.store');
+    Route::put('phases/{phase}', [PhaseController::class, 'update'])->name('phases.update');
+    Route::delete('phases/{phase}', [PhaseController::class, 'destroy'])->name('phases.destroy');
+
+    Route::post('phases/{phase}/activities', [ActivityController::class, 'store'])->name('phases.activities.store');
+    Route::put('activities/{activity}', [ActivityController::class, 'update'])->name('activities.update');
+    Route::delete('activities/{activity}', [ActivityController::class, 'destroy'])->name('activities.destroy');
+
+    Route::post('activities/{activity}/tasks', [TaskController::class, 'store'])->name('activities.tasks.store');
+    Route::put('tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
+    Route::patch('tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.status');
+    Route::delete('tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
+
+    Route::post('planning/reorder/phases', [ReorderController::class, 'phases'])->name('planning.reorder.phases');
+    Route::post('planning/reorder/activities', [ReorderController::class, 'activities'])->name('planning.reorder.activities');
+    Route::post('planning/reorder/tasks', [ReorderController::class, 'tasks'])->name('planning.reorder.tasks');
+
     // Partners (configuration)
     Route::resource('partners', PartnerController::class)->except(['show']);
 
@@ -221,6 +243,10 @@ Route::middleware('auth')->group(function () {
         InsertionRecordController::class,
         'destroy',
     ])->name('learners.insertion.destroy');
+
+    Route::post('learners/{learner}/interviews', [LearnerInterviewController::class, 'store'])->name('learners.interviews.store');
+    Route::put('learners/{learner}/interviews/{interview}', [LearnerInterviewController::class, 'update'])->name('learners.interviews.update');
+    Route::delete('learners/{learner}/interviews/{interview}', [LearnerInterviewController::class, 'destroy'])->name('learners.interviews.destroy');
 
     // Enrollment / withdrawal / move
     Route::get('formations/{formation}/learners/enroll', [
@@ -581,6 +607,10 @@ Route::middleware('auth')->group(function () {
         NotificationController::class,
         'unreadCount',
     ])->name('notifications.unread-count');
+    Route::get('/notifications/recent', [
+        NotificationController::class,
+        'recent',
+    ])->name('notifications.recent');
     Route::patch('/notifications/{notification}/read', [
         NotificationController::class,
         'markAsRead',

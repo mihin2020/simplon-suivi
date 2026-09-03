@@ -10,6 +10,8 @@ use App\Http\Requests\Project\UpdateProjectRequest;
 use App\Models\Formation;
 use App\Models\Partner;
 use App\Models\Project;
+use App\Models\User;
+use App\Services\ProgressCalculator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,9 +25,23 @@ class ProjectController extends Controller
     {
         $this->authorize('viewAny', Project::class);
 
+        $calculator = app(ProgressCalculator::class);
+
         $projects = Project::withCount('formations')
+            ->with([
+                'phases:id,project_id,weight',
+                'phases.activities:id,phase_id,weight',
+                'phases.activities.tasks:id,activity_id,status',
+            ])
             ->orderByDesc('started_at')
             ->paginate(15);
+
+        $projects->getCollection()->transform(function (Project $project) use ($calculator) {
+            $project->setAttribute('progress_percentage', $calculator->forProject($project));
+            $project->unsetRelation('phases');
+
+            return $project;
+        });
 
         return Inertia::render('Projects/Index', [
             'projects' => $projects,
@@ -64,7 +80,7 @@ class ProjectController extends Controller
             ->with('success', 'Projet créé avec succès.');
     }
 
-    public function show(Project $project): Response
+    public function show(Project $project, ProgressCalculator $calculator): Response
     {
         $this->authorize('view', $project);
 
@@ -73,9 +89,20 @@ class ProjectController extends Controller
             'partners:id,name,logo_path,category',
         ]);
 
+        $calculator->hydrate($project);
+
+        $assignableUsers = request()->user()?->can('update', $project)
+            ? User::query()
+                ->assignableToPlanning()
+                ->orderBy('first_name')
+                ->orderBy('last_name')
+                ->get(['id', 'first_name', 'last_name', 'email', 'role'])
+            : collect();
+
         return Inertia::render('Projects/Show', [
             'project' => $project,
             'allPartners' => Partner::orderBy('name')->get(['id', 'name', 'logo_path', 'category']),
+            'assignableUsers' => $assignableUsers,
         ]);
     }
 

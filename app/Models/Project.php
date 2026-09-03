@@ -28,9 +28,9 @@ class Project extends Model
     {
         return [
             'started_at' => 'date',
-            'ended_at'   => 'date',
-            'budget'     => 'integer',
-            'status'     => ProjectStatus::class,
+            'ended_at' => 'date',
+            'budget' => 'integer',
+            'status' => ProjectStatus::class,
         ];
     }
 
@@ -42,6 +42,11 @@ class Project extends Model
     public function partners(): BelongsToMany
     {
         return $this->belongsToMany(Partner::class, 'project_partner');
+    }
+
+    public function phases(): HasMany
+    {
+        return $this->hasMany(Phase::class)->orderBy('position');
     }
 
     public function scopeActive(Builder $query): Builder

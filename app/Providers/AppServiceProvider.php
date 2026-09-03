@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Activity;
 use App\Models\Attendance;
 use App\Models\Competence;
 use App\Models\CompetenceBlock;
@@ -9,9 +10,12 @@ use App\Models\EducationLevel;
 use App\Models\Formation;
 use App\Models\InsertionRecord;
 use App\Models\Learner;
+use App\Models\LearnerInterview;
 use App\Models\Partner;
+use App\Models\Phase;
 use App\Models\Project;
 use App\Models\Referentiel;
+use App\Models\Task;
 use App\Models\Trainer;
 use App\Models\TrainerProfile;
 use App\Models\User;
@@ -54,13 +58,13 @@ class AppServiceProvider extends ServiceProvider
             Trainer::class, InsertionRecord::class, Partner::class,
             Referentiel::class, CompetenceBlock::class, Competence::class,
             EducationLevel::class, TrainerProfile::class, User::class,
-            Attendance::class,
+            Attendance::class, Phase::class, Activity::class, Task::class,
+            LearnerInterview::class,
         ] as $model) {
             $model::observe(AiCacheObserver::class);
         }
 
-        RateLimiter::for('chatbot', fn (Request $request) =>
-            Limit::perMinute(10)->by($request->user()?->id ?? $request->ip())
+        RateLimiter::for('chatbot', fn (Request $request) => Limit::perMinute(10)->by($request->user()?->id ?? $request->ip())
         );
     }
 }

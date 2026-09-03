@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\UserRole;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -78,7 +79,32 @@ class User extends Authenticatable
 
     public function notifications(): HasMany
     {
-        return $this->hasMany(\App\Models\Notification::class);
+        return $this->hasMany(Notification::class);
+    }
+
+    public function assignedPhases(): BelongsToMany
+    {
+        return $this->belongsToMany(Phase::class, 'phase_user')->withTimestamps();
+    }
+
+    public function assignedActivities(): BelongsToMany
+    {
+        return $this->belongsToMany(Activity::class, 'activity_user')->withTimestamps();
+    }
+
+    public function assignedTasks(): BelongsToMany
+    {
+        return $this->belongsToMany(Task::class, 'task_user')->withTimestamps();
+    }
+
+    public function scopeAssignableToPlanning(Builder $query): Builder
+    {
+        return $query
+            ->where('is_active', true)
+            ->whereIn('role', array_map(
+                fn (UserRole $role) => $role->value,
+                UserRole::planningAssignableRoles()
+            ));
     }
 
     public function hasPermission(string $slug): bool

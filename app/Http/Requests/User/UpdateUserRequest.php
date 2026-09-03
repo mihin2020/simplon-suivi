@@ -26,11 +26,11 @@ class UpdateUserRequest extends FormRequest
             'is_active'     => ['boolean'],
             'permissions'   => ['nullable', 'array'],
             'permissions.*' => ['integer', 'exists:permissions,id'],
-            'profile_id'    => $isTrainer ? ['nullable', 'uuid', 'exists:trainer_profiles,id'] : ['nullable', 'prohibited'],
-            'phone'         => $isTrainer ? ['nullable', 'string', 'max:20'] : ['nullable', 'prohibited'],
-            'phone2'        => $isTrainer ? ['nullable', 'string', 'max:20'] : ['nullable', 'prohibited'],
-            'cv'            => $isTrainer ? ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'] : ['nullable', 'prohibited'],
-            'remove_cv'     => $isTrainer ? ['nullable', 'boolean'] : ['nullable', 'prohibited'],
+            'profile_id'    => $isTrainer ? ['nullable', 'uuid', 'exists:trainer_profiles,id'] : ['nullable'],
+            'phone'         => $isTrainer ? ['nullable', 'string', 'max:20'] : ['nullable'],
+            'phone2'        => $isTrainer ? ['nullable', 'string', 'max:20'] : ['nullable'],
+            'cv'            => $isTrainer ? ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'] : ['nullable'],
+            'remove_cv'     => $isTrainer ? ['nullable', 'boolean'] : ['nullable'],
         ];
     }
 

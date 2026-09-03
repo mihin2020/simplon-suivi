@@ -4,6 +4,8 @@ import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import PartnerCategoryBadge from '@/Components/PartnerCategoryBadge.vue'
 import Can from '@/Components/Can.vue'
+import ProgressBar from '@/Components/Planning/ProgressBar.vue'
+import ProjectPlanning from '@/Components/Planning/ProjectPlanning.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -26,6 +28,47 @@ interface Formation {
     active_learners_count: number
 }
 
+interface Assignee {
+    id: string
+    first_name: string
+    last_name: string
+    full_name?: string
+    email: string
+}
+
+interface TaskItem {
+    id: string
+    title: string
+    description: string | null
+    started_at: string
+    ended_at: string
+    status: 'todo' | 'in_progress' | 'done'
+    assignees: Assignee[]
+}
+
+interface ActivityItem {
+    id: string
+    title: string
+    description: string | null
+    started_at: string
+    ended_at: string
+    resources: string[] | null
+    assignees: Assignee[]
+    tasks: TaskItem[]
+    progress_percentage: number
+}
+
+interface PhaseItem {
+    id: string
+    name: string
+    description: string | null
+    started_at: string
+    ended_at: string
+    assignees: Assignee[]
+    activities: ActivityItem[]
+    progress_percentage: number
+}
+
 interface Project {
     id: string
     name: string
@@ -35,11 +78,22 @@ interface Project {
     status: string
     formations: Formation[]
     partners: Partner[]
+    phases: PhaseItem[]
+    progress_percentage?: number
+}
+
+interface AssignableUser {
+    id: string
+    first_name: string
+    last_name: string
+    full_name?: string
+    email: string
 }
 
 const props = defineProps<{
     project: Project
     allPartners: Partner[]
+    assignableUsers: AssignableUser[]
 }>()
 
 const showPartnersModal = ref(false)
@@ -127,6 +181,10 @@ const duplicateFormation = (formation: Formation) => {
                         <span>→</span>
                         <span>{{ fmt(project.ended_at) }}</span>
                     </div>
+                    <div class="project-progress">
+                        <span class="project-progress-label">Avancement du projet</span>
+                        <ProgressBar :percentage="project.progress_percentage ?? 0" />
+                    </div>
                 </div>
             </div>
             <div class="flex items-center gap-sm flex-wrap">
@@ -152,6 +210,11 @@ const duplicateFormation = (formation: Formation) => {
                 </Can>
             </div>
         </div>
+
+        <ProjectPlanning
+            :project="{ ...project, phases: project.phases ?? [] }"
+            :assignable-users="assignableUsers ?? []"
+        />
 
         <!-- Formations -->
         <div class="bg-surface-container-lowest border border-surface-container-highest rounded-xl overflow-hidden shadow-sm">
@@ -390,6 +453,19 @@ const duplicateFormation = (formation: Formation) => {
 </template>
 
 <style scoped>
+.project-progress {
+    margin-top: 12px;
+    max-width: 360px;
+}
+.project-progress-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #9aaabb;
+}
 .icon-back {
     display: inline-flex; align-items: center; justify-content: center;
     width: 40px; height: 40px; border-radius: 50%;
