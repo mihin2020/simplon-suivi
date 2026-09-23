@@ -7,7 +7,7 @@ return [
     /*
      * Optional override. When empty, MysqldumpResolver auto-detects:
      * - Windows: Laragon / XAMPP / WAMP / PATH
-     * - Linux: /usr/bin/mysqldump, PATH
+     * - Linux: mariadb-dump (preferred) then mysqldump
      */
 
     'local_disk' => env('BACKUP_DISK', 'backups'),

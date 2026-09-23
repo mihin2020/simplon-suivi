@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Process;
 class MysqldumpResolver
 {
     /**
-     * Resolve mysqldump binary for local Windows (Laragon/XAMPP) and Linux production.
+     * Resolve dump binary for local Windows (Laragon/XAMPP) and Linux production (MariaDB/MySQL).
      */
     public static function path(): string
     {
@@ -19,12 +19,7 @@ class MysqldumpResolver
         }
 
         if ($configured === 'mysqldump' || $configured === '') {
-            $auto = self::detect();
-            if ($auto !== null) {
-                return $auto;
-            }
-
-            return 'mysqldump';
+            return self::detect() ?? 'mysqldump';
         }
 
         // Configured but missing on disk — try auto-detect before failing later
@@ -40,21 +35,27 @@ class MysqldumpResolver
                 }
             }
 
-            $fromPath = self::which('mysqldump.exe') ?? self::which('mysqldump');
-            if ($fromPath) {
-                return $fromPath;
-            }
-
-            return null;
+            return self::which('mysqldump.exe')
+                ?? self::which('mysqldump')
+                ?? self::which('mariadb-dump.exe')
+                ?? self::which('mariadb-dump');
         }
 
-        foreach (['/usr/bin/mysqldump', '/usr/local/bin/mysqldump', '/bin/mysqldump'] as $candidate) {
+        // Prefer mariadb-dump on modern MariaDB servers (mysqldump is deprecated there).
+        foreach ([
+            '/usr/bin/mariadb-dump',
+            '/usr/local/bin/mariadb-dump',
+            '/bin/mariadb-dump',
+            '/usr/bin/mysqldump',
+            '/usr/local/bin/mysqldump',
+            '/bin/mysqldump',
+        ] as $candidate) {
             if (File::exists($candidate) && is_executable($candidate)) {
                 return $candidate;
             }
         }
 
-        return self::which('mysqldump');
+        return self::which('mariadb-dump') ?? self::which('mysqldump');
     }
 
     /**
@@ -73,8 +74,7 @@ class MysqldumpResolver
             }
         }
 
-        $xampp = 'C:\\xampp\\mysql\\bin\\mysqldump.exe';
-        $candidates[] = $xampp;
+        $candidates[] = 'C:\\xampp\\mysql\\bin\\mysqldump.exe';
 
         $wampRoots = glob('C:\\wamp64\\bin\\mysql\\mysql*', GLOB_ONLYDIR) ?: [];
         rsort($wampRoots);
@@ -88,11 +88,9 @@ class MysqldumpResolver
     private static function which(string $binary): ?string
     {
         try {
-            if (PHP_OS_FAMILY === 'Windows') {
-                $result = Process::run(['where', $binary]);
-            } else {
-                $result = Process::run(['which', $binary]);
-            }
+            $result = PHP_OS_FAMILY === 'Windows'
+                ? Process::run(['where', $binary])
+                : Process::run(['which', $binary]);
 
             if (! $result->successful()) {
                 return null;
