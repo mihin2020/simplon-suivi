@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Campus;
 
+use App\Actions\Campus\SyncFormationPaymentPlan;
 use App\Enums\CampusFormationMode;
 use App\Http\Controllers\Controller;
 use App\Models\CampusFormation;
@@ -15,9 +16,9 @@ class CampusFormationController extends Controller
     public function index(Request $request): Response
     {
         $formations = CampusFormation::withCount('cohorts')
-            ->when($request->input('search'), fn($q, $s) =>
-                $q->where('name', 'like', "%{$s}%")
-                  ->orWhere('description', 'like', "%{$s}%")
+            ->withCount('installments')
+            ->when($request->input('search'), fn ($q, $s) => $q->where('name', 'like', "%{$s}%")
+                ->orWhere('description', 'like', "%{$s}%")
             )
             ->latest()
             ->paginate(15)
@@ -25,7 +26,7 @@ class CampusFormationController extends Controller
 
         return Inertia::render('Campus/Formations/Index', [
             'formations' => $formations,
-            'modes'      => collect(CampusFormationMode::cases())->map(fn($m) => [
+            'modes' => collect(CampusFormationMode::cases())->map(fn ($m) => [
                 'value' => $m->value,
                 'label' => $m->label(),
             ]),
@@ -35,34 +36,35 @@ class CampusFormationController extends Controller
     public function create(): Response
     {
         return Inertia::render('Campus/Formations/Create', [
-            'modes' => collect(CampusFormationMode::cases())->map(fn($m) => [
+            'modes' => collect(CampusFormationMode::cases())->map(fn ($m) => [
                 'value' => $m->value,
                 'label' => $m->label(),
             ]),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, SyncFormationPaymentPlan $syncPlan): RedirectResponse
     {
-        $data = $request->validate([
-            'name'            => ['required', 'string', 'max:255'],
-            'description'     => ['nullable', 'string'],
-            'duration_months' => ['required', 'integer', 'min:1', 'max:60'],
-            'mode'            => ['required', 'in:presentiel,en_ligne'],
-            'total_cost'      => ['required', 'integer', 'min:0'],
-            'is_active'       => ['boolean'],
-        ]);
+        $data = $request->validate($this->rules());
 
-        CampusFormation::create($data);
+        $installments = $data['installments'] ?? [];
+        unset($data['installments']);
 
-        return redirect()->route('campus.formations.index')
+        $formation = CampusFormation::create($data);
+
+        if ($installments !== []) {
+            $syncPlan->execute($formation, $installments);
+        }
+
+        return redirect()->route('campus.formations.show', $formation)
             ->with('success', 'Formation créée avec succès.');
     }
 
     public function show(CampusFormation $campusFormation): Response
     {
         $campusFormation->load([
-            'cohorts' => fn($q) => $q->withCount('learners')->orderBy('started_at', 'desc'),
+            'cohorts' => fn ($q) => $q->withCount('learners')->orderBy('started_at', 'desc'),
+            'installments',
         ]);
 
         return Inertia::render('Campus/Formations/Show', [
@@ -72,27 +74,29 @@ class CampusFormationController extends Controller
 
     public function edit(CampusFormation $campusFormation): Response
     {
+        $campusFormation->load('installments');
+
         return Inertia::render('Campus/Formations/Edit', [
             'formation' => $campusFormation,
-            'modes'     => collect(CampusFormationMode::cases())->map(fn($m) => [
+            'modes' => collect(CampusFormationMode::cases())->map(fn ($m) => [
                 'value' => $m->value,
                 'label' => $m->label(),
             ]),
         ]);
     }
 
-    public function update(Request $request, CampusFormation $campusFormation): RedirectResponse
-    {
-        $data = $request->validate([
-            'name'            => ['required', 'string', 'max:255'],
-            'description'     => ['nullable', 'string'],
-            'duration_months' => ['required', 'integer', 'min:1', 'max:60'],
-            'mode'            => ['required', 'in:presentiel,en_ligne'],
-            'total_cost'      => ['required', 'integer', 'min:0'],
-            'is_active'       => ['boolean'],
-        ]);
+    public function update(
+        Request $request,
+        CampusFormation $campusFormation,
+        SyncFormationPaymentPlan $syncPlan,
+    ): RedirectResponse {
+        $data = $request->validate($this->rules());
+
+        $installments = $data['installments'] ?? [];
+        unset($data['installments']);
 
         $campusFormation->update($data);
+        $syncPlan->execute($campusFormation->fresh(), $installments);
 
         return redirect()->route('campus.formations.show', $campusFormation)
             ->with('success', 'Formation mise à jour.');
@@ -109,5 +113,22 @@ class CampusFormationController extends Controller
 
         return redirect()->route('campus.formations.index')
             ->with('success', 'Formation supprimée.');
+    }
+
+    /** @return array<string, mixed> */
+    private function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'duration_months' => ['required', 'integer', 'min:1', 'max:60'],
+            'mode' => ['required', 'in:presentiel,en_ligne'],
+            'total_cost' => ['required', 'integer', 'min:0'],
+            'is_active' => ['boolean'],
+            'installments' => ['nullable', 'array', 'max:24'],
+            'installments.*.type' => ['required', 'in:percentage,amount'],
+            'installments.*.value' => ['required', 'numeric', 'min:1'],
+            'installments.*.due_date' => ['required', 'date'],
+        ];
     }
 }

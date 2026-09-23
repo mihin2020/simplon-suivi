@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import FormationPaymentPlanEditor, { type PlanDraft } from '@/Components/Campus/FormationPaymentPlanEditor.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -15,6 +16,7 @@ const form = useForm({
     mode:            'presentiel',
     total_cost:      0,
     is_active:       true,
+    installments:    [] as PlanDraft[],
 })
 
 const submit = () => {
@@ -104,6 +106,13 @@ const submit = () => {
                 </div>
                 <p v-if="form.errors.total_cost" class="error-msg">{{ form.errors.total_cost }}</p>
             </div>
+
+            <!-- Plan de paiement -->
+            <FormationPaymentPlanEditor
+                v-model="form.installments"
+                :total-cost="Number(form.total_cost) || 0"
+            />
+            <p v-if="form.errors.installments" class="error-msg">{{ form.errors.installments }}</p>
 
             <!-- Statut actif -->
             <div class="field">

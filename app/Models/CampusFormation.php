@@ -43,6 +43,11 @@ class CampusFormation extends Model
         return $this->hasMany(Cohort::class);
     }
 
+    public function installments(): HasMany
+    {
+        return $this->hasMany(CampusFormationInstallment::class)->orderBy('position');
+    }
+
     public function activeCohorts(): HasMany
     {
         return $this->cohorts()->where('status', 'en_cours');

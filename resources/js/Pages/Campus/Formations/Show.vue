@@ -16,6 +16,14 @@ interface Cohort {
     learners_count: number
 }
 
+interface Installment {
+    id: string
+    position: number
+    type: 'percentage' | 'amount'
+    value: number
+    due_date: string
+}
+
 interface Formation {
     id: string
     name: string
@@ -25,6 +33,7 @@ interface Formation {
     total_cost: number
     is_active: boolean
     cohorts: Cohort[]
+    installments?: Installment[]
 }
 
 const props = defineProps<{ formation: Formation }>()
@@ -33,6 +42,13 @@ const fmt = (d: string) =>
     new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
 
 const formatCost = (n: number) => new Intl.NumberFormat('fr-FR').format(n) + ' FCFA'
+
+const installmentAmount = (i: Installment) => {
+    if (i.type === 'percentage') {
+        return Math.round((i.value / 100) * props.formation.total_cost)
+    }
+    return i.value
+}
 
 const modeLabel: Record<string, string> = { presentiel: 'Présentiel', en_ligne: 'En ligne' }
 const modeIcon:  Record<string, string> = { presentiel: 'location_on', en_ligne: 'wifi' }
@@ -114,6 +130,33 @@ const confirmDelete = () => {
                 <div>
                     <p class="info-label">Cohortes</p>
                     <p class="info-val">{{ formation.cohorts.length }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Plan de paiement -->
+        <div class="plan-card">
+            <div class="plan-card-head">
+                <h2 class="text-h2 font-semibold text-on-surface">Plan de paiement</h2>
+                <span class="count-badge">{{ formation.installments?.length ?? 0 }} tranche(s)</span>
+            </div>
+            <p v-if="!formation.installments?.length" class="plan-empty">
+                Aucun plan défini. Les échéanciers restent gérables manuellement sur chaque cohorte.
+            </p>
+            <div v-else class="plan-table">
+                <div class="plan-thead">
+                    <span>Tranche</span>
+                    <span>Type</span>
+                    <span>Valeur</span>
+                    <span>Montant</span>
+                    <span>Échéance</span>
+                </div>
+                <div v-for="i in formation.installments" :key="i.id" class="plan-row">
+                    <span class="tnum">T{{ i.position }}</span>
+                    <span>{{ i.type === 'percentage' ? 'Pourcentage' : 'Montant fixe' }}</span>
+                    <span>{{ i.type === 'percentage' ? `${i.value} %` : formatCost(i.value) }}</span>
+                    <span class="font-semibold">{{ formatCost(installmentAmount(i)) }}</span>
+                    <span>{{ fmt(i.due_date) }}</span>
                 </div>
             </div>
         </div>
@@ -218,6 +261,30 @@ const confirmDelete = () => {
 .info-icon { font-size: 22px; color: #E5004C; }
 .info-label { font-size: 11px; font-weight: 600; color: #9aaabb; text-transform: uppercase; letter-spacing: 0.04em; }
 .info-val { font-size: 16px; font-weight: 700; color: #191c1e; margin-top: 2px; }
+
+.plan-card {
+    background: #fff; border: 1px solid #e0e3e5; border-radius: 12px;
+    padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.plan-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.plan-empty { font-size: 13px; color: #9aaabb; font-style: italic; }
+.plan-table { display: flex; flex-direction: column; gap: 6px; }
+.plan-thead, .plan-row {
+    display: grid; grid-template-columns: 70px 1fr 1fr 1fr 1fr;
+    gap: 10px; align-items: center; font-size: 13px;
+}
+.plan-thead {
+    font-size: 11px; font-weight: 700; color: #9aaabb;
+    text-transform: uppercase; letter-spacing: 0.04em;
+}
+.plan-row {
+    padding: 10px 12px; border: 1px solid #eef0f2; border-radius: 8px; color: #191c1e;
+}
+.tnum {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 28px; border-radius: 6px; background: #e8edf2;
+    font-size: 12px; font-weight: 700; color: #1F3A4D;
+}
 
 .count-badge {
     display: inline-flex; align-items: center; justify-content: center;

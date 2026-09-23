@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Campus;
 
+use App\Actions\Campus\ApplyFormationPaymentPlanToLearner;
 use App\Enums\CohortStatus;
 use App\Exports\CohortLearnerTemplateExport;
 use App\Http\Controllers\Controller;
@@ -175,8 +176,11 @@ class CohortController extends Controller
             ->with('success', 'Cohorte supprimée.');
     }
 
-    public function storeLearner(Request $request, Cohort $cohort): RedirectResponse
-    {
+    public function storeLearner(
+        Request $request,
+        Cohort $cohort,
+        ApplyFormationPaymentPlanToLearner $applyPlan,
+    ): RedirectResponse {
         if ($cohort->status === CohortStatus::Cloturee) {
             return back()->withErrors(['cohort' => 'Impossible de modifier une cohorte clôturée.']);
         }
@@ -195,13 +199,17 @@ class CohortController extends Controller
         ]);
 
         // Si l'email existe déjà, on inscrit l'apprenant existant sans créer de doublon
-        if (!empty($data['email'])) {
+        if (! empty($data['email'])) {
             $existing = Learner::where('email', $data['email'])->first();
 
             if ($existing) {
+                $wasEnrolled = $cohort->learners()->where('learners.id', $existing->id)->exists();
                 $cohort->learners()->syncWithoutDetaching([
                     $existing->id => ['enrolled_at' => now(), 'status' => 'actif'],
                 ]);
+                if (! $wasEnrolled) {
+                    $applyPlan->execute($cohort, $existing);
+                }
 
                 return back()->with('success', "L'apprenant {$existing->first_name} {$existing->last_name} existe déjà et a été inscrit dans la cohorte.");
             }
@@ -217,6 +225,7 @@ class CohortController extends Controller
         $cohort->learners()->syncWithoutDetaching([
             $learner->id => ['enrolled_at' => now(), 'status' => 'actif'],
         ]);
+        $applyPlan->execute($cohort, $learner);
 
         return back()->with('success', 'Apprenant créé et inscrit dans la cohorte.');
     }
@@ -247,8 +256,11 @@ class CohortController extends Controller
         return back()->with('success', $msg . '.');
     }
 
-    public function enrollLearners(Request $request, Cohort $cohort): RedirectResponse
-    {
+    public function enrollLearners(
+        Request $request,
+        Cohort $cohort,
+        ApplyFormationPaymentPlanToLearner $applyPlan,
+    ): RedirectResponse {
         if ($cohort->status === CohortStatus::Cloturee) {
             return back()->withErrors(['cohort' => 'Impossible de modifier une cohorte clôturée.']);
         }
@@ -257,11 +269,24 @@ class CohortController extends Controller
             'learner_ids.*' => ['uuid', 'exists:learners,id'],
         ]);
 
+        $alreadyEnrolled = $cohort->learners()
+            ->whereIn('learners.id', $request->learner_ids)
+            ->pluck('learners.id')
+            ->all();
+
         $cohort->learners()->syncWithoutDetaching(
-            collect($request->learner_ids)->mapWithKeys(fn($id) => [
+            collect($request->learner_ids)->mapWithKeys(fn ($id) => [
                 $id => ['enrolled_at' => now(), 'status' => 'actif'],
             ])->all()
         );
+
+        $newlyEnrolled = array_diff($request->learner_ids, $alreadyEnrolled);
+        foreach ($newlyEnrolled as $learnerId) {
+            $learner = Learner::find($learnerId);
+            if ($learner) {
+                $applyPlan->execute($cohort, $learner);
+            }
+        }
 
         return back()->with('success', 'Apprenants inscrits avec succès.');
     }

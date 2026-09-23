@@ -43,11 +43,18 @@ interface Stats {
     overdue_count: number
 }
 interface PaymentMethodOpt { value: string; label: string; icon: string }
+interface FormationPlanRow {
+    position: number
+    type: 'percentage' | 'amount'
+    value: number
+    due_date: string | null
+}
 
 const props = defineProps<{
     cohort: Cohort
     total_cost: number
     learnerPayments: LearnerPayment[]
+    formationPlan?: FormationPlanRow[]
     stats: Stats
     paymentMethods: PaymentMethodOpt[]
 }>()
@@ -210,16 +217,35 @@ const hasPending = (lp: LearnerPayment) =>
 // ── Global schedule modal ─────────────────────────────────────────────────
 const showGlobalSchedule   = ref(false)
 const globalProcessing     = ref(false)
+const globalFromFormation  = ref(false)
 
 interface GlobalDraft { type: 'percentage' | 'amount'; value: number | ''; due_date: string }
 const globalDrafts = ref<GlobalDraft[]>([])
+const hasFormationPlan = computed(() => (props.formationPlan?.length ?? 0) > 0)
 
 const openGlobalSchedule = () => {
-    globalDrafts.value = [{ type: 'percentage', value: 100, due_date: '' }]
+    const plan = props.formationPlan ?? []
+    if (plan.length > 0) {
+        globalDrafts.value = plan.map((row) => ({
+            type: row.type,
+            value: row.value,
+            due_date: row.due_date ?? '',
+        }))
+        globalFromFormation.value = true
+    } else {
+        globalDrafts.value = [{ type: 'percentage', value: 100, due_date: '' }]
+        globalFromFormation.value = false
+    }
     showGlobalSchedule.value = true
 }
-const addGlobalDraft    = () => globalDrafts.value.push({ type: 'percentage', value: '', due_date: '' })
-const removeGlobalDraft = (i: number) => globalDrafts.value.splice(i, 1)
+const addGlobalDraft    = () => {
+    globalDrafts.value.push({ type: 'percentage', value: '', due_date: '' })
+    globalFromFormation.value = false
+}
+const removeGlobalDraft = (i: number) => {
+    globalDrafts.value.splice(i, 1)
+    globalFromFormation.value = false
+}
 
 const globalCalcAmount = (d: GlobalDraft): number => {
     if (!d.value) return 0
@@ -351,7 +377,7 @@ const submitAdd = () => {
             </div>
             <button class="btn-global-schedule" type="button" @click="openGlobalSchedule">
                 <span class="material-symbols-outlined" style="font-size:16px">calendar_month</span>
-                Définir l'échéancier de la cohorte
+                {{ hasFormationPlan ? 'Appliquer le plan de la formation' : "Définir l'échéancier de la cohorte" }}
             </button>
         </div>
 
@@ -905,6 +931,11 @@ const submitAdd = () => {
                 </div>
 
                 <div class="mbody">
+                    <p v-if="globalFromFormation" class="plan-banner">
+                        <span class="material-symbols-outlined" style="font-size:16px">school</span>
+                        Prérempli depuis le plan de paiement de la formation
+                        ({{ formationPlan?.length }} tranche(s)). Vous pouvez ajuster avant d’appliquer.
+                    </p>
                     <p class="help-txt">
                         Définissez les tranches en <strong>pourcentage (%)</strong> du coût total ou en <strong>montant fixe (FCFA)</strong>.
                         Cet échéancier sera appliqué à tous les apprenants actifs.
@@ -1324,6 +1355,18 @@ const submitAdd = () => {
 
 /* ── Schedule — draft list ── */
 .help-txt { font-size: 13px; color: #515f74; }
+.plan-banner {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #fce8ef;
+    color: #1F3A4D;
+    font-size: 13px;
+    line-height: 1.4;
+}
 .draft-list { display: flex; flex-direction: column; gap: 8px; }
 .draft-head {
     display: flex; align-items: center; gap: 8px; padding: 0 4px;

@@ -21,7 +21,9 @@ class PaymentController extends Controller
 {
     public function index(Cohort $cohort): Response
     {
-        $cohort->load(['campusFormation' => fn ($q) => $q->withTrashed()]);
+        $cohort->load([
+            'campusFormation' => fn ($q) => $q->withTrashed()->with('installments'),
+        ]);
         $totalCost = $cohort->campusFormation?->total_cost ?? 0;
 
         $groupedPayments = $cohort->payments()
@@ -54,10 +56,22 @@ class PaymentController extends Controller
             ];
         });
 
+        $formationPlan = $cohort->campusFormation?->installments
+            ->sortBy('position')
+            ->values()
+            ->map(fn ($i) => [
+                'position' => $i->position,
+                'type' => $i->type,
+                'value' => (int) $i->value,
+                'due_date' => $i->due_date?->toDateString(),
+            ])
+            ->all() ?? [];
+
         return Inertia::render('Campus/Finance/Payments', [
             'cohort' => $cohort,
             'total_cost' => $totalCost,
             'learnerPayments' => $learnerPayments,
+            'formationPlan' => $formationPlan,
             'stats' => [
                 'total_expected' => $cohort->total_expected,
                 'total_collected' => $cohort->total_collected,

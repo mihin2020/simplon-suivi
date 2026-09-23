@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import FormationPaymentPlanEditor, { type PlanDraft } from '@/Components/Campus/FormationPaymentPlanEditor.vue'
 
 defineOptions({ layout: AdminLayout })
 
 interface Mode { value: string; label: string }
+
+interface Installment {
+    id?: string
+    position: number
+    type: 'percentage' | 'amount'
+    value: number
+    due_date: string
+}
 
 interface Formation {
     id: string
@@ -14,6 +23,7 @@ interface Formation {
     mode: string
     total_cost: number
     is_active: boolean
+    installments?: Installment[]
 }
 
 const props = defineProps<{ formation: Formation; modes: Mode[] }>()
@@ -25,6 +35,11 @@ const form = useForm({
     mode:            props.formation.mode,
     total_cost:      props.formation.total_cost,
     is_active:       props.formation.is_active,
+    installments:    (props.formation.installments ?? []).map((i): PlanDraft => ({
+        type: i.type,
+        value: i.value,
+        due_date: typeof i.due_date === 'string' ? i.due_date.slice(0, 10) : '',
+    })),
 })
 
 const submit = () => {
@@ -114,6 +129,13 @@ const submit = () => {
                 </div>
                 <p v-if="form.errors.total_cost" class="error-msg">{{ form.errors.total_cost }}</p>
             </div>
+
+            <!-- Plan de paiement -->
+            <FormationPaymentPlanEditor
+                v-model="form.installments"
+                :total-cost="Number(form.total_cost) || 0"
+            />
+            <p v-if="form.errors.installments" class="error-msg">{{ form.errors.installments }}</p>
 
             <!-- Statut actif -->
             <div class="field">
