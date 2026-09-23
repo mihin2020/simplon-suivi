@@ -39,7 +39,14 @@ class MysqldumpRunner
 
         $defaultsFile = self::writeDefaultsFile($username, $password);
         $errors = [];
-        $commonOptions = self::commonOptions($mysqldump);
+        $commonOptions = [
+            '--single-transaction',
+            '--quick',
+            '--skip-lock-tables',
+            '--routines',
+            '--triggers',
+            '--default-character-set=utf8mb4',
+        ];
 
         try {
             foreach (self::strategies($host, $port) as $strategy) {
@@ -79,46 +86,6 @@ class MysqldumpRunner
             'L\'export de la base a échoué. Vérifiez que MySQL/MariaDB est démarré. '
             .Str::limit(implode(' | ', $errors), 800)
         );
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function commonOptions(string $binary): array
-    {
-        $options = [
-            '--single-transaction',
-            '--quick',
-            '--skip-lock-tables',
-            '--routines',
-            '--triggers',
-            '--default-character-set=utf8mb4',
-        ];
-
-        // MySQL 8+ only — MariaDB rejects this option ("unknown variable").
-        if (self::supportsColumnStatistics($binary)) {
-            $options[] = '--column-statistics=0';
-        }
-
-        return $options;
-    }
-
-    private static function supportsColumnStatistics(string $binary): bool
-    {
-        $base = strtolower(basename($binary));
-
-        if (str_contains($base, 'mariadb')) {
-            return false;
-        }
-
-        try {
-            $result = Process::timeout(15)->run([$binary, '--help']);
-            $help = $result->output()."\n".$result->errorOutput();
-
-            return str_contains($help, 'column-statistics');
-        } catch (\Throwable) {
-            return false;
-        }
     }
 
     /**
