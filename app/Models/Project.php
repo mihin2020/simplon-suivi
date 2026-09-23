@@ -49,6 +49,11 @@ class Project extends Model
         return $this->hasMany(Phase::class)->orderBy('position');
     }
 
+    public function forms(): HasMany
+    {
+        return $this->hasMany(Form::class);
+    }
+
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', ProjectStatus::Active);

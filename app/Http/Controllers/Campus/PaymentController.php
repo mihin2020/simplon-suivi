@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Campus;
 
+use App\Actions\Campus\RefundPayment;
 use App\Enums\CohortStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Campus\RefundPaymentRequest;
 use App\Models\Cohort;
 use App\Models\Payment;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -27,20 +29,28 @@ class PaymentController extends Controller
             ->get()
             ->groupBy('learner_id');
 
-        $learners = $cohort->activeLearners()
+        $learners = $cohort->learners()
+            ->withPivot(['enrolled_at', 'status'])
+            ->wherePivotIn('status', ['actif', 'retrait'])
             ->orderBy('last_name')
             ->get(['learners.id', 'first_name', 'last_name']);
 
         $learnerPayments = $learners->map(function ($learner) use ($groupedPayments, $totalCost) {
             $payments = $groupedPayments->get($learner->id, collect());
             $paidAmount = $payments->filter(fn ($p) => $p->status === PaymentStatus::Paye)->sum('amount');
+            $isAbandoned = $learner->pivot->status === 'retrait';
 
             return [
                 'learner' => $learner,
+                'cohort_status' => $learner->pivot->status,
+                'is_abandoned' => $isAbandoned,
                 'payments' => $payments->values(),
                 'paid_amount' => $paidAmount,
-                'remaining_amount' => max(0, $totalCost - $paidAmount),
-                'progress' => $totalCost > 0 ? min(100, (int) round(($paidAmount / $totalCost) * 100)) : 0,
+                // Abandoned learners: remaining fees are no longer due
+                'remaining_amount' => $isAbandoned ? 0 : max(0, $totalCost - $paidAmount),
+                'progress' => $isAbandoned
+                    ? 0
+                    : ($totalCost > 0 ? min(100, (int) round(($paidAmount / $totalCost) * 100)) : 0),
             ];
         });
 
@@ -75,10 +85,10 @@ class PaymentController extends Controller
             'installments.*.due_date' => ['nullable', 'date'],
         ]);
 
-        // Keep paid installments, replace pending/overdue ones
+        // Keep paid/refunded installments, replace pending/overdue ones
         $nextNum = Payment::where('cohort_id', $cohort->id)
             ->where('learner_id', $data['learner_id'])
-            ->where('status', PaymentStatus::Paye->value)
+            ->whereIn('status', [PaymentStatus::Paye->value, PaymentStatus::Rembourse->value])
             ->count();
 
         Payment::where('cohort_id', $cohort->id)
@@ -128,7 +138,7 @@ class PaymentController extends Controller
         foreach ($learners as $learner) {
             $nextNum = Payment::where('cohort_id', $cohort->id)
                 ->where('learner_id', $learner->id)
-                ->where('status', PaymentStatus::Paye->value)
+                ->whereIn('status', [PaymentStatus::Paye->value, PaymentStatus::Rembourse->value])
                 ->count();
 
             Payment::where('cohort_id', $cohort->id)
@@ -216,6 +226,10 @@ class PaymentController extends Controller
             'payment_method' => ['required', 'in:especes,mobile_money'],
         ]);
 
+        if (! in_array($payment->status, [PaymentStatus::EnAttente, PaymentStatus::EnRetard], true)) {
+            return back()->withErrors(['payment' => 'Seule une tranche en attente ou en retard peut être encaissée.']);
+        }
+
         $payment->update([
             'status' => PaymentStatus::Paye,
             'paid_at' => $data['paid_at'],
@@ -225,8 +239,29 @@ class PaymentController extends Controller
         return back()->with('success', 'Paiement encaissé.');
     }
 
+    public function refund(
+        RefundPaymentRequest $request,
+        Payment $payment,
+        RefundPayment $action,
+    ): RedirectResponse {
+        $action->execute(
+            $payment,
+            (int) $request->validated('refund_amount'),
+            $request->validated('refund_motif'),
+            $request->user(),
+        );
+
+        return back()->with('success', 'Remboursement enregistré. Les montants ont été mis à jour.');
+    }
+
     public function destroy(Payment $payment): RedirectResponse
     {
+        if ($payment->status === PaymentStatus::Rembourse) {
+            return back()->withErrors([
+                'payment' => 'Une tranche déjà remboursée ne peut pas être annulée.',
+            ]);
+        }
+
         $payment->update(['status' => PaymentStatus::Annule]);
 
         return back()->with('success', 'Tranche annulée.');

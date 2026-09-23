@@ -69,7 +69,7 @@ class PermissionSeeder extends Seeder
 
             // WhatsApp
             ['name' => 'Voir les messages WhatsApp',   'slug' => 'whatsapp.view',    'group' => 'WhatsApp'],
-            ['name' => 'Envoyer des messages WhatsApp','slug' => 'whatsapp.send',    'group' => 'WhatsApp'],
+            ['name' => 'Envoyer des messages WhatsApp', 'slug' => 'whatsapp.send',    'group' => 'WhatsApp'],
             ['name' => 'Gérer WhatsApp (synchroniser, déconnecter, supprimer)', 'slug' => 'whatsapp.manage', 'group' => 'WhatsApp'],
 
             // Dépenses
@@ -97,15 +97,26 @@ class PermissionSeeder extends Seeder
 
             // Campus — Finance
             ['name' => 'Voir les paiements',              'slug' => 'campus.finance.view',   'group' => 'Campus — Finance'],
-            ['name' => 'Encaisser un paiement',           'slug' => 'campus.finance.collect','group' => 'Campus — Finance'],
+            ['name' => 'Encaisser un paiement',           'slug' => 'campus.finance.collect', 'group' => 'Campus — Finance'],
             ['name' => 'Gérer les échéanciers',           'slug' => 'campus.finance.manage', 'group' => 'Campus — Finance'],
-            ['name' => 'Voir le tableau de bord financier','slug' => 'campus.finance.dashboard','group' => 'Campus — Finance'],
+            ['name' => 'Voir le tableau de bord financier', 'slug' => 'campus.finance.dashboard', 'group' => 'Campus — Finance'],
 
             // Campus — Workforce (gestion des apprenants campus)
             ['name' => 'Voir les apprenants de cohorte',  'slug' => 'campus.workforce.view',   'group' => 'Campus — Workforce'],
             ['name' => 'Inscrire un apprenant',           'slug' => 'campus.workforce.enroll', 'group' => 'Campus — Workforce'],
             ['name' => 'Retirer un apprenant',            'slug' => 'campus.workforce.remove', 'group' => 'Campus — Workforce'],
             ['name' => 'Déplacer un apprenant',           'slug' => 'campus.workforce.move',   'group' => 'Campus — Workforce'],
+
+            // Formulaires (recrutement candidats)
+            ['name' => 'Voir les formulaires',            'slug' => 'forms.view',      'group' => 'Formulaires'],
+            ['name' => 'Créer un formulaire',             'slug' => 'forms.create',    'group' => 'Formulaires'],
+            ['name' => 'Modifier un formulaire',          'slug' => 'forms.update',    'group' => 'Formulaires'],
+            ['name' => 'Supprimer un formulaire',         'slug' => 'forms.delete',    'group' => 'Formulaires'],
+            ['name' => 'Publier / fermer / verrouiller',  'slug' => 'forms.publish',   'group' => 'Formulaires'],
+            ['name' => 'Voir les réponses',               'slug' => 'forms.responses', 'group' => 'Formulaires'],
+            ['name' => 'Sélectionner des candidats',      'slug' => 'forms.select',    'group' => 'Formulaires'],
+            ['name' => 'Exporter les réponses',           'slug' => 'forms.export',    'group' => 'Formulaires'],
+            ['name' => 'Voir les statistiques formulaires', 'slug' => 'forms.stats',  'group' => 'Formulaires'],
         ];
 
         foreach ($permissions as $permission) {

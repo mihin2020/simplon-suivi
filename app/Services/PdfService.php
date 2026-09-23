@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Formation;
+use App\Models\Form;
 use App\Models\Learner;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Response;
@@ -36,21 +37,28 @@ class PdfService
     }
 
     /**
-     * Generate a learner list for a formation.
+     * Generate a PDF summary of form candidatures.
      */
-    public function learnerList(Formation $formation): Response
+    public function formResponses(Form $form): Response
     {
-        $learners = $formation->activeLearners()
-            ->with('educationLevel')
-            ->orderBy('last_name')
+        $form->load(['project:id,name', 'formation:id,name', 'fields']);
+
+        $responses = $form->responses()
+            ->with(['answers.field', 'reviewer:id,first_name,last_name'])
+            ->latest('submitted_at')
             ->get();
 
-        $pdf = Pdf::loadView('pdfs.learner-list', [
-            'formation' => $formation,
-            'learners'  => $learners,
-        ])->setPaper('a4', 'portrait');
+        $pdf = Pdf::loadView('pdfs.form-responses', [
+            'form' => $form,
+            'responses' => $responses,
+            'generatedAt' => now(),
+        ])->setPaper('a4', 'landscape');
 
-        $filename = sprintf('apprenants_%s.pdf', str($formation->name)->slug());
+        $filename = sprintf(
+            'candidatures_%s_%s.pdf',
+            str($form->title)->slug(),
+            now()->format('Ymd-His')
+        );
 
         return $pdf->download($filename);
     }

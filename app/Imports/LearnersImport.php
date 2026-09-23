@@ -7,6 +7,8 @@ use App\Models\EducationLevel;
 use App\Models\LastDiploma;
 use App\Models\Learner;
 use App\Models\Vulnerability;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -160,6 +162,14 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
             'last_diploma_id'             => !empty($row['dernier_diplome']) ? ($this->lastDiplomaMap[trim((string) $row['dernier_diplome'])] ?? null) : null,
         ]);
 
+        if (! empty($row['photo'])) {
+            $photo = $this->storePhotoFromValue(trim((string) $row['photo']));
+            if ($photo) {
+                $learner->photo_path = $photo['path'];
+                $learner->photo_original_name = $photo['original_name'];
+            }
+        }
+
         $learner->save();
 
         if ($this->formationId) {
@@ -184,6 +194,51 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
             in_array($v, ['veuf', 'veuve', 'widowed']) => 'widowed',
             default => null,
         };
+    }
+
+    /**
+     * @return array{path: string, original_name: string}|null
+     */
+    private function storePhotoFromValue(string $value): ?array
+    {
+        if (! preg_match('#^https?://#i', $value)) {
+            return null;
+        }
+
+        try {
+            $response = Http::timeout(20)->withOptions(['allow_redirects' => true])->get($value);
+            if (! $response->successful() || $response->body() === '') {
+                return null;
+            }
+
+            $pathInfo = pathinfo(parse_url($value, PHP_URL_PATH) ?? '');
+            $disposition = (string) $response->header('Content-Disposition');
+            $originalName = $pathInfo['basename'] ?? null;
+            if (preg_match('/filename="?([^";]+)"?/i', $disposition, $matches)) {
+                $originalName = $matches[1];
+            }
+
+            $ext = strtolower(pathinfo((string) $originalName, PATHINFO_EXTENSION) ?: ($pathInfo['extension'] ?? 'jpg'));
+            if (! in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+                $mime = strtolower((string) $response->header('Content-Type'));
+                $ext = match (true) {
+                    str_contains($mime, 'png') => 'png',
+                    str_contains($mime, 'webp') => 'webp',
+                    str_contains($mime, 'gif') => 'gif',
+                    default => 'jpg',
+                };
+            }
+
+            $target = 'learners/'.Str::uuid().'.'.$ext;
+            Storage::disk('public')->put($target, $response->body());
+
+            return [
+                'path' => $target,
+                'original_name' => $originalName ?: ('photo.'.$ext),
+            ];
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     public function batchSize(): int

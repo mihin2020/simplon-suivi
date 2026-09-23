@@ -23,14 +23,20 @@ class Payment extends Model
         'reference',
         'notes',
         'payment_method',
+        'refunded_at',
+        'refund_amount',
+        'refund_motif',
+        'refunded_by',
     ];
 
     protected $casts = [
         'due_date'       => 'date',
         'paid_at'        => 'date',
+        'refunded_at'    => 'datetime',
         'status'         => PaymentStatus::class,
         'payment_method' => PaymentMethod::class,
         'amount'         => 'integer',
+        'refund_amount'  => 'integer',
     ];
 
     public function cohort(): BelongsTo
@@ -41,6 +47,11 @@ class Payment extends Model
     public function learner(): BelongsTo
     {
         return $this->belongsTo(Learner::class);
+    }
+
+    public function refundedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'refunded_by');
     }
 
     public function scopeOverdue($query)

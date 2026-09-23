@@ -18,6 +18,9 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EducationLevelController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\Form\FormController;
+use App\Http\Controllers\Form\FormResponseController;
+use App\Http\Controllers\Form\PublicFormController;
 use App\Http\Controllers\FormationController;
 use App\Http\Controllers\FormationLinkController;
 use App\Http\Controllers\FormationTrainerController;
@@ -34,10 +37,10 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\PhaseController;
 use App\Http\Controllers\PresenceRedirectController;
-use App\Http\Controllers\ReorderController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReferentielController;
+use App\Http\Controllers\ReorderController;
 use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\TrainerController;
@@ -84,6 +87,25 @@ Route::post('/reinitialisation/{token}', [
 Route::post('/deconnexion', [LoginController::class, 'destroy'])
     ->name('logout')
     ->middleware('auth');
+
+// Formulaires publics (candidats — sans authentification)
+Route::prefix('f')->name('public.forms.')->group(function () {
+    Route::get('{publicToken}', [PublicFormController::class, 'show'])
+        ->where('publicToken', '[A-Za-z0-9]{8,64}')
+        ->name('show');
+    Route::post('{publicToken}', [PublicFormController::class, 'store'])
+        ->middleware('throttle:forms.public')
+        ->where('publicToken', '[A-Za-z0-9]{8,64}')
+        ->name('store');
+    Route::get('{publicToken}/merci', [PublicFormController::class, 'thanks'])
+        ->where('publicToken', '[A-Za-z0-9]{8,64}')
+        ->name('thanks');
+});
+
+// Signed file download for form answers (used by Excel export / learner import)
+Route::get('forms/{form}/responses/{response}/answers/{answer}/signed-download', [FormResponseController::class, 'signedDownloadAnswer'])
+    ->middleware('signed')
+    ->name('forms.responses.answers.signed-download');
 
 // Routes protégées
 Route::middleware('auth')->group(function () {
@@ -157,6 +179,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('cohorts/{cohort}/learners', [CohortController::class, 'storeLearner'])->name('cohorts.learners.store');
                 Route::post('cohorts/{cohort}/learners/{learner}', [CohortController::class, 'updateLearner'])->name('cohorts.learners.update');
                 Route::delete('cohorts/{cohort}/learners/{learner}', [CohortController::class, 'removeLearner'])->name('cohorts.learners.remove');
+                Route::post('cohorts/{cohort}/learners/{learner}/abandon', [CohortController::class, 'abandonLearner'])->name('cohorts.learners.abandon');
                 Route::delete('cohorts/{cohort}/learners', [CohortController::class, 'removeLearners'])->name('cohorts.learners.remove-bulk');
                 Route::post('cohorts/{cohort}/learners/{learner}/move', [CohortController::class, 'moveLearner'])->name('cohorts.learners.move');
             });
@@ -169,6 +192,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('cohorts/{cohort}/payments/schedule', [PaymentController::class, 'generateSchedule'])->name('payments.schedule');
                 Route::post('cohorts/{cohort}/payments/schedule-global', [PaymentController::class, 'generateGlobalSchedule'])->name('payments.schedule-global');
                 Route::post('cohorts/{cohort}/payments', [PaymentController::class, 'store'])->name('payments.store');
+                Route::post('payments/{payment}/refund', [PaymentController::class, 'refund'])->name('payments.refund');
                 Route::patch('payments/{payment}/mark-paid', [PaymentController::class, 'markPaid'])->name('payments.mark-paid');
                 Route::get('payments/{payment}/receipt', [PaymentController::class, 'receipt'])->name('payments.receipt');
                 Route::get('payments/{payment}/receipt/download', [PaymentController::class, 'receiptDownload'])->name('payments.receipt.download');
@@ -199,6 +223,41 @@ Route::middleware('auth')->group(function () {
 
     // Partners (configuration)
     Route::resource('partners', PartnerController::class)->except(['show']);
+
+    // Formulaires de candidature
+    Route::middleware('permission:forms.view,forms.create,forms.update,forms.delete,forms.publish,forms.responses,forms.select,forms.export,forms.stats')->group(function () {
+        Route::get('forms', [FormController::class, 'index'])->name('forms.index');
+        Route::get('forms/create', [FormController::class, 'create'])->name('forms.create');
+        Route::post('forms', [FormController::class, 'store'])->name('forms.store');
+        Route::get('forms/{form}/edit', [FormController::class, 'edit'])->name('forms.edit');
+        Route::get('forms/{form}/stats', [FormController::class, 'stats'])->name('forms.stats');
+        Route::put('forms/{form}', [FormController::class, 'update'])->name('forms.update');
+        Route::patch('forms/{form}/identity', [FormController::class, 'updateIdentity'])->name('forms.identity');
+        Route::put('forms/{form}/fields', [FormController::class, 'syncFields'])->name('forms.fields.sync');
+        Route::post('forms/{form}/publish', [FormController::class, 'publish'])->name('forms.publish');
+        Route::post('forms/{form}/close', [FormController::class, 'close'])->name('forms.close');
+        Route::post('forms/{form}/lock', [FormController::class, 'lock'])->name('forms.lock');
+        Route::post('forms/{form}/duplicate', [FormController::class, 'duplicate'])->name('forms.duplicate');
+        Route::post('forms/{form}/shorten-link', [FormController::class, 'shortenLink'])->name('forms.shorten-link');
+        Route::post('forms/{form}/header-image', [FormController::class, 'uploadHeader'])->name('forms.header.upload');
+        Route::delete('forms/{form}/header-image', [FormController::class, 'removeHeader'])->name('forms.header.remove');
+        Route::post('forms/{form}/unarchive', [FormController::class, 'unarchive'])->name('forms.unarchive');
+        Route::delete('forms/{form}', [FormController::class, 'destroy'])->name('forms.destroy');
+
+        Route::get('forms/{form}/responses', [FormResponseController::class, 'index'])->name('forms.responses.index');
+        Route::get('forms/{form}/responses/export', [FormResponseController::class, 'export'])->name('forms.responses.export');
+        Route::get('forms/{form}/responses/export-import', [FormResponseController::class, 'exportForImport'])->name('forms.responses.export-import');
+        Route::get('forms/{form}/responses/export-pdf', [FormResponseController::class, 'exportPdf'])->name('forms.responses.export-pdf');
+        Route::get('forms/{form}/responses/{response}/answers/{answer}/download', [FormResponseController::class, 'downloadAnswer'])
+            ->name('forms.responses.answers.download');
+        Route::post('forms/{form}/responses/select', [FormResponseController::class, 'select'])->name('forms.responses.select');
+        Route::post('forms/{form}/responses/shortlist', [FormResponseController::class, 'shortlist'])->name('forms.responses.shortlist');
+        Route::post('forms/{form}/responses/unshortlist', [FormResponseController::class, 'unshortlist'])->name('forms.responses.unshortlist');
+        Route::post('forms/{form}/responses/deselect', [FormResponseController::class, 'deselect'])->name('forms.responses.deselect');
+        Route::post('forms/{form}/responses/reject', [FormResponseController::class, 'reject'])->name('forms.responses.reject');
+        Route::post('forms/{form}/responses/unreject', [FormResponseController::class, 'unreject'])->name('forms.responses.unreject');
+        Route::post('forms/{form}/responses/enroll', [FormResponseController::class, 'enroll'])->name('forms.responses.enroll');
+    });
 
     // Formations (nested shallow : create/index sous le projet, show/edit/update/destroy à plat)
     Route::resource(

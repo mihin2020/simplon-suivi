@@ -18,6 +18,9 @@ interface Payment {
     payment_method: string | null
     reference: string | null
     notes: string | null
+    refunded_at: string | null
+    refund_amount: number | null
+    refund_motif: string | null
 }
 interface LearnerPayment {
     learner: Learner
@@ -25,6 +28,8 @@ interface LearnerPayment {
     paid_amount: number
     remaining_amount: number
     progress: number
+    cohort_status?: string
+    is_abandoned?: boolean
 }
 interface Cohort {
     id: string
@@ -55,13 +60,13 @@ const today   = () => new Date().toISOString().slice(0, 10)
 
 // ── Status ────────────────────────────────────────────────────────────────
 const statusCss: Record<string, string>  = {
-    en_attente: 's-amber', paye: 's-emerald', en_retard: 's-rose', annule: 's-gray',
+    en_attente: 's-amber', paye: 's-emerald', en_retard: 's-rose', annule: 's-gray', rembourse: 's-blue',
 }
 const statusIcon: Record<string, string> = {
-    en_attente: 'schedule', paye: 'check_circle', en_retard: 'warning', annule: 'cancel',
+    en_attente: 'schedule', paye: 'check_circle', en_retard: 'warning', annule: 'cancel', rembourse: 'undo',
 }
 const statusLabel: Record<string, string> = {
-    en_attente: 'En attente', paye: 'Payé', en_retard: 'En retard', annule: 'Annulé',
+    en_attente: 'En attente', paye: 'Payé', en_retard: 'En retard', annule: 'Annulé', rembourse: 'Remboursé',
 }
 const methodLabel: Record<string, string> = {
     especes: 'Espèces', mobile_money: 'Mobile Money',
@@ -72,8 +77,10 @@ const methodIcon: Record<string, string> = {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 const visible = (lp: LearnerPayment) => lp.payments.filter(p => p.status !== 'annule')
+const canCollect = (p: Payment) => p.status === 'en_attente' || p.status === 'en_retard'
 
 const rowBadge = (lp: LearnerPayment) => {
+    if (lp.is_abandoned)                                   return { css: 's-amber', text: 'Abandonné' }
     if (lp.progress >= 100)                                return { css: 's-emerald', text: 'Soldé ✓' }
     if (lp.payments.some(p => p.status === 'en_retard'))   return { css: 's-rose',    text: 'En retard' }
     if (visible(lp).length === 0)                          return { css: 's-gray',    text: 'Non configuré' }
@@ -130,6 +137,29 @@ const submitPaid = () => {
     paidForm.patch(`/campus/payments/${paidTarget.value.id}/mark-paid`, {
         preserveScroll: true,
         onSuccess: () => { showPaidModal.value = false },
+    })
+}
+
+// ── Refund modal ──────────────────────────────────────────────────────────
+const showRefundModal = ref(false)
+const refundTarget    = ref<Payment | null>(null)
+const refundLearner   = ref('')
+const refundForm      = useForm({ refund_amount: 0 as number, refund_motif: '' })
+
+const openRefundModal = (p: Payment, learnerName: string) => {
+    refundTarget.value = p
+    refundLearner.value = learnerName
+    refundForm.refund_amount = p.amount
+    refundForm.refund_motif = ''
+    refundForm.clearErrors()
+    showRefundModal.value = true
+}
+
+const submitRefund = () => {
+    if (!refundTarget.value) return
+    refundForm.post(`/campus/payments/${refundTarget.value.id}/refund`, {
+        preserveScroll: true,
+        onSuccess: () => { showRefundModal.value = false },
     })
 }
 
@@ -347,12 +377,14 @@ const submitAdd = () => {
             >
                 <!-- ── Row header ── -->
                 <button class="learner-row" @click="toggle(lp.learner.id)" type="button">
-                    <div class="avatar">
+                    <div class="avatar" :class="{ 'avatar-abandoned': lp.is_abandoned }">
                         {{ lp.learner.first_name.charAt(0) }}{{ lp.learner.last_name.charAt(0) }}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="learner-name">{{ lp.learner.last_name }} {{ lp.learner.first_name }}</p>
-                        <div class="prog-row">
+                        <p class="learner-name">
+                            {{ lp.learner.last_name }} {{ lp.learner.first_name }}
+                        </p>
+                        <div v-if="!lp.is_abandoned" class="prog-row">
                             <div class="prog-track">
                                 <div
                                     class="prog-fill"
@@ -364,6 +396,9 @@ const submitAdd = () => {
                                 {{ fmt(lp.paid_amount) }} / {{ fmt(total_cost) }} ({{ lp.progress }}%)
                             </span>
                         </div>
+                        <p v-else class="abandoned-hint">
+                            Abandonné · encaissé {{ fmt(lp.paid_amount) }} · plus rien à percevoir
+                        </p>
                     </div>
                     <span :class="['status-pill', rowBadge(lp).css]">{{ rowBadge(lp).text }}</span>
                     <span class="material-symbols-outlined chevron" :class="{ rot: expanded.has(lp.learner.id) }">
@@ -378,7 +413,12 @@ const submitAdd = () => {
                     <div v-if="visible(lp).length === 0" class="empty-panel">
                         <span class="material-symbols-outlined" style="font-size:36px;color:#9aaabb">payments</span>
                         <p class="mt-xs text-body-sm text-secondary">Aucune tranche enregistrée.</p>
-                        <button class="btn-sched mt-sm" @click.stop="openSchedule(lp)" type="button">
+                        <button
+                            v-if="!lp.is_abandoned"
+                            class="btn-sched mt-sm"
+                            @click.stop="openSchedule(lp)"
+                            type="button"
+                        >
                             <span class="material-symbols-outlined" style="font-size:15px">auto_awesome</span>
                             Définir l'échéancier
                         </button>
@@ -391,7 +431,7 @@ const submitAdd = () => {
                                 v-for="p in visible(lp)"
                                 :key="p.id"
                                 class="inst-row"
-                                :class="p.status === 'paye' ? 'ir-paid' : p.status === 'en_retard' ? 'ir-late' : ''"
+                                :class="p.status === 'paye' ? 'ir-paid' : p.status === 'en_retard' ? 'ir-late' : p.status === 'rembourse' ? 'ir-refund' : ''"
                             >
                                 <!-- Tranche label -->
                                 <div class="tnum">T{{ p.installment_number }}</div>
@@ -408,6 +448,14 @@ const submitAdd = () => {
                                     <span v-if="p.paid_at" class="ditem paid-date">
                                         <span class="material-symbols-outlined" style="font-size:13px">check</span>
                                         Encaissée le {{ fmtDate(p.paid_at) }}
+                                    </span>
+                                    <span v-if="p.status === 'rembourse' && p.refunded_at" class="ditem refund-date">
+                                        <span class="material-symbols-outlined" style="font-size:13px">undo</span>
+                                        Remboursée le {{ fmtDate(p.refunded_at) }}
+                                        <template v-if="p.refund_amount"> · {{ fmt(p.refund_amount) }}</template>
+                                    </span>
+                                    <span v-if="p.refund_motif" class="ditem refund-motif" :title="p.refund_motif">
+                                        Motif : {{ p.refund_motif }}
                                     </span>
                                 </div>
 
@@ -444,7 +492,7 @@ const submitAdd = () => {
                                         <span class="material-symbols-outlined" style="font-size:15px">download</span>
                                     </a>
                                     <button
-                                        v-if="p.status !== 'paye'"
+                                        v-if="!lp.is_abandoned && canCollect(p)"
                                         class="btn-encaisser"
                                         @click.stop="openPaidModal(p, `${lp.learner.last_name} ${lp.learner.first_name}`)"
                                         type="button"
@@ -453,13 +501,23 @@ const submitAdd = () => {
                                         Encaisser
                                     </button>
                                     <button
-                                        v-if="p.status !== 'paye'"
+                                        v-if="!lp.is_abandoned && (canCollect(p) || p.status === 'paye')"
                                         class="btn-del"
                                         @click.stop="askCancel(p, `${lp.learner.last_name} ${lp.learner.first_name}`)"
                                         type="button"
                                         title="Annuler cette tranche"
                                     >
                                         <span class="material-symbols-outlined" style="font-size:14px">close</span>
+                                    </button>
+                                    <button
+                                        v-if="!lp.is_abandoned && p.status === 'paye'"
+                                        class="btn-refund"
+                                        @click.stop="openRefundModal(p, `${lp.learner.last_name} ${lp.learner.first_name}`)"
+                                        type="button"
+                                        title="Rembourser cette tranche"
+                                    >
+                                        <span class="material-symbols-outlined" style="font-size:14px">undo</span>
+                                        Rembourser
                                     </button>
                                 </div>
                             </div>
@@ -468,7 +526,11 @@ const submitAdd = () => {
                         <!-- Panel footer -->
                         <div class="panel-footer">
                             <div class="footer-left">
-                                <span v-if="lp.remaining_amount > 0" class="remaining-txt">
+                                <span v-if="lp.is_abandoned" class="abandoned-txt">
+                                    <span class="material-symbols-outlined" style="font-size:14px">person_off</span>
+                                    Abandonné — aucun frais restant à encaisser
+                                </span>
+                                <span v-else-if="lp.remaining_amount > 0" class="remaining-txt">
                                     Restant à percevoir : <strong>{{ fmt(lp.remaining_amount) }}</strong>
                                 </span>
                                 <span v-else class="paid-txt">
@@ -476,7 +538,7 @@ const submitAdd = () => {
                                     Entièrement réglé
                                 </span>
                             </div>
-                            <div class="footer-right">
+                            <div v-if="!lp.is_abandoned" class="footer-right">
                                 <button
                                     v-if="lp.remaining_amount > 0"
                                     class="btn-add-t"
@@ -554,6 +616,70 @@ const submitAdd = () => {
                             <span class="spinner" v-if="paidForm.processing" />
                             <span v-else class="material-symbols-outlined" style="font-size:15px">check_circle</span>
                             Confirmer l'encaissement
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- ══ Modal : Rembourser une tranche ══════════════════════════════════ -->
+    <Teleport to="body">
+        <div v-if="showRefundModal" class="backdrop" @click.self="showRefundModal = false">
+            <div class="modal" style="max-width:440px">
+                <div class="mhd">
+                    <div>
+                        <h3 class="mtitle">Rembourser la tranche</h3>
+                        <p class="msub" v-if="refundTarget">
+                            {{ refundLearner }} · Tranche {{ refundTarget.installment_number }} ·
+                            Encaissée : <strong>{{ fmt(refundTarget.amount) }}</strong>
+                        </p>
+                    </div>
+                    <button @click="showRefundModal = false" class="close-btn" type="button">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <form @submit.prevent="submitRefund">
+                    <div class="mbody">
+                        <div class="field">
+                            <label class="label">Montant remboursé (FCFA) *</label>
+                            <input
+                                v-model.number="refundForm.refund_amount"
+                                type="number"
+                                min="1"
+                                :max="refundTarget?.amount ?? 1"
+                                class="input"
+                                :class="{ 'input-err': refundForm.errors.refund_amount }"
+                            />
+                            <p class="hint" v-if="refundTarget">Maximum : {{ fmt(refundTarget.amount) }}</p>
+                            <p v-if="refundForm.errors.refund_amount" class="err-msg">{{ refundForm.errors.refund_amount }}</p>
+                        </div>
+                        <div class="field">
+                            <label class="label">Motif *</label>
+                            <textarea
+                                v-model="refundForm.refund_motif"
+                                rows="3"
+                                class="input"
+                                placeholder="Ex. Abandon de formation, erreur d'encaissement…"
+                                :class="{ 'input-err': refundForm.errors.refund_motif }"
+                            />
+                            <p v-if="refundForm.errors.refund_motif" class="err-msg">{{ refundForm.errors.refund_motif }}</p>
+                        </div>
+                        <p class="hint">
+                            La tranche passera en statut « Remboursé » et ne sera plus comptée dans le montant collecté.
+                        </p>
+                    </div>
+                    <div class="mft">
+                        <button type="button" class="btn-secondary" @click="showRefundModal = false">Annuler</button>
+                        <button
+                            type="submit"
+                            class="btn-primary"
+                            :disabled="refundForm.processing || !refundForm.refund_motif.trim() || !refundForm.refund_amount"
+                        >
+                            <span class="spinner" v-if="refundForm.processing" />
+                            <span v-else class="material-symbols-outlined" style="font-size:15px">undo</span>
+                            Confirmer le remboursement
                         </button>
                     </div>
                 </form>
@@ -1038,6 +1164,7 @@ const submitAdd = () => {
 .s-amber   { background: #fef3c7; color: #92400e; }
 .s-rose    { background: #ffe4e6; color: #9f1239; }
 .s-gray    { background: #f3f4f6; color: #6b7280; }
+.s-blue    { background: #dbeafe; color: #1e40af; }
 
 .chevron { font-size: 20px; color: #9aaabb; transition: transform 0.2s; flex-shrink: 0; }
 .chevron.rot { transform: rotate(180deg); }
@@ -1054,6 +1181,7 @@ const submitAdd = () => {
 }
 .ir-paid { border-color: #a7f3d0; background: #f0fdf4; }
 .ir-late { border-color: #fecdd3; background: #fff1f2; }
+.ir-refund { border-color: #bfdbfe; background: #eff6ff; }
 
 .tnum {
     min-width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0;
@@ -1065,6 +1193,11 @@ const submitAdd = () => {
 .idates { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
 .ditem  { display: flex; align-items: center; gap: 4px; font-size: 12px; color: #515f74; }
 .paid-date { color: #059669; }
+.refund-date { color: #1d4ed8; }
+.refund-motif {
+    color: #64748b; font-style: italic;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 280px;
+}
 
 .method-badge {
     display: inline-flex; align-items: center; gap: 4px;
@@ -1105,6 +1238,17 @@ const submitAdd = () => {
 }
 .btn-encaisser:hover { background: #047857; }
 
+.btn-refund {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 5px 10px; border-radius: 6px;
+    background: #fff5f8; color: #E5004C; border: 1px solid #f9c2d3;
+    font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s;
+    font-family: inherit;
+}
+.btn-refund:hover { background: #ffe4ec; }
+
+.hint { font-size: 12px; color: #64748b; margin-top: 4px; line-height: 1.4; }
+
 .btn-del {
     display: inline-flex; align-items: center; justify-content: center;
     width: 28px; height: 28px; border-radius: 6px;
@@ -1120,6 +1264,9 @@ const submitAdd = () => {
 .footer-left   { font-size: 13px; }
 .remaining-txt { color: #515f74; }
 .paid-txt { display: flex; align-items: center; gap: 4px; color: #059669; font-weight: 600; }
+.abandoned-txt { display: flex; align-items: center; gap: 4px; color: #b45309; font-weight: 600; font-size: 13px; }
+.abandoned-hint { font-size: 12px; color: #b45309; margin-top: 2px; }
+.avatar-abandoned { background: #fef3c7 !important; color: #92400e !important; }
 .footer-right  { display: flex; align-items: center; gap: 8px; }
 
 .btn-add-t {

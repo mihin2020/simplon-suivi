@@ -23,7 +23,12 @@ interface Learner {
     emergency_contact_firstname: string | null
     emergency_contact_phone: string | null
     education_level?: { id: number; name: string } | null
-    pivot?: { enrolled_at: string; status: string }
+    pivot?: {
+        enrolled_at: string
+        status: string
+        abandon_motif?: string | null
+        abandoned_at?: string | null
+    }
 }
 
 interface Cohort {
@@ -82,13 +87,13 @@ const statusClass: Record<string, string> = {
 }
 const learnerStatusClass: Record<string, string> = {
     actif:    'badge-green',
-    retrait:  'badge-gray',
+    retrait:  'badge-amber',
     diplome:  'badge-blue',
     deplace:  'badge-purple',
 }
 const learnerStatusLabel: Record<string, string> = {
     actif:   'Actif',
-    retrait: 'Retiré',
+    retrait: 'Abandonné',
     diplome: 'Diplômé',
     deplace: 'Déplacé',
 }
@@ -260,6 +265,35 @@ const confirmRemove = () => {
             removingLearner.value = false
             showRemoveModal.value = false
             targetRemove.value = null
+            showLearnerModal.value = false
+        },
+    })
+}
+
+// ── Abandon apprenant ────────────────────────────────────────────────────
+const showAbandonModal = ref(false)
+const targetAbandon    = ref<Learner | null>(null)
+const abandonForm      = useForm({ abandon_motif: '' })
+
+const askAbandon = (l: Learner) => {
+    targetAbandon.value = l
+    abandonForm.abandon_motif = ''
+    abandonForm.clearErrors()
+    showAbandonModal.value = true
+}
+
+const closeAbandonModal = () => {
+    showAbandonModal.value = false
+    targetAbandon.value = null
+    abandonForm.reset()
+    abandonForm.clearErrors()
+}
+
+const confirmAbandon = () => {
+    if (!targetAbandon.value || !abandonForm.abandon_motif.trim()) return
+    abandonForm.post(`/campus/cohorts/${props.cohort.id}/learners/${targetAbandon.value.id}/abandon`, {
+        onSuccess: () => {
+            closeAbandonModal()
             showLearnerModal.value = false
         },
     })
@@ -558,6 +592,14 @@ const confirmClose = () => {
                         </Can>
                         <Can permission="campus.workforce.remove">
                             <button
+                                @click="askAbandon(l)"
+                                class="abandon-btn opacity-0 group-hover:opacity-100"
+                                title="Marquer comme abandonné"
+                                type="button"
+                            >
+                                <span class="material-symbols-outlined" style="font-size:16px">person_off</span>
+                            </button>
+                            <button
                                 @click="askRemove(l)"
                                 class="remove-btn opacity-0 group-hover:opacity-100"
                                 title="Retirer de la cohorte"
@@ -619,6 +661,12 @@ const confirmClose = () => {
                                     <span :class="['status-badge', learnerStatusClass[selectedLearner.pivot.status]]">
                                         {{ learnerStatusLabel[selectedLearner.pivot.status] ?? selectedLearner.pivot.status }}
                                     </span>
+                                </p>
+                                <p
+                                    v-if="selectedLearner.pivot?.status === 'retrait' && selectedLearner.pivot.abandon_motif"
+                                    class="abandon-motif-line"
+                                >
+                                    Motif : {{ selectedLearner.pivot.abandon_motif }}
                                 </p>
                             </div>
                         </div>
@@ -687,6 +735,14 @@ const confirmClose = () => {
                                 >
                                     <span class="material-symbols-outlined" style="font-size:16px">swap_horiz</span>
                                     Déplacer
+                                </button>
+                                <button
+                                    @click="askAbandon(selectedLearner)"
+                                    class="btn-abandon-outline"
+                                    type="button"
+                                >
+                                    <span class="material-symbols-outlined" style="font-size:16px">person_off</span>
+                                    Abandonné
                                 </button>
                                 <button
                                     @click="askRemove(selectedLearner)"
@@ -1056,6 +1112,58 @@ const confirmClose = () => {
         @cancel="showBulkRemoveModal = false"
     />
 
+    <!-- Modal abandon apprenant -->
+    <Teleport to="body">
+        <Transition name="modal">
+            <div v-if="showAbandonModal && targetAbandon" class="backdrop" @click.self="closeAbandonModal">
+                <div class="enroll-modal" style="max-width:440px">
+                    <div class="enroll-header">
+                        <div>
+                            <h3 class="enroll-title">Marquer comme abandonné</h3>
+                            <p class="enroll-sub">
+                                {{ targetAbandon.last_name }} {{ targetAbandon.first_name }}
+                            </p>
+                        </div>
+                        <button type="button" class="close-btn" @click="closeAbandonModal">
+                            <span class="material-symbols-outlined">close</span>
+                        </button>
+                    </div>
+                    <form @submit.prevent="confirmAbandon" class="add-form-body">
+                        <p class="text-body-sm text-on-surface-variant" style="margin-bottom:12px">
+                            L’apprenant restera visible dans la cohorte. Les frais restants ne seront plus à encaisser
+                            (sans remboursement des montants déjà payés).
+                        </p>
+                        <div class="form-group">
+                            <label class="form-label">Motif <span class="req">*</span></label>
+                            <textarea
+                                v-model="abandonForm.abandon_motif"
+                                rows="3"
+                                class="form-input"
+                                placeholder="Raison de l'abandon…"
+                                required
+                            />
+                            <p v-if="abandonForm.errors.abandon_motif" class="error-msg">
+                                {{ abandonForm.errors.abandon_motif }}
+                            </p>
+                        </div>
+                        <div class="enroll-actions">
+                            <button type="button" class="btn-cancel" @click="closeAbandonModal">Annuler</button>
+                            <button
+                                type="submit"
+                                class="btn-confirm-enroll"
+                                :disabled="abandonForm.processing || !abandonForm.abandon_motif.trim()"
+                            >
+                                <span v-if="abandonForm.processing" class="spinner" />
+                                <span v-else class="material-symbols-outlined" style="font-size:15px">person_off</span>
+                                Confirmer l'abandon
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </Transition>
+    </Teleport>
+
     <!-- Modal retirer apprenant -->
     <ConfirmModal
         :show="showRemoveModal"
@@ -1195,6 +1303,7 @@ const confirmClose = () => {
 .badge-blue   { background: #dbeafe; color: #1d4ed8; }
 .badge-green  { background: #d1fae5; color: #065f46; }
 .badge-gray   { background: #f3f4f6; color: #6b7280; }
+.badge-amber  { background: #fef3c7; color: #92400e; }
 .badge-purple { background: #ede9fe; color: #6d28d9; }
 
 /* Stats */
@@ -1420,6 +1529,13 @@ const confirmClose = () => {
 }
 .move-btn:hover { color: #6d28d9; }
 
+.abandon-btn {
+    padding: 4px; color: #9aaabb; border-radius: 4px; border: none;
+    background: transparent; cursor: pointer; display: inline-flex;
+    transition: color 0.15s;
+}
+.abandon-btn:hover { color: #b45309; }
+
 .btn-move-outline {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 9px 16px; border: 1px solid #ddd6fe; border-radius: 8px;
@@ -1489,6 +1605,18 @@ const confirmClose = () => {
     cursor: pointer; transition: background 0.15s;
 }
 .btn-danger-outline:hover { background: #fff5f5; }
+
+.btn-abandon-outline {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 16px; border: 1px solid #fcd34d; border-radius: 8px;
+    background: transparent; color: #b45309; font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: background 0.15s;
+}
+.btn-abandon-outline:hover { background: #fffbeb; }
+
+.abandon-motif-line {
+    margin-top: 6px; font-size: 12px; color: #b45309; font-style: italic;
+}
 
 /* Action group */
 .action-group {

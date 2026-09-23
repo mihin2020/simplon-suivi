@@ -56,6 +56,7 @@ const optionalColumns = [
     { key: 'organisation',               label: 'Organisation' },
     { key: 'tranche_age',                label: 'Tranche d\'âge' },
     { key: 'domaine_etudes',             label: 'Domaine d\'études' },
+    { key: 'photo',                      label: 'Photo (URL)' },
 ]
 </script>
 

@@ -33,6 +33,7 @@ class LearnerTemplateExport implements FromArray, WithHeadings, WithStyles, With
             'organisation',
             'tranche_age',
             'domaine_etudes',
+            'photo',
             'cnib_number',
             'situation_matrimoniale',
             'nombre_enfants',
@@ -63,6 +64,7 @@ class LearnerTemplateExport implements FromArray, WithHeadings, WithStyles, With
                 'Simplon',
                 '',
                 'Informatique',
+                '',
                 'B0123456789',
                 'Célibataire',
                 '0',
@@ -93,18 +95,19 @@ class LearnerTemplateExport implements FromArray, WithHeadings, WithStyles, With
             'P' => 22, // organisation
             'Q' => 18, // tranche_age
             'R' => 20, // domaine_etudes
-            'S' => 18, // cnib_number
-            'T' => 22, // situation_matrimoniale
-            'U' => 18, // nombre_enfants
-            'V' => 18, // vulnerabilite
-            'W' => 18, // dernier_diplome
+            'S' => 40, // photo
+            'T' => 18, // cnib_number
+            'U' => 22, // situation_matrimoniale
+            'V' => 18, // nombre_enfants
+            'W' => 18, // vulnerabilite
+            'X' => 18, // dernier_diplome
         ];
     }
 
     public function styles(Worksheet $sheet): array
     {
         // Style de l'en-tête (ligne 1)
-        $sheet->getStyle('A1:W1')->applyFromArray([
+        $sheet->getStyle('A1:X1')->applyFromArray([
             'font' => [
                 'bold'  => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -133,7 +136,7 @@ class LearnerTemplateExport implements FromArray, WithHeadings, WithStyles, With
         ]);
 
         // Style de la ligne d'exemple (ligne 2)
-        $sheet->getStyle('A2:W2')->applyFromArray([
+        $sheet->getStyle('A2:X2')->applyFromArray([
             'font' => ['color' => ['rgb' => '515f74'], 'italic' => true],
             'fill' => [
                 'fillType'   => Fill::FILL_SOLID,
@@ -142,7 +145,7 @@ class LearnerTemplateExport implements FromArray, WithHeadings, WithStyles, With
         ]);
 
         // Bordures sur toute la zone
-        $sheet->getStyle('A1:W2')->applyFromArray([
+        $sheet->getStyle('A1:X2')->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,

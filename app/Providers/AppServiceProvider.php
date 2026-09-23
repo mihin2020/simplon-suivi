@@ -66,5 +66,14 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('chatbot', fn (Request $request) => Limit::perMinute(10)->by($request->user()?->id ?? $request->ip())
         );
+
+        RateLimiter::for('forms.public', function (Request $request) {
+            $token = (string) $request->route('publicToken');
+
+            return [
+                Limit::perMinute(30)->by($request->ip()),
+                Limit::perMinute(5)->by($token.'|'.$request->ip()),
+            ];
+        });
     }
 }

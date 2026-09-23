@@ -14,10 +14,10 @@ const flash = computed(() => page.props.flash as { success?: string; warning?: s
 
 const visibleFlash = ref<{ success?: string; warning?: string; error?: string }>({})
 watch(flash, (f) => {
-    if (!f) return
+    if (!f || (!f.success && !f.warning && !f.error)) return
     visibleFlash.value = { ...f }
     setTimeout(() => { visibleFlash.value = {} }, 4000)
-}, { immediate: true })
+}, { deep: true })
 
 const userRoleLegacy  = auth.user?.role as string | undefined
 const isTrainer = userRoleLegacy === 'trainer'
@@ -77,6 +77,7 @@ const allNavGroups: NavGroup[] = [
             { label: 'Référentiels',    icon: 'menu_book',            href: '/referentiels',         prefix: 'Referentiels/',  roles: ['super_admin', 'admin'], permissions: ['referentiels.view'] },
             { label: 'Partenaires',     icon: 'handshake',            href: '/partners',             prefix: 'Partners/',      roles: ['super_admin', 'admin'], permissions: ['partners.view'] },
             { label: 'Statistiques',    icon: 'bar_chart',            href: '/statistics',           prefix: 'Statistics/',    roles: ['super_admin', 'admin'], permissions: ['statistics.view'] },
+            { label: 'Formulaires',     icon: 'dynamic_form',         href: '/forms',                prefix: 'Forms/',         roles: ['super_admin', 'admin'], permissions: ['forms.view'] },
             { label: 'Communication',   icon: 'chat',                 href: '/communication/emails', prefix: 'Communication/', roles: ['super_admin', 'admin'], permissions: ['communication.view', 'communication.send', 'communication.manage', 'whatsapp.view', 'whatsapp.send', 'whatsapp.manage'] },
         ],
     },

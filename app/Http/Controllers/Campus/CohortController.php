@@ -80,7 +80,7 @@ class CohortController extends Controller
         $enrolledIds = $cohort->learners()->pluck('learners.id');
 
         $learners = $cohort->learners()
-            ->withPivot(['enrolled_at', 'status'])
+            ->withPivot(['enrolled_at', 'status', 'abandon_motif', 'abandoned_at'])
             ->with('educationLevel')
             ->orderBy('last_name')
             ->paginate(10)
@@ -301,6 +301,31 @@ class CohortController extends Controller
         $cohort->learners()->detach($learner->id);
 
         return back()->with('success', 'Apprenant retiré de la cohorte.');
+    }
+
+    public function abandonLearner(
+        Request $request,
+        Cohort $cohort,
+        Learner $learner,
+        \App\Actions\Campus\AbandonCohortLearner $action,
+    ): RedirectResponse {
+        if ($cohort->status === CohortStatus::Cloturee) {
+            return back()->withErrors(['cohort' => 'Impossible de modifier une cohorte clôturée.']);
+        }
+
+        $data = $request->validate([
+            'abandon_motif' => ['required', 'string', 'max:500'],
+        ], [
+            'abandon_motif.required' => 'Le motif de l\'abandon est obligatoire.',
+            'abandon_motif.max' => 'Le motif ne peut pas dépasser 500 caractères.',
+        ]);
+
+        $action->execute($cohort, $learner, $data['abandon_motif']);
+
+        return back()->with(
+            'success',
+            "{$learner->first_name} {$learner->last_name} a été marqué(e) comme abandonné(e). Les frais restants ne sont plus à encaisser.",
+        );
     }
 
     public function removeLearners(Request $request, Cohort $cohort): RedirectResponse
