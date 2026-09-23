@@ -79,6 +79,7 @@ const allNavGroups: NavGroup[] = [
             { label: 'Statistiques',    icon: 'bar_chart',            href: '/statistics',           prefix: 'Statistics/',    roles: ['super_admin', 'admin'], permissions: ['statistics.view'] },
             { label: 'Formulaires',     icon: 'dynamic_form',         href: '/forms',                prefix: 'Forms/',         roles: ['super_admin', 'admin'], permissions: ['forms.view'] },
             { label: 'Communication',   icon: 'chat',                 href: '/communication/emails', prefix: 'Communication/', roles: ['super_admin', 'admin'], permissions: ['communication.view', 'communication.send', 'communication.manage', 'whatsapp.view', 'whatsapp.send', 'whatsapp.manage'] },
+            { label: 'Sauvegardes',     icon: 'cloud_download',       href: '/configuration/backups', prefix: 'Configuration/Backups', roles: ['super_admin', 'admin'], permissions: ['backup.view', 'backup.run', 'backup.manage'] },
         ],
     },
     {
@@ -268,7 +269,10 @@ const logout = () => router.post('/deconnexion', {}, {
                     v-if="showConfiguration"
                     href="/configuration"
                     class="nav-link nav-inactive"
-                    :class="[isActive('Configuration/') ? 'nav-active' : 'nav-inactive', sidebarCollapsed ? 'justify-center' : '']"
+                    :class="[
+                        page.component === 'Configuration/Index' ? 'nav-active' : 'nav-inactive',
+                        sidebarCollapsed ? 'justify-center' : '',
+                    ]"
                     :title="sidebarCollapsed ? 'Configuration' : ''"
                 >
                     <span class="material-symbols-outlined nav-icon">settings</span>

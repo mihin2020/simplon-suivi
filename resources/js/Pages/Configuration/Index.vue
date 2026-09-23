@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, useForm, router } from '@inertiajs/vue3'
+import { Head, useForm, router, Link } from '@inertiajs/vue3'
 import { ref, computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
@@ -332,6 +332,17 @@ const submitAttendanceSettings = () => {
                 </span>
             </button>
         </div>
+
+        <Link href="/configuration/backups" class="bk-entry">
+            <div class="bk-entry-icon">
+                <span class="material-symbols-outlined">cloud_download</span>
+            </div>
+            <div class="bk-entry-text">
+                <strong>Sauvegardes</strong>
+                <span>Lancer, planifier et télécharger les archives (BDD + fichiers). Copie externe R2 disponible.</span>
+            </div>
+            <span class="material-symbols-outlined bk-entry-chevron">chevron_right</span>
+        </Link>
 
         <!-- ══════════ ONGLET DONNÉES MÉTIER ══════════ -->
         <div v-if="activeTab === 'referentiels'" class="cfg-grid">
@@ -1271,6 +1282,22 @@ const submitAttendanceSettings = () => {
 .toast-leave-to     { opacity: 0; transform: translateY(8px); }
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
+.bk-entry {
+    display: flex; align-items: center; gap: 14px;
+    margin: 0 0 1.25rem; padding: 14px 16px;
+    background: #fff; border: 1px solid #e8eef2; border-radius: 14px;
+    text-decoration: none; color: inherit; transition: border-color .15s, box-shadow .15s;
+}
+.bk-entry:hover { border-color: #E5004C; box-shadow: 0 4px 14px rgba(229,0,76,.08); }
+.bk-entry-icon {
+    width: 42px; height: 42px; border-radius: 10px; flex-shrink: 0;
+    background: #fff0f4; color: #E5004C; display: grid; place-items: center;
+}
+.bk-entry-text { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.bk-entry-text strong { color: #1F3A4D; font-size: 15px; }
+.bk-entry-text span { color: #64748b; font-size: 13px; line-height: 1.4; }
+.bk-entry-chevron { color: #94a3b8; }
+
 @media (max-width: 900px) {
     .cfg-grid  { grid-template-columns: 1fr; }
     .ia-cols   { grid-template-columns: 1fr; }

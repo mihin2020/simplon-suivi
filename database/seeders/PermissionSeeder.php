@@ -82,6 +82,11 @@ class PermissionSeeder extends Seeder
             ['name' => 'Voir la configuration',       'slug' => 'configuration.view',    'group' => 'Configuration'],
             ['name' => 'Gérer la configuration (référentiels de données, clé IA)', 'slug' => 'configuration.manage', 'group' => 'Configuration'],
 
+            // Sauvegardes
+            ['name' => 'Voir les sauvegardes',        'slug' => 'backup.view',   'group' => 'Sauvegardes'],
+            ['name' => 'Lancer une sauvegarde',       'slug' => 'backup.run',   'group' => 'Sauvegardes'],
+            ['name' => 'Gérer les sauvegardes (config, supprimer)', 'slug' => 'backup.manage', 'group' => 'Sauvegardes'],
+
             // Campus — Formations
             ['name' => 'Voir le catalogue formations',    'slug' => 'campus.formations.view',   'group' => 'Campus — Formations'],
             ['name' => 'Créer une formation',             'slug' => 'campus.formations.create', 'group' => 'Campus — Formations'],

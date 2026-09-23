@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\ActivationController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\Campus\CampusFinanceController;
 use App\Http\Controllers\Campus\CampusFormationController;
 use App\Http\Controllers\Campus\CohortController;
@@ -374,6 +375,28 @@ Route::middleware('auth')->group(function () {
             ConfigurationController::class,
             'index',
         ])->name('configuration');
+    });
+
+    // Backups
+    Route::middleware('permission:backup.view,backup.run,backup.manage')->group(function () {
+        Route::get('configuration/backups', [BackupController::class, 'index'])
+            ->name('configuration.backups');
+        Route::get('configuration/backups/{backup}/download', [BackupController::class, 'download'])
+            ->name('configuration.backups.download');
+        Route::get('configuration/backups/{backup}/progress', [BackupController::class, 'progress'])
+            ->name('configuration.backups.progress');
+    });
+
+    Route::middleware('permission:backup.run')->group(function () {
+        Route::post('configuration/backups', [BackupController::class, 'store'])
+            ->name('configuration.backups.store');
+    });
+
+    Route::middleware('permission:backup.manage')->group(function () {
+        Route::put('configuration/backups/settings', [BackupController::class, 'updateSettings'])
+            ->name('configuration.backups.settings');
+        Route::delete('configuration/backups/{backup}', [BackupController::class, 'destroy'])
+            ->name('configuration.backups.destroy');
     });
 
     Route::middleware('permission:configuration.manage')->group(function () {

@@ -2,12 +2,13 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Email;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
-    protected $rootView = "app";
+    protected $rootView = 'app';
 
     public function version(Request $request): ?string
     {
@@ -21,35 +22,36 @@ class HandleInertiaRequests extends Middleware
 
         return [
             ...parent::share($request),
-            "auth" => [
-                "user" => $user
+            'auth' => [
+                'user' => $user
                     ? [
-                        "id" => $user->id,
-                        "full_name" => $user->full_name,
-                        "email" => $user->email,
-                        "role" => $user->role->value,
-                        "role_label" => $user->role->label(),
-                        "is_super_admin" => $user->isSuperAdmin(),
-                        "permissions" => $user->isSuperAdmin()
+                        'id' => $user->id,
+                        'full_name' => $user->full_name,
+                        'email' => $user->email,
+                        'role' => $user->role->value,
+                        'role_label' => $user->role->label(),
+                        'is_super_admin' => $user->isSuperAdmin(),
+                        'permissions' => $user->isSuperAdmin()
                             ? null
-                            : $user->permissions->pluck("slug")->values(),
+                            : $user->permissions->pluck('slug')->values(),
                     ]
                     : null,
             ],
-            "unread_notifications_count" => $request->user()
+            'unread_notifications_count' => $request->user()
                 ? $request->user()->notifications()->unread()->count()
                 : 0,
-            "unread_emails_count" => $request->user()
-                ? \App\Models\Email::where("direction", "received")
-                    ->where("is_archived", false)
-                    ->where("is_read", false)
-                    ->distinct("thread_id")
-                    ->count("thread_id")
+            'unread_emails_count' => $request->user()
+                ? Email::where('direction', 'received')
+                    ->where('is_archived', false)
+                    ->where('is_read', false)
+                    ->distinct('thread_id')
+                    ->count('thread_id')
                 : 0,
-            "flash" => [
-                "success" => $request->session()->get("success"),
-                "warning" => $request->session()->get("warning"),
-                "error" => $request->session()->get("error"),
+            'flash' => [
+                'success' => $request->session()->get('success'),
+                'warning' => $request->session()->get('warning'),
+                'error' => $request->session()->get('error'),
+                'backup_running_id' => $request->session()->get('backup_running_id'),
             ],
         ];
     }
