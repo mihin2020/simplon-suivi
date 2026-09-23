@@ -85,7 +85,9 @@ class ProjectController extends Controller
         $this->authorize('view', $project);
 
         $project->load([
-            'formations' => fn ($q) => $q->withCount('activeLearners')->orderByDesc('started_at'),
+            'formations' => fn ($q) => $q
+                ->withCount(['learners', 'activeLearners'])
+                ->orderByDesc('started_at'),
             'partners:id,name,logo_path,category',
         ]);
 
@@ -166,7 +168,7 @@ class ProjectController extends Controller
                         'status' => FormationStatus::Archived->value,
                     ]);
 
-                // 3. Marquer tous les apprenants "en cours" comme "terminés" (diplômés)
+                // 3. Marquer tous les apprenants "en cours" comme "formation terminée"
                 Formation::where('project_id', $project->id)
                     ->each(function ($formation) {
                         $formation->activeLearners()->updateExistingPivot(
@@ -200,7 +202,7 @@ class ProjectController extends Controller
                         'status' => FormationStatus::Archived->value,
                     ]);
 
-                // 3. Marquer tous les apprenants "en cours" comme "terminés" (diplômés)
+                // 3. Marquer tous les apprenants "en cours" comme "formation terminée"
                 Formation::where('project_id', $project->id)
                     ->each(function ($formation) {
                         $formation->activeLearners()->updateExistingPivot(
@@ -225,7 +227,7 @@ class ProjectController extends Controller
 
             return redirect()
                 ->route('projects.show', $project)
-                ->with('success', "Projet terminé avec succès. Bilan : {$completedLearners}/{$totalLearners} apprenants diplômés.");
+                ->with('success', "Projet terminé avec succès. Bilan : {$completedLearners}/{$totalLearners} apprenants ayant terminé la formation.");
         }
 
         // Générer un message avec le bilan si le projet vient d'être archivé
@@ -236,7 +238,7 @@ class ProjectController extends Controller
 
             return redirect()
                 ->route('projects.show', $project)
-                ->with('success', "Projet archivé avec succès. Bilan : {$completedLearners}/{$totalLearners} apprenants diplômés.");
+                ->with('success', "Projet archivé avec succès. Bilan : {$completedLearners}/{$totalLearners} apprenants ayant terminé la formation.");
         }
 
         return redirect()

@@ -94,7 +94,7 @@ const learnerStatusClass: Record<string, string> = {
 const learnerStatusLabel: Record<string, string> = {
     actif:   'Actif',
     retrait: 'Abandonné',
-    diplome: 'Diplômé',
+    diplome: 'Formation terminée',
     deplace: 'Déplacé',
 }
 
@@ -1279,7 +1279,7 @@ const confirmClose = () => {
     <ConfirmModal
         :show="showCloseModal"
         title="Clôturer la cohorte"
-        :message="`Clôturer « ${cohort.name} » ? Tous les apprenants encore actifs seront automatiquement diplômés. Cette action est irréversible.`"
+        :message="`Clôturer « ${cohort.name} » ? Tous les apprenants encore actifs passeront en « Formation terminée ». Cette action est irréversible.`"
         confirm-label="Clôturer"
         :loading="closing"
         @confirm="confirmClose"

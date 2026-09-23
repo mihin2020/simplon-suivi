@@ -34,9 +34,9 @@ class Formation extends Model
     {
         return [
             'started_at' => 'date',
-            'ended_at'   => 'date',
-            'status'     => FormationStatus::class,
-            'capacity'   => 'integer',
+            'ended_at' => 'date',
+            'status' => FormationStatus::class,
+            'capacity' => 'integer',
         ];
     }
 
@@ -74,11 +74,10 @@ class Formation extends Model
     public function inactiveLearners(): BelongsToMany
     {
         return $this->learners()
-            ->wherePivotIn('status', [
-                LearnerStatus::Withdrawn->value,
-                LearnerStatus::Completed->value,
-                LearnerStatus::Moved->value,
-            ]);
+            ->wherePivotIn('status', array_map(
+                fn (LearnerStatus $status) => $status->value,
+                LearnerStatus::inactiveCases()
+            ));
     }
 
     public function trainers(): BelongsToMany

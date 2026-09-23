@@ -6,6 +6,7 @@ use App\Enums\Gender;
 use App\Enums\InsertionStatus;
 use App\Models\Formation;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithStyles;
@@ -20,14 +21,21 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
     private const LAST_COLUMN = 'G';
 
     private int $statsStartRow = 5;
+
     private int $statsEndRow;
+
     private int $listTitleRow;
+
     private int $tableHeaderRow;
+
     private int $learnerCount;
 
     private array $stats;
+
     private Collection $learners;
+
     private string $projectName;
+
     private string $statusLabel;
 
     private ?string $titleOverride = null;
@@ -40,12 +48,12 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
 
         $this->projectName = $this->formation->project?->name ?? '—';
         $this->statusLabel = $this->formation->status?->label() ?? '—';
-        $this->stats        = self::computeStats($this->formation, $latestInsertionMap);
-        $this->learners      = self::buildLearnerRows($this->formation, $latestInsertionMap);
-        $this->learnerCount  = $this->learners->count();
+        $this->stats = self::computeStats($this->formation, $latestInsertionMap);
+        $this->learners = self::buildLearnerRows($this->formation, $latestInsertionMap);
+        $this->learnerCount = $this->learners->count();
 
-        $this->statsEndRow   = $this->statsStartRow + count($this->stats) - 1;
-        $this->listTitleRow  = $this->statsEndRow + 2;
+        $this->statsEndRow = $this->statsStartRow + count($this->stats) - 1;
+        $this->listTitleRow = $this->statsEndRow + 2;
         $this->tableHeaderRow = $this->listTitleRow + 1;
     }
 
@@ -58,12 +66,12 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
             return [];
         }
 
-        $sub = \Illuminate\Support\Facades\DB::table('insertion_records')
-            ->select('learner_id', \Illuminate\Support\Facades\DB::raw('MAX(status_changed_at) as max_date'))
+        $sub = DB::table('insertion_records')
+            ->select('learner_id', DB::raw('MAX(status_changed_at) as max_date'))
             ->whereIn('learner_id', $learnerIds)
             ->groupBy('learner_id');
 
-        $rows = \Illuminate\Support\Facades\DB::table('insertion_records as ir')
+        $rows = DB::table('insertion_records as ir')
             ->select('ir.learner_id', 'ir.status')
             ->joinSub($sub, 'latest', function ($join) {
                 $join->on('ir.learner_id', '=', 'latest.learner_id')
@@ -82,37 +90,37 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
     public static function computeStats(Formation $formation, array $latestInsertionMap): array
     {
         $learners = $formation->learners;
-        $total    = $learners->count();
+        $total = $learners->count();
 
-        $male   = $learners->filter(fn ($l) => $l->gender === Gender::Male)->count();
+        $male = $learners->filter(fn ($l) => $l->gender === Gender::Male)->count();
         $female = $learners->filter(fn ($l) => $l->gender === Gender::Female)->count();
 
         $internship = 0;
-        $employed   = 0;
-        $searching  = 0;
+        $employed = 0;
+        $searching = 0;
         $unemployed = 0;
         foreach ($learners as $learner) {
             $status = $latestInsertionMap[$learner->id] ?? null;
             match ($status) {
                 InsertionStatus::Internship->value => $internship++,
-                InsertionStatus::Employed->value   => $employed++,
-                InsertionStatus::Searching->value  => $searching++,
-                default                             => $unemployed++,
+                InsertionStatus::Employed->value => $employed++,
+                InsertionStatus::Searching->value => $searching++,
+                default => $unemployed++,
             };
         }
 
         return [
             'Total apprenants' => $total,
-            'Hommes'           => $male,
-            'Femmes'           => $female,
-            'En cours'         => $learners->filter(fn ($l) => $l->pivot->status === 'in_progress')->count(),
-            'Abandonnés'       => $learners->filter(fn ($l) => $l->pivot->status === 'withdrawn')->count(),
-            'Diplômés'         => $learners->filter(fn ($l) => $l->pivot->status === 'completed')->count(),
-            'Transférés'       => $learners->filter(fn ($l) => $l->pivot->status === 'moved')->count(),
-            'En stage'         => $internship,
-            'En emploi'        => $employed,
-            'En recherche'     => $searching,
-            'Sans emploi'      => $unemployed,
+            'Hommes' => $male,
+            'Femmes' => $female,
+            'En cours' => $learners->filter(fn ($l) => $l->pivot->status === 'in_progress')->count(),
+            'Abandonnés' => $learners->filter(fn ($l) => $l->pivot->status === 'withdrawn')->count(),
+            'Formation terminée' => $learners->filter(fn ($l) => $l->pivot->status === 'completed')->count(),
+            'Transférés' => $learners->filter(fn ($l) => $l->pivot->status === 'moved')->count(),
+            'En stage' => $internship,
+            'En emploi' => $employed,
+            'En recherche' => $searching,
+            'Sans emploi' => $unemployed,
         ];
     }
 
@@ -120,9 +128,9 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
     {
         $statusLabels = [
             'in_progress' => 'En cours',
-            'withdrawn'   => 'Abandonné',
-            'completed'   => 'Diplômé',
-            'moved'       => 'Transféré',
+            'withdrawn' => 'Abandonné',
+            'completed' => 'Formation terminée',
+            'moved' => 'Transféré',
         ];
 
         return $formation->learners
@@ -130,19 +138,19 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
             ->values()
             ->map(function ($learner) use ($latestInsertionMap, $statusLabels) {
                 $insertionStatus = $latestInsertionMap[$learner->id] ?? null;
-                $insertionLabel  = match ($insertionStatus) {
+                $insertionLabel = match ($insertionStatus) {
                     InsertionStatus::Internship->value => 'En stage',
-                    InsertionStatus::Employed->value   => 'En emploi',
-                    InsertionStatus::Searching->value  => 'En recherche',
-                    default                             => 'Sans emploi',
+                    InsertionStatus::Employed->value => 'En emploi',
+                    InsertionStatus::Searching->value => 'En recherche',
+                    default => 'Sans emploi',
                 };
 
                 return [
-                    'last_name'       => $learner->last_name,
-                    'first_name'      => $learner->first_name,
-                    'gender_label'    => $learner->gender?->label() ?? '—',
-                    'email'           => $learner->email,
-                    'status_label'    => $statusLabels[$learner->pivot->status] ?? $learner->pivot->status,
+                    'last_name' => $learner->last_name,
+                    'first_name' => $learner->first_name,
+                    'gender_label' => $learner->gender?->label() ?? '—',
+                    'email' => $learner->email,
+                    'status_label' => $statusLabels[$learner->pivot->status] ?? $learner->pivot->status,
                     'insertion_label' => $insertionLabel,
                 ];
             });
@@ -167,7 +175,7 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
 
     public function array(): array
     {
-        $rows   = [];
+        $rows = [];
         $rows[] = [$this->formation->name];
         $rows[] = ["Projet : {$this->projectName}   ·   Statut : {$this->statusLabel}"];
         $rows[] = [];
@@ -221,8 +229,8 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
         // Titre formation
         $sheet->mergeCells("A1:{$last}1");
         $sheet->getStyle("A1:{$last}1")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 16, 'color' => ['rgb' => 'FFFFFF']],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F3A4D']],
+            'font' => ['bold' => true, 'size' => 16, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F3A4D']],
             'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'indent' => 1],
         ]);
         $sheet->getRowDimension(1)->setRowHeight(34);
@@ -230,8 +238,8 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
         // Sous-titre
         $sheet->mergeCells("A2:{$last}2");
         $sheet->getStyle("A2:{$last}2")->applyFromArray([
-            'font'      => ['italic' => true, 'size' => 11, 'color' => ['rgb' => '475569']],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']],
+            'font' => ['italic' => true, 'size' => 11, 'color' => ['rgb' => '475569']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']],
             'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'indent' => 1],
         ]);
         $sheet->getRowDimension(2)->setRowHeight(20);
@@ -239,8 +247,8 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
         // Bandeau "RÉSUMÉ"
         $sheet->mergeCells("A4:{$last}4");
         $sheet->getStyle("A4:{$last}4")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'FFFFFF']],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E5004C']],
+            'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E5004C']],
             'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'indent' => 1],
         ]);
         $sheet->getRowDimension(4)->setRowHeight(24);
@@ -253,7 +261,7 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
             'font' => ['bold' => true, 'color' => ['rgb' => '1F3A4D']],
         ]);
         $sheet->getStyle("B{$this->statsStartRow}:B{$this->statsEndRow}")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'E5004C']],
+            'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'E5004C']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
         for ($r = $this->statsStartRow; $r <= $this->statsEndRow; $r++) {
@@ -267,16 +275,16 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
         // Bandeau "LISTE DES APPRENANTS"
         $sheet->mergeCells("A{$this->listTitleRow}:{$last}{$this->listTitleRow}");
         $sheet->getStyle("A{$this->listTitleRow}:{$last}{$this->listTitleRow}")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'FFFFFF']],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F3A4D']],
+            'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F3A4D']],
             'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'indent' => 1],
         ]);
         $sheet->getRowDimension($this->listTitleRow)->setRowHeight(24);
 
         // En-tête du tableau
         $sheet->getStyle("A{$this->tableHeaderRow}:{$last}{$this->tableHeaderRow}")->applyFromArray([
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2D5A7B']],
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2D5A7B']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
         ]);
         $sheet->getRowDimension($this->tableHeaderRow)->setRowHeight(22);
@@ -284,7 +292,7 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
         // Corps du tableau
         $bodyRowCount = max(1, $this->learnerCount);
         $firstDataRow = $this->tableHeaderRow + 1;
-        $lastDataRow  = $this->tableHeaderRow + $bodyRowCount;
+        $lastDataRow = $this->tableHeaderRow + $bodyRowCount;
 
         $sheet->getStyle("A{$firstDataRow}:{$last}{$lastDataRow}")->applyFromArray([
             'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN, 'color' => ['rgb' => 'E2E8F0']]],
@@ -302,7 +310,7 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
 
-        $sheet->freezePane('A' . ($this->tableHeaderRow + 1));
+        $sheet->freezePane('A'.($this->tableHeaderRow + 1));
 
         return [];
     }

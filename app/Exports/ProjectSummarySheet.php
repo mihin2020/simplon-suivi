@@ -16,6 +16,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 class ProjectSummarySheet implements FromArray, WithColumnWidths, WithStyles, WithTitle
 {
     private const LAST_COLUMN = 'H';
+
     private const TABLE_HEADER_ROW = 4;
 
     private Collection $rows;
@@ -28,14 +29,14 @@ class ProjectSummarySheet implements FromArray, WithColumnWidths, WithStyles, Wi
             $stats = FormationStatisticsSheet::computeStats($formation, $latestInsertionMap);
 
             return [
-                'name'       => $formation->name,
-                'status'     => $formation->status?->label() ?? '—',
-                'total'      => $stats['Total apprenants'],
-                'male'       => $stats['Hommes'],
-                'female'     => $stats['Femmes'],
-                'in_progress'=> $stats['En cours'],
-                'completed'  => $stats['Diplômés'],
-                'employed'   => $stats['En emploi'],
+                'name' => $formation->name,
+                'status' => $formation->status?->label() ?? '—',
+                'total' => $stats['Total apprenants'],
+                'male' => $stats['Hommes'],
+                'female' => $stats['Femmes'],
+                'in_progress' => $stats['En cours'],
+                'completed' => $stats['Formation terminée'],
+                'employed' => $stats['En emploi'],
             ];
         });
     }
@@ -47,11 +48,11 @@ class ProjectSummarySheet implements FromArray, WithColumnWidths, WithStyles, Wi
 
     public function array(): array
     {
-        $rows   = [];
+        $rows = [];
         $rows[] = [$this->project->name];
         $rows[] = ['Récapitulatif des formations'];
         $rows[] = [];
-        $rows[] = ['Formation', 'Statut', 'Total', 'Hommes', 'Femmes', 'En cours', 'Diplômés', 'En emploi'];
+        $rows[] = ['Formation', 'Statut', 'Total', 'Hommes', 'Femmes', 'En cours', 'Formation terminée', 'En emploi'];
 
         foreach ($this->rows as $row) {
             $rows[] = [
@@ -89,32 +90,32 @@ class ProjectSummarySheet implements FromArray, WithColumnWidths, WithStyles, Wi
 
     public function styles(Worksheet $sheet): array
     {
-        $last         = self::LAST_COLUMN;
-        $headerRow    = self::TABLE_HEADER_ROW;
+        $last = self::LAST_COLUMN;
+        $headerRow = self::TABLE_HEADER_ROW;
         $firstDataRow = $headerRow + 1;
-        $count        = $this->rows->count();
-        $lastDataRow  = $firstDataRow + $count - 1;
-        $totalRow     = $lastDataRow + 1;
+        $count = $this->rows->count();
+        $lastDataRow = $firstDataRow + $count - 1;
+        $totalRow = $lastDataRow + 1;
 
         $sheet->mergeCells("A1:{$last}1");
         $sheet->getStyle("A1:{$last}1")->applyFromArray([
-            'font'      => ['bold' => true, 'size' => 16, 'color' => ['rgb' => 'FFFFFF']],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F3A4D']],
+            'font' => ['bold' => true, 'size' => 16, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F3A4D']],
             'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'indent' => 1],
         ]);
         $sheet->getRowDimension(1)->setRowHeight(34);
 
         $sheet->mergeCells("A2:{$last}2");
         $sheet->getStyle("A2:{$last}2")->applyFromArray([
-            'font'      => ['italic' => true, 'size' => 11, 'color' => ['rgb' => '475569']],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']],
+            'font' => ['italic' => true, 'size' => 11, 'color' => ['rgb' => '475569']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']],
             'alignment' => ['vertical' => Alignment::VERTICAL_CENTER, 'indent' => 1],
         ]);
         $sheet->getRowDimension(2)->setRowHeight(20);
 
         $sheet->getStyle("A{$headerRow}:{$last}{$headerRow}")->applyFromArray([
-            'font'      => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E5004C']],
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E5004C']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
         ]);
         $sheet->getRowDimension($headerRow)->setRowHeight(24);
@@ -137,14 +138,14 @@ class ProjectSummarySheet implements FromArray, WithColumnWidths, WithStyles, Wi
         }
 
         $sheet->getStyle("A{$totalRow}:{$last}{$totalRow}")->applyFromArray([
-            'font'      => ['bold' => true, 'color' => ['rgb' => '1F3A4D']],
-            'fill'      => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']],
-            'borders'   => ['top' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '1F3A4D']]],
+            'font' => ['bold' => true, 'color' => ['rgb' => '1F3A4D']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F1F5F9']],
+            'borders' => ['top' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '1F3A4D']]],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
         $sheet->getStyle("A{$totalRow}")->applyFromArray(['alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT]]);
 
-        $sheet->freezePane('A' . $firstDataRow);
+        $sheet->freezePane('A'.$firstDataRow);
 
         return [];
     }

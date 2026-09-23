@@ -334,7 +334,7 @@ const maritalStatusLabel = (s: string | null) => {
 }
 
 const enrollmentStatusLabels: Record<string, string> = {
-    in_progress: 'En cours', withdrawn: 'Retiré', completed: 'Terminé', moved: 'Déplacé'
+    in_progress: 'En cours', withdrawn: 'Retiré', completed: 'Formation terminée', moved: 'Déplacé'
 }
 
 const currentFormation = computed(() => props.learner.formations.find(f => f.pivot.status === 'in_progress') ?? props.learner.formations[0] ?? null)

@@ -148,7 +148,7 @@ const genderLabel = (g: string | null) => {
 const statusLabelLearner: Record<string, string> = {
     in_progress: 'En cours',
     withdrawn: 'Abandonné',
-    completed: 'Diplômé',
+    completed: 'Formation terminée',
     moved: 'Transféré',
 }
 
@@ -246,7 +246,7 @@ const statusColorLearner: Record<string, string> = {
                                         </th>
                                         <th class="px-lg py-sm font-semibold text-center text-green-700">En cours</th>
                                         <th class="px-lg py-sm font-semibold text-center text-red-700">Abandons</th>
-                                        <th class="px-lg py-sm font-semibold text-center text-blue-700">Diplômés</th>
+                                        <th class="px-lg py-sm font-semibold text-center text-blue-700">Formation terminée</th>
                                         <th class="px-lg py-sm font-semibold text-center text-orange-700">Transférés</th>
                                         <th class="px-lg py-sm font-semibold text-center text-blue-600">Stage</th>
                                         <th class="px-lg py-sm font-semibold text-center text-green-600">Emploi</th>
@@ -273,7 +273,7 @@ const statusColorLearner: Record<string, string> = {
                                         <td class="px-lg py-sm text-center cursor-pointer hover:underline" style="color:#1F3A4D" @click="f.male_count > 0 && openLearnersModal(f.id, f.name, 'gender', 'male', 'Hommes')">{{ f.male_count }}</td>
                                         <td class="px-lg py-sm text-center text-green-700 cursor-pointer hover:underline" @click="f.in_progress_count > 0 && openLearnersModal(f.id, f.name, 'status', 'in_progress', 'En cours')">{{ f.in_progress_count }}</td>
                                         <td class="px-lg py-sm text-center text-red-700 cursor-pointer hover:underline" @click="f.withdrawn_count > 0 && openLearnersModal(f.id, f.name, 'status', 'withdrawn', 'Abandons')">{{ f.withdrawn_count }}</td>
-                                        <td class="px-lg py-sm text-center text-blue-700 cursor-pointer hover:underline" @click="f.completed_count > 0 && openLearnersModal(f.id, f.name, 'status', 'completed', 'Diplômés')">{{ f.completed_count }}</td>
+                                        <td class="px-lg py-sm text-center text-blue-700 cursor-pointer hover:underline" @click="f.completed_count > 0 && openLearnersModal(f.id, f.name, 'status', 'completed', 'Formation terminée')">{{ f.completed_count }}</td>
                                         <td class="px-lg py-sm text-center text-orange-700 cursor-pointer hover:underline" @click="f.moved_count > 0 && openLearnersModal(f.id, f.name, 'status', 'moved', 'Transférés')">{{ f.moved_count }}</td>
                                         <td class="px-lg py-sm text-center text-blue-600 cursor-pointer hover:underline" @click="f.internship_count > 0 && openLearnersModal(f.id, f.name, 'insertion', 'internship', 'En stage')">{{ f.internship_count }}</td>
                                         <td class="px-lg py-sm text-center text-green-600 cursor-pointer hover:underline" @click="f.employed_count > 0 && openLearnersModal(f.id, f.name, 'insertion', 'employed', 'En emploi')">{{ f.employed_count }}</td>

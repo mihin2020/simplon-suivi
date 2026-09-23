@@ -23,7 +23,9 @@ class FormationController extends Controller
         $this->authorize('viewAny', Formation::class);
 
         $formations = $project->formations()
-            ->withCount(['learners as active_learners_count' => fn ($q) => $q->where('formation_learner.status', LearnerStatus::InProgress->value),
+            ->withCount([
+                'learners',
+                'learners as active_learners_count' => fn ($q) => $q->where('formation_learner.status', LearnerStatus::InProgress->value),
             ])
             ->orderByDesc('started_at')
             ->paginate(15);
@@ -70,6 +72,11 @@ class FormationController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        $completedLearners = $formation->completedLearners()
+            ->with('educationLevel')
+            ->orderBy('last_name')
+            ->get();
+
         $inactiveLearners = $formation->inactiveLearners()
             ->with('educationLevel')
             ->orderBy('last_name')
@@ -86,6 +93,7 @@ class FormationController extends Controller
         return Inertia::render('Formations/Show', [
             'formation' => $formation,
             'activeLearners' => $activeLearners,
+            'completedLearners' => $completedLearners,
             'inactiveLearners' => $inactiveLearners,
             'availableTrainers' => $availableTrainers,
             'referentiels' => Referentiel::orderBy('name')->get(['id', 'name']),
@@ -126,7 +134,7 @@ class FormationController extends Controller
             // Mettre à jour la date de fin automatiquement
             $data['ended_at'] = now();
 
-            // Marquer tous les apprenants "en cours" comme "terminés" (diplômés)
+            // Marquer tous les apprenants "en cours" comme "formation terminée"
             $formation->activeLearners()->updateExistingPivot(
                 $formation->activeLearners()->pluck('learners.id'),
                 [

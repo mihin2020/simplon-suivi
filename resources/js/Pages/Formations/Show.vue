@@ -17,7 +17,7 @@ interface Learner {
     email: string | null
     phone: string | null
     education_level: EducationLevel | null
-    pivot: { status: string; enrolled_at: string; withdrawn_at: string | null; notes: string | null }
+    pivot: { status: string; enrolled_at: string; withdrawn_at: string | null; completed_at: string | null; notes: string | null }
 }
 
 interface User {
@@ -64,6 +64,7 @@ const props = defineProps<{
         from: number | null
         to: number | null
     }
+    completedLearners: Learner[]
     inactiveLearners: Learner[]
     availableTrainers: Trainer[]
     referentiels: Array<{ id: string; name: string }>
@@ -135,13 +136,17 @@ const confirmAbandon = () => {
     })
 }
 
-// Onglet apprenants
-const activeTab = ref<'actifs' | 'inactifs'>('actifs')
+// Onglet apprenants : En cours | Formation terminée | Inactifs (abandons / transferts)
+const activeTab = ref<'en_cours' | 'termines' | 'inactifs'>(
+    props.activeLearners.total === 0 && props.completedLearners.length > 0
+        ? 'termines'
+        : 'en_cours',
+)
 
 const statusLabelsLearner: Record<string, string> = {
     in_progress: 'En cours',
     withdrawn: 'Abandonné',
-    completed: 'Diplômé',
+    completed: 'Formation terminée',
     moved: 'Transféré',
 }
 
@@ -235,7 +240,20 @@ const filteredLearners = computed(() => {
     )
 })
 
-// Recherche apprenants inactifs
+// Recherche apprenants formation terminée
+const completedSearch = ref('')
+const filteredCompletedLearners = computed(() => {
+    const q = completedSearch.value.toLowerCase().trim()
+    if (!q) return props.completedLearners
+    return props.completedLearners.filter(l =>
+        `${l.first_name} ${l.last_name}`.toLowerCase().includes(q) ||
+        l.last_name.toLowerCase().includes(q) ||
+        l.first_name.toLowerCase().includes(q) ||
+        (l.email && l.email.toLowerCase().includes(q))
+    )
+})
+
+// Recherche apprenants inactifs (abandons / transferts)
 const inactiveSearch = ref('')
 const filteredInactiveLearners = computed(() => {
     const q = inactiveSearch.value.toLowerCase().trim()
@@ -387,15 +405,24 @@ const filteredInactiveLearners = computed(() => {
             <!-- Apprenants avec onglets -->
             <div class="lg:col-span-2 bg-surface-container-lowest border border-surface-container-highest rounded-xl overflow-hidden shadow-sm">
                 <!-- Onglets -->
-                <div class="flex border-b border-surface-container-highest">
+                <div class="flex border-b border-surface-container-highest overflow-x-auto">
                     <button
-                        @click="activeTab = 'actifs'"
+                        @click="activeTab = 'en_cours'"
                         class="tab-btn"
-                        :class="{ 'tab-active': activeTab === 'actifs' }"
+                        :class="{ 'tab-active': activeTab === 'en_cours' }"
                     >
                         <span class="material-symbols-outlined" style="font-size:18px">groups</span>
-                        Apprenants actifs
+                        En cours
                         <span class="tab-badge">{{ activeLearners.total }}</span>
+                    </button>
+                    <button
+                        @click="activeTab = 'termines'"
+                        class="tab-btn"
+                        :class="{ 'tab-active': activeTab === 'termines' }"
+                    >
+                        <span class="material-symbols-outlined" style="font-size:18px">school</span>
+                        Formation terminée
+                        <span class="tab-badge">{{ completedLearners.length }}</span>
                     </button>
                     <button
                         @click="activeTab = 'inactifs'"
@@ -408,8 +435,8 @@ const filteredInactiveLearners = computed(() => {
                     </button>
                 </div>
 
-                <!-- Contenu Actifs -->
-                <div v-if="activeTab === 'actifs'">
+                <!-- Contenu En cours -->
+                <div v-if="activeTab === 'en_cours'">
                     <div class="px-lg py-md border-b border-surface-container-highest">
                         <div class="search-bar">
                             <span class="material-symbols-outlined search-icon">search</span>
@@ -514,7 +541,77 @@ const filteredInactiveLearners = computed(() => {
                     </div>
                 </div>
 
-                <!-- Contenu Inactifs -->
+                <!-- Contenu Formation terminée -->
+                <div v-else-if="activeTab === 'termines'">
+                    <div class="px-lg py-md border-b border-surface-container-highest">
+                        <div class="search-bar">
+                            <span class="material-symbols-outlined search-icon">search</span>
+                            <input
+                                v-model="completedSearch"
+                                type="text"
+                                placeholder="Rechercher parmi les apprenants ayant terminé..."
+                                class="search-input"
+                            />
+                            <button v-if="completedSearch" @click="completedSearch = ''" class="search-clear">
+                                <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                            </button>
+                            <span v-if="completedSearch" class="search-count">
+                                {{ filteredCompletedLearners.length }} trouvé{{ filteredCompletedLearners.length > 1 ? 's' : '' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-surface border-b border-surface-container-highest">
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide w-10 text-center">N°</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Apprenant</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Niveau</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Terminé le</th>
+                                    <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-surface-container-highest">
+                                <tr v-if="filteredCompletedLearners.length === 0">
+                                    <td colspan="5" class="px-md py-xl text-center text-secondary text-body-md">
+                                        {{ completedSearch ? 'Aucun résultat pour cette recherche.' : 'Aucun apprenant n\'a encore terminé cette formation.' }}
+                                    </td>
+                                </tr>
+                                <tr
+                                    v-for="(learner, idx) in filteredCompletedLearners"
+                                    :key="learner.id"
+                                    class="hover:bg-surface-bright transition-colors"
+                                >
+                                    <td class="px-md py-sm text-secondary text-center text-body-sm">
+                                        {{ String(idx + 1).padStart(2, '0') }}
+                                    </td>
+                                    <td class="px-md py-sm">
+                                        <Link
+                                            :href="`/learners/${learner.id}`"
+                                            class="font-semibold text-on-surface hover:text-primary transition-colors"
+                                        >
+                                            {{ learner.last_name }} {{ learner.first_name }}
+                                        </Link>
+                                        <p v-if="learner.email" class="text-body-sm text-secondary">{{ learner.email }}</p>
+                                    </td>
+                                    <td class="px-md py-sm text-on-surface-variant text-body-sm">
+                                        {{ learner.education_level?.name ?? '' }}
+                                    </td>
+                                    <td class="px-md py-sm text-on-surface-variant text-body-sm whitespace-nowrap">
+                                        {{ fmt(learner.pivot.completed_at) }}
+                                    </td>
+                                    <td class="px-md py-sm text-right">
+                                        <Link :href="`/learners/${learner.id}`" class="icon-btn" title="Voir le profil">
+                                            <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
+                                        </Link>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Contenu Inactifs (abandons / transferts) -->
                 <div v-else>
                     <div class="px-lg py-md border-b border-surface-container-highest">
                         <div class="search-bar">
@@ -522,7 +619,7 @@ const filteredInactiveLearners = computed(() => {
                             <input
                                 v-model="inactiveSearch"
                                 type="text"
-                                placeholder="Rechercher parmi les apprenants inactifs..."
+                                placeholder="Rechercher parmi les abandons et transferts..."
                                 class="search-input"
                             />
                             <button v-if="inactiveSearch" @click="inactiveSearch = ''" class="search-clear">
@@ -548,7 +645,7 @@ const filteredInactiveLearners = computed(() => {
                             <tbody class="divide-y divide-surface-container-highest">
                                 <tr v-if="filteredInactiveLearners.length === 0">
                                     <td colspan="6" class="px-md py-xl text-center text-secondary text-body-md">
-                                        {{ inactiveSearch ? 'Aucun résultat pour cette recherche.' : 'Aucun apprenant inactif.' }}
+                                        {{ inactiveSearch ? 'Aucun résultat pour cette recherche.' : 'Aucun abandon ni transfert.' }}
                                     </td>
                                 </tr>
                                 <tr

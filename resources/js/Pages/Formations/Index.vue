@@ -11,6 +11,7 @@ interface Formation {
     started_at: string
     ended_at: string | null
     status: string
+    learners_count: number
     active_learners_count: number
 }
 
@@ -109,7 +110,9 @@ const destroyFormation = (f: Formation) => {
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant whitespace-nowrap">{{ fmt(formation.started_at) }}</td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant whitespace-nowrap">{{ fmt(formation.ended_at) }}</td>
                             <td class="px-md py-sm text-center">
-                                <span class="learner-count">{{ formation.active_learners_count }}</span>
+                                <span class="learner-count" :title="formation.active_learners_count + ' en cours'">
+                                    {{ formation.learners_count }}
+                                </span>
                             </td>
                             <td class="px-md py-sm">
                                 <span class="status-badge" :class="`status-${formation.status}`">
