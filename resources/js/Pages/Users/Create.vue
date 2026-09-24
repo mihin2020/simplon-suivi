@@ -3,6 +3,7 @@ import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import PermissionPicker from '@/Components/PermissionPicker.vue'
+import PhoneInput from '@/Components/UI/PhoneInput.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -167,12 +168,12 @@ const submit = () => {
                     <div class="grid-2 mt-sm">
                         <div class="field">
                             <label class="label">Téléphone 1</label>
-                            <input v-model="form.phone" type="tel" class="input" :class="{ 'input-error': form.errors.phone }" placeholder="+226 XX XX XX XX" />
+                            <PhoneInput v-model="form.phone" :error="!!form.errors.phone" />
                             <p v-if="form.errors.phone" class="error-msg">{{ form.errors.phone }}</p>
                         </div>
                         <div class="field">
                             <label class="label">Téléphone 2</label>
-                            <input v-model="form.phone2" type="tel" class="input" :class="{ 'input-error': form.errors.phone2 }" placeholder="+226 XX XX XX XX" />
+                            <PhoneInput v-model="form.phone2" :error="!!form.errors.phone2" />
                             <p v-if="form.errors.phone2" class="error-msg">{{ form.errors.phone2 }}</p>
                         </div>
                     </div>

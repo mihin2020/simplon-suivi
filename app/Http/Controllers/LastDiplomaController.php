@@ -16,7 +16,10 @@ class LastDiplomaController extends Controller
             'name' => ['required', 'string', 'max:255', Rule::unique('last_diplomas', 'name')],
         ]);
 
-        LastDiploma::create($validated);
+        LastDiploma::create([
+            ...$validated,
+            'order' => (int) LastDiploma::query()->max('order') + 1,
+        ]);
 
         return redirect()->route('configuration')->with('success', 'Diplôme ajouté.');
     }
@@ -32,7 +35,7 @@ class LastDiplomaController extends Controller
         return redirect()->route('configuration')->with('success', 'Diplôme mis à jour.');
     }
 
-    public function destroy(LastDiploma $lastDiploma): RedirectResponse|\Illuminate\Http\JsonResponse
+    public function destroy(LastDiploma $lastDiploma): RedirectResponse|JsonResponse
     {
         if ($lastDiploma->learners()->count() > 0) {
             $message = 'Impossible de supprimer ce diplôme car il est utilisé par des apprenants.';

@@ -2,6 +2,8 @@
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import PhoneInput from '@/Components/UI/PhoneInput.vue'
+import { useFormDraft } from '@/composables/useFormDraft'
 
 defineOptions({ layout: AdminLayout })
 
@@ -94,6 +96,9 @@ const form = useForm({
     photo:                       null as File | null,
     cnib:                        null as File | null,
     cv:                          null as File | null,
+    remove_photo:                false,
+    remove_cnib:                 false,
+    remove_cv:                   false,
 })
 
 const photoPreview = ref<string | null>(
@@ -105,37 +110,63 @@ const cnibName = ref<string | null>(
 const cvName = ref<string | null>(
     props.learner.cv_original_name ?? (props.learner.cv_path ? props.learner.cv_path.split('/').pop() ?? null : null)
 )
-const cnibUrl = computed(() => props.learner.cnib_path ? `/storage/${props.learner.cnib_path}` : null)
-const cvUrl = computed(() => props.learner.cv_path ? `/storage/${props.learner.cv_path}` : null)
-const hasCnib = ref(!!props.learner.cnib_path)
-const hasCv = ref(!!props.learner.cv_path)
+const existingCnibUrl = ref(props.learner.cnib_path ? `/storage/${props.learner.cnib_path}` : null)
+const existingCvUrl = ref(props.learner.cv_path ? `/storage/${props.learner.cv_path}` : null)
+const hasExistingPhoto = ref(!!props.learner.photo_path)
+
+const clearFileInput = (id: string) => {
+    const el = document.getElementById(id) as HTMLInputElement | null
+    if (el) el.value = ''
+}
 
 const onPhotoChange = (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0]
     if (!file) return
     form.photo = file
+    form.remove_photo = false
     photoPreview.value = URL.createObjectURL(file)
 }
 
 const removePhoto = () => {
     form.photo = null
+    form.remove_photo = hasExistingPhoto.value || !!props.learner.photo_path
     photoPreview.value = null
+    hasExistingPhoto.value = false
+    clearFileInput('photo-input')
 }
 
 const onCnibChange = (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0]
     if (!file) return
     form.cnib = file
+    form.remove_cnib = false
     cnibName.value = file.name
-    hasCnib.value = true
+    existingCnibUrl.value = null
+}
+
+const removeCnib = () => {
+    form.cnib = null
+    form.remove_cnib = !!props.learner.cnib_path
+    cnibName.value = null
+    existingCnibUrl.value = null
+    clearFileInput('cnib-input')
 }
 
 const onCvChange = (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0]
     if (!file) return
     form.cv = file
+    form.remove_cv = false
     cvName.value = file.name
-    hasCv.value = true
+    existingCvUrl.value = null
+}
+
+const removeCv = () => {
+    form.cv = null
+    form.remove_cv = !!props.learner.cv_path
+    cvName.value = null
+    existingCvUrl.value = null
+    clearFileInput('cv-input')
 }
 
 // Calcul automatique de l'âge depuis la date de naissance
@@ -159,7 +190,10 @@ watch(() => form.birth_date, () => {
 
 const submit = () => form.post(`/learners/${props.learner.id}`, {
     forceFormData: true,
+    onSuccess: () => clearDraft(),
 })
+
+const { clearDraft } = useFormDraft(`learners-edit:${props.learner.id}`, form)
 </script>
 
 <template>
@@ -193,9 +227,9 @@ const submit = () => form.post(`/learners/${props.learner.id}`, {
                                 <span class="material-symbols-outlined" style="font-size:16px">upload</span>
                                 {{ photoPreview ? 'Changer la photo' : 'Choisir une photo' }}
                             </label>
-                            <button v-if="photoPreview && form.photo" type="button" @click="removePhoto" class="remove-btn">
-                                <span class="material-symbols-outlined" style="font-size:16px">close</span>
-                                Annuler
+                            <button v-if="photoPreview" type="button" @click="removePhoto" class="remove-btn">
+                                <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                                Retirer
                             </button>
                         </div>
                         <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onPhotoChange" />
@@ -320,7 +354,7 @@ const submit = () => form.post(`/learners/${props.learner.id}`, {
                     </div>
                     <div class="field">
                         <label class="label">Téléphone</label>
-                        <input v-model="form.phone" type="tel" class="input" />
+                        <PhoneInput v-model="form.phone" />
                     </div>
                 </div>
             </div>
@@ -364,18 +398,26 @@ const submit = () => form.post(`/learners/${props.learner.id}`, {
                 <div class="grid grid-cols-2 gap-md">
                     <div class="field">
                         <label class="label">Document CNIB / Pièce d'identité</label>
-                        <div v-if="cnibUrl && !form.cnib" class="mb-sm">
-                            <a :href="cnibUrl" target="_blank" rel="noopener" class="doc-link">
+                        <div v-if="existingCnibUrl && !form.cnib" class="mb-sm flex items-center gap-sm flex-wrap">
+                            <a :href="existingCnibUrl" target="_blank" rel="noopener" class="doc-link">
                                 <span class="material-symbols-outlined" style="font-size:16px">visibility</span>
                                 Voir le document
                             </a>
+                            <button type="button" @click="removeCnib" class="remove-btn">
+                                <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                                Retirer
+                            </button>
                         </div>
                         <div class="file-upload-row">
                             <label class="upload-btn" for="cnib-input">
                                 <span class="material-symbols-outlined" style="font-size:18px">upload_file</span>
-                                {{ hasCnib ? 'Remplacer' : 'Choisir' }}
+                                {{ (existingCnibUrl || cnibName) ? 'Remplacer' : 'Choisir' }}
                             </label>
                             <span v-if="cnibName" class="file-name">{{ cnibName }}</span>
+                            <button v-if="form.cnib" type="button" @click="removeCnib" class="remove-btn">
+                                <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                                Annuler
+                            </button>
                         </div>
                         <input id="cnib-input" type="file" accept=".pdf,image/jpeg,image/png" class="hidden" @change="onCnibChange" />
                         <p class="text-body-sm text-secondary">PDF, JPEG, PNG · 5 Mo max</p>
@@ -383,18 +425,26 @@ const submit = () => form.post(`/learners/${props.learner.id}`, {
                     </div>
                     <div class="field">
                         <label class="label">CV</label>
-                        <div v-if="cvUrl && !form.cv" class="mb-sm">
-                            <a :href="cvUrl" target="_blank" rel="noopener" class="doc-link">
+                        <div v-if="existingCvUrl && !form.cv" class="mb-sm flex items-center gap-sm flex-wrap">
+                            <a :href="existingCvUrl" target="_blank" rel="noopener" class="doc-link">
                                 <span class="material-symbols-outlined" style="font-size:16px">visibility</span>
                                 Voir le CV
                             </a>
+                            <button type="button" @click="removeCv" class="remove-btn">
+                                <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                                Retirer
+                            </button>
                         </div>
                         <div class="file-upload-row">
                             <label class="upload-btn" for="cv-input">
                                 <span class="material-symbols-outlined" style="font-size:18px">upload_file</span>
-                                {{ hasCv ? 'Remplacer' : 'Choisir' }}
+                                {{ (existingCvUrl || cvName) ? 'Remplacer' : 'Choisir' }}
                             </label>
                             <span v-if="cvName" class="file-name">{{ cvName }}</span>
+                            <button v-if="form.cv" type="button" @click="removeCv" class="remove-btn">
+                                <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                                Annuler
+                            </button>
                         </div>
                         <input id="cv-input" type="file" accept="application/pdf,.doc,.docx" class="hidden" @change="onCvChange" />
                         <p class="text-body-sm text-secondary">PDF, DOC, DOCX · 5 Mo max</p>
@@ -418,7 +468,7 @@ const submit = () => form.post(`/learners/${props.learner.id}`, {
                 </div>
                 <div class="field">
                     <label class="label">Téléphone</label>
-                    <input v-model="form.emergency_contact_phone" type="tel" class="input" />
+                    <PhoneInput v-model="form.emergency_contact_phone" />
                 </div>
             </div>
 

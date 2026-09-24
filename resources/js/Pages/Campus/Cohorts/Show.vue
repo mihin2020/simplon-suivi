@@ -4,6 +4,7 @@ import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import ConfirmModal from '@/Components/ConfirmModal.vue'
 import Can from '@/Components/Can.vue'
+import PhoneInput from '@/Components/UI/PhoneInput.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -814,7 +815,7 @@ const confirmClose = () => {
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Téléphone</label>
-                                <input v-model="editForm.phone" type="tel" class="form-input" />
+                                <PhoneInput v-model="editForm.phone" />
                             </div>
                         </div>
 
@@ -839,7 +840,7 @@ const confirmClose = () => {
                         </div>
                         <div class="form-group">
                             <label class="form-label">Téléphone d'urgence</label>
-                            <input v-model="editForm.emergency_contact_phone" type="tel" class="form-input" />
+                            <PhoneInput v-model="editForm.emergency_contact_phone" />
                         </div>
 
                         <div class="enroll-actions">
@@ -1000,7 +1001,7 @@ const confirmClose = () => {
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Téléphone</label>
-                                <input v-model="addForm.phone" type="tel" class="form-input" />
+                                <PhoneInput v-model="addForm.phone" />
                             </div>
                         </div>
 
@@ -1027,7 +1028,7 @@ const confirmClose = () => {
                         </div>
                         <div class="form-group">
                             <label class="form-label">Téléphone d'urgence</label>
-                            <input v-model="addForm.emergency_contact_phone" type="tel" class="form-input" />
+                            <PhoneInput v-model="addForm.emergency_contact_phone" />
                         </div>
 
                         <div class="enroll-actions">

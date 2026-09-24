@@ -2,6 +2,8 @@
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import PhoneInput from '@/Components/UI/PhoneInput.vue'
+import { useFormDraft } from '@/composables/useFormDraft'
 
 defineOptions({ layout: AdminLayout })
 
@@ -59,11 +61,22 @@ const photoPreview = ref<string | null>(null)
 const cnibName = ref<string | null>(null)
 const cvName = ref<string | null>(null)
 
+const clearFileInput = (id: string) => {
+    const el = document.getElementById(id) as HTMLInputElement | null
+    if (el) el.value = ''
+}
+
 const onPhotoChange = (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0]
     if (!file) return
     form.photo = file
     photoPreview.value = URL.createObjectURL(file)
+}
+
+const removePhoto = () => {
+    form.photo = null
+    photoPreview.value = null
+    clearFileInput('photo-input')
 }
 
 const onCnibChange = (e: Event) => {
@@ -73,11 +86,23 @@ const onCnibChange = (e: Event) => {
     cnibName.value = file.name
 }
 
+const removeCnib = () => {
+    form.cnib = null
+    cnibName.value = null
+    clearFileInput('cnib-input')
+}
+
 const onCvChange = (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0]
     if (!file) return
     form.cv = file
     cvName.value = file.name
+}
+
+const removeCv = () => {
+    form.cv = null
+    cvName.value = null
+    clearFileInput('cv-input')
 }
 
 // Calcul automatique de l'âge depuis la date de naissance
@@ -101,7 +126,10 @@ watch(computedAge, (age) => {
 
 const submit = () => form.post('/learners', {
     forceFormData: true,
+    onSuccess: () => clearDraft(),
 })
+
+const { clearDraft } = useFormDraft('learners-create', form)
 </script>
 
 <template>
@@ -130,10 +158,16 @@ const submit = () => form.post('/learners', {
                         <span v-else class="material-symbols-outlined text-secondary" style="font-size:40px">person</span>
                     </div>
                     <div class="flex-1">
-                        <label class="upload-btn" for="photo-input">
-                            <span class="material-symbols-outlined" style="font-size:18px">upload</span>
-                            Choisir une photo
-                        </label>
+                        <div class="flex items-center gap-sm">
+                            <label class="upload-btn" for="photo-input">
+                                <span class="material-symbols-outlined" style="font-size:18px">upload</span>
+                                {{ photoPreview ? 'Changer la photo' : 'Choisir une photo' }}
+                            </label>
+                            <button v-if="photoPreview" type="button" @click="removePhoto" class="remove-btn">
+                                <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                                Retirer
+                            </button>
+                        </div>
                         <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onPhotoChange" />
                         <p class="text-body-sm text-secondary mt-xs">JPEG, PNG ou WebP · 2 Mo max · Optionnel</p>
                         <p v-if="form.errors.photo" class="error-msg mt-xs">{{ form.errors.photo }}</p>
@@ -256,7 +290,7 @@ const submit = () => form.post('/learners', {
                     </div>
                     <div class="field">
                         <label class="label">Téléphone</label>
-                        <input v-model="form.phone" type="tel" class="input" placeholder="+226 XX XX XX XX" />
+                        <PhoneInput v-model="form.phone" />
                     </div>
                 </div>
             </div>
@@ -306,6 +340,10 @@ const submit = () => form.post('/learners', {
                                 {{ cnibName ? 'Changer' : 'Choisir' }}
                             </label>
                             <span v-if="cnibName" class="file-name">{{ cnibName }}</span>
+                            <button v-if="cnibName" type="button" @click="removeCnib" class="remove-btn">
+                                <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                                Retirer
+                            </button>
                         </div>
                         <input id="cnib-input" type="file" accept=".pdf,image/jpeg,image/png" class="hidden" @change="onCnibChange" />
                         <p class="text-body-sm text-secondary">PDF, JPEG, PNG · 5 Mo max</p>
@@ -319,6 +357,10 @@ const submit = () => form.post('/learners', {
                                 {{ cvName ? 'Changer' : 'Choisir' }}
                             </label>
                             <span v-if="cvName" class="file-name">{{ cvName }}</span>
+                            <button v-if="cvName" type="button" @click="removeCv" class="remove-btn">
+                                <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                                Retirer
+                            </button>
                         </div>
                         <input id="cv-input" type="file" accept="application/pdf,.doc,.docx" class="hidden" @change="onCvChange" />
                         <p class="text-body-sm text-secondary">PDF, DOC, DOCX · 5 Mo max</p>
@@ -342,7 +384,7 @@ const submit = () => form.post('/learners', {
                 </div>
                 <div class="field">
                     <label class="label">Téléphone</label>
-                    <input v-model="form.emergency_contact_phone" type="tel" class="input" placeholder="+226 XX XX XX XX" />
+                    <PhoneInput v-model="form.emergency_contact_phone" />
                 </div>
             </div>
 
@@ -391,7 +433,15 @@ const submit = () => form.post('/learners', {
 }
 .upload-btn:hover { background: #eceef0; }
 
-.file-upload-row { display: flex; align-items: center; gap: 12px; }
+.remove-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 8px 12px; border: 1px solid #fecaca; border-radius: 8px;
+    font-size: 13px; font-weight: 600; color: #b91c1c;
+    background: #fff; cursor: pointer; transition: background 0.15s;
+}
+.remove-btn:hover { background: #fee2e2; }
+
+.file-upload-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .file-name { font-size: 13px; color: #515f74; truncate: true; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .gender-group { display: flex; gap: 10px; margin-top: 4px; }

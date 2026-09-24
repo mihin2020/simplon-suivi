@@ -10,7 +10,7 @@ class TrainerProfile extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['name'];
+    protected $fillable = ['name', 'order'];
 
     public function trainers(): HasMany
     {

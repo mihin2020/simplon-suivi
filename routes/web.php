@@ -14,6 +14,7 @@ use App\Http\Controllers\Campus\CampusFormationController;
 use App\Http\Controllers\Campus\CohortController;
 use App\Http\Controllers\Campus\PaymentController;
 use App\Http\Controllers\ConfigurationController;
+use App\Http\Controllers\ConfigurationReorderController;
 use App\Http\Controllers\ContractTypeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EducationLevelController;
@@ -429,6 +430,17 @@ Route::middleware('auth')->group(function () {
             'contract-types',
             ContractTypeController::class,
         )->except(['create', 'edit', 'show', 'index']);
+
+        Route::post('configuration/reorder/{type}', ConfigurationReorderController::class)
+            ->whereIn('type', [
+                'trainer-profiles',
+                'education-levels',
+                'age-ranges',
+                'vulnerabilities',
+                'last-diplomas',
+                'contract-types',
+            ])
+            ->name('configuration.reorder');
 
         Route::post('configuration/attendance-settings', [
             ConfigurationController::class,

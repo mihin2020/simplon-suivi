@@ -19,7 +19,10 @@ class TrainerProfileController extends Controller
             'name' => ['required', 'string', 'max:255', 'unique:trainer_profiles,name'],
         ]);
 
-        TrainerProfile::create($request->only('name'));
+        TrainerProfile::create([
+            'name' => $request->input('name'),
+            'order' => (int) TrainerProfile::query()->max('order') + 1,
+        ]);
 
         return back()->with('success', 'Profil créé.');
     }
@@ -27,7 +30,7 @@ class TrainerProfileController extends Controller
     public function update(Request $request, TrainerProfile $trainerProfile): RedirectResponse
     {
         $request->validate([
-            'name' => ['required', 'string', 'max:255', 'unique:trainer_profiles,name,' . $trainerProfile->id],
+            'name' => ['required', 'string', 'max:255', 'unique:trainer_profiles,name,'.$trainerProfile->id],
         ]);
 
         $trainerProfile->update($request->only('name'));

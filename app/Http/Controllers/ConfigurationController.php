@@ -20,11 +20,11 @@ class ConfigurationController extends Controller
     public function index(): Response
     {
         return Inertia::render('Configuration/Index', [
-            'trainerProfiles' => TrainerProfile::orderBy('name')->get(['id', 'name']),
-            'educationLevels' => EducationLevel::orderBy('created_at')->get(['id', 'name']),
+            'trainerProfiles' => TrainerProfile::orderBy('order')->orderBy('name')->get(['id', 'name']),
+            'educationLevels' => EducationLevel::orderBy('order')->orderBy('name')->get(['id', 'name']),
             'ageRanges' => AgeRange::orderBy('order')->orderBy('age_min')->get(['id', 'name', 'age_min', 'age_max', 'order']),
-            'vulnerabilities' => Vulnerability::orderBy('created_at')->get(['id', 'name']),
-            'lastDiplomas' => LastDiploma::orderBy('created_at')->get(['id', 'name']),
+            'vulnerabilities' => Vulnerability::orderBy('order')->orderBy('name')->get(['id', 'name']),
+            'lastDiplomas' => LastDiploma::orderBy('order')->orderBy('name')->get(['id', 'name']),
             'internshipContractTypes' => ContractType::internship()->orderBy('order')->orderBy('name')->get(['id', 'name']),
             'employmentContractTypes' => ContractType::employment()->orderBy('order')->orderBy('name')->get(['id', 'name']),
             'aiConfig' => [

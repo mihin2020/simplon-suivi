@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\AgeRange;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class AgeRangeController extends Controller
 {
@@ -17,6 +17,7 @@ class AgeRangeController extends Controller
         ]);
 
         $validated['name'] = $this->buildName($validated['age_min'], $validated['age_max']);
+        $validated['order'] = (int) AgeRange::query()->max('order') + 1;
 
         AgeRange::create($validated);
 
@@ -42,10 +43,11 @@ class AgeRangeController extends Controller
         if ($max >= 150) {
             return "{$min} ans et +";
         }
+
         return "{$min} - {$max} ans";
     }
 
-    public function destroy(AgeRange $ageRange): RedirectResponse|\Illuminate\Http\JsonResponse
+    public function destroy(AgeRange $ageRange): RedirectResponse|JsonResponse
     {
         if ($ageRange->learners()->count() > 0) {
             $message = 'Impossible de supprimer cette tranche d\'âge car elle est utilisée par des apprenants.';

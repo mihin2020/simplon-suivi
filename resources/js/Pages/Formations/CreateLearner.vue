@@ -2,6 +2,8 @@
 import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
+import PhoneInput from '@/Components/UI/PhoneInput.vue'
+import { useFormDraft } from '@/composables/useFormDraft'
 
 defineOptions({ layout: AdminLayout })
 
@@ -52,11 +54,22 @@ const photoPreview = ref<string | null>(null)
 const cnibName = ref<string | null>(null)
 const cvName = ref<string | null>(null)
 
+const clearFileInput = (id: string) => {
+    const el = document.getElementById(id) as HTMLInputElement | null
+    if (el) el.value = ''
+}
+
 const onPhotoChange = (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0]
     if (!file) return
     form.photo = file
     photoPreview.value = URL.createObjectURL(file)
+}
+
+const removePhoto = () => {
+    form.photo = null
+    photoPreview.value = null
+    clearFileInput('photo-input')
 }
 
 const onCnibChange = (e: Event) => {
@@ -66,11 +79,23 @@ const onCnibChange = (e: Event) => {
     cnibName.value = file.name
 }
 
+const removeCnib = () => {
+    form.cnib = null
+    cnibName.value = null
+    clearFileInput('cnib-input')
+}
+
 const onCvChange = (e: Event) => {
     const file = (e.target as HTMLInputElement).files?.[0]
     if (!file) return
     form.cv = file
     cvName.value = file.name
+}
+
+const removeCv = () => {
+    form.cv = null
+    cvName.value = null
+    clearFileInput('cv-input')
 }
 
 // Calcul automatique de l'âge depuis la date de naissance
@@ -93,7 +118,10 @@ watch(computedAge, (age) => {
 
 const submit = () => form.post(`/formations/${props.formation.id}/learners/new`, {
     forceFormData: true,
+    onSuccess: () => clearDraft(),
 })
+
+const { clearDraft } = useFormDraft(`formations-create-learner:${props.formation.id}`, form)
 </script>
 
 <template>
@@ -137,10 +165,16 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners/new`,
                         <span v-else class="material-symbols-outlined text-secondary" style="font-size:40px">person</span>
                     </div>
                     <div class="flex-1">
-                        <label class="upload-btn" for="photo-input">
-                            <span class="material-symbols-outlined" style="font-size:16px">upload</span>
-                            Choisir une photo
-                        </label>
+                        <div class="flex items-center gap-sm">
+                            <label class="upload-btn" for="photo-input">
+                                <span class="material-symbols-outlined" style="font-size:16px">upload</span>
+                                {{ photoPreview ? 'Changer la photo' : 'Choisir une photo' }}
+                            </label>
+                            <button v-if="photoPreview" type="button" @click="removePhoto" class="remove-btn">
+                                <span class="material-symbols-outlined" style="font-size:16px">delete</span>
+                                Retirer
+                            </button>
+                        </div>
                         <input id="photo-input" type="file" accept="image/jpeg,image/png,image/webp" class="hidden" @change="onPhotoChange" />
                         <p class="text-body-sm text-secondary mt-xs">JPEG, PNG ou WebP · 2 Mo max · Optionnel</p>
                     </div>
@@ -262,7 +296,7 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners/new`,
                     </div>
                     <div class="field">
                         <label class="label">Téléphone</label>
-                        <input v-model="form.phone" type="tel" class="input" />
+                        <PhoneInput v-model="form.phone" />
                     </div>
                 </div>
             </div>
@@ -306,25 +340,33 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners/new`,
                 <div class="grid grid-cols-2 gap-md">
                     <div class="field">
                         <label class="label">Document CNIB / Pièce d'identité</label>
-                        <div class="flex items-center gap-md">
+                        <div class="flex items-center gap-md flex-wrap">
                             <label class="upload-btn" for="cnib-input">
                                 <span class="material-symbols-outlined" style="font-size:16px">upload</span>
-                                Choisir un fichier
+                                {{ cnibName ? 'Changer' : 'Choisir un fichier' }}
                             </label>
                             <input id="cnib-input" type="file" accept="application/pdf,image/jpeg,image/png" class="hidden" @change="onCnibChange" />
                             <span v-if="cnibName" class="text-body-sm text-secondary">{{ cnibName }}</span>
+                            <button v-if="cnibName" type="button" @click="removeCnib" class="remove-btn">
+                                <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                                Retirer
+                            </button>
                         </div>
                         <p class="text-body-sm text-secondary mt-xs">PDF, JPEG ou PNG · 5 Mo max · Optionnel</p>
                     </div>
                     <div class="field">
                         <label class="label">CV</label>
-                        <div class="flex items-center gap-md">
+                        <div class="flex items-center gap-md flex-wrap">
                             <label class="upload-btn" for="cv-input">
                                 <span class="material-symbols-outlined" style="font-size:16px">upload</span>
-                                Choisir un fichier
+                                {{ cvName ? 'Changer' : 'Choisir un fichier' }}
                             </label>
                             <input id="cv-input" type="file" accept="application/pdf,.doc,.docx" class="hidden" @change="onCvChange" />
                             <span v-if="cvName" class="text-body-sm text-secondary">{{ cvName }}</span>
+                            <button v-if="cvName" type="button" @click="removeCv" class="remove-btn">
+                                <span class="material-symbols-outlined" style="font-size:16px">close</span>
+                                Retirer
+                            </button>
                         </div>
                         <p class="text-body-sm text-secondary mt-xs">PDF, DOC ou DOCX · 5 Mo max · Optionnel</p>
                     </div>
@@ -346,7 +388,7 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners/new`,
                 </div>
                 <div class="field">
                     <label class="label">Téléphone</label>
-                    <input v-model="form.emergency_contact_phone" type="tel" class="input" />
+                    <PhoneInput v-model="form.emergency_contact_phone" />
                 </div>
             </div>
 
@@ -407,6 +449,14 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners/new`,
     background: #f9fafb; cursor: pointer; transition: background 0.15s;
 }
 .upload-btn:hover { background: #eceef0; }
+
+.remove-btn {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 8px 12px; border: 1px solid #fecaca; border-radius: 8px;
+    font-size: 12px; color: #ba1a1a; background: #fff5f5;
+    cursor: pointer; transition: background 0.15s;
+}
+.remove-btn:hover { background: #fee2e2; }
 
 .gender-group { display: flex; gap: 10px; margin-top: 4px; }
 .gender-option {

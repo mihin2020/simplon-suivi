@@ -3,6 +3,7 @@ import { Head, useForm, Link } from '@inertiajs/vue3'
 import { ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import PartnerCategoryBadge from '@/Components/PartnerCategoryBadge.vue'
+import PhoneInput from '@/Components/UI/PhoneInput.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -260,15 +261,7 @@ const submit = () => {
                             <!-- Téléphone -->
                             <div class="field">
                                 <label class="label">Téléphone</label>
-                                <div class="input-wrap">
-                                    <input
-                                        v-model="form.contact_phone"
-                                        type="tel"
-                                        class="input"
-                                        :class="{ 'input-error': form.errors.contact_phone }"
-                                        placeholder="+XX XX XX XX XX"
-                                    />
-                                </div>
+                                <PhoneInput v-model="form.contact_phone" :error="!!form.errors.contact_phone" />
                                 <p v-if="form.errors.contact_phone" class="error-msg">{{ form.errors.contact_phone }}</p>
                             </div>
 

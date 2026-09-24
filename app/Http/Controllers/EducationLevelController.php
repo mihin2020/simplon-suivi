@@ -16,7 +16,10 @@ class EducationLevelController extends Controller
             'name' => ['required', 'string', 'max:255', Rule::unique('education_levels', 'name')],
         ]);
 
-        EducationLevel::create($validated);
+        EducationLevel::create([
+            ...$validated,
+            'order' => (int) EducationLevel::query()->max('order') + 1,
+        ]);
 
         return redirect()->route('configuration')->with('success', 'Niveau d\'études ajouté.');
     }
@@ -32,7 +35,7 @@ class EducationLevelController extends Controller
         return redirect()->route('configuration')->with('success', 'Niveau d\'études mis à jour.');
     }
 
-    public function destroy(EducationLevel $educationLevel): RedirectResponse|\Illuminate\Http\JsonResponse
+    public function destroy(EducationLevel $educationLevel): RedirectResponse|JsonResponse
     {
         // Check if there are learners using this education level
         if ($educationLevel->learners()->count() > 0) {

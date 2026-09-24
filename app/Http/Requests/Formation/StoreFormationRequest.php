@@ -17,14 +17,14 @@ class StoreFormationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'        => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'started_at'  => ['required', 'date'],
-            'ended_at'    => ['nullable', 'date', 'after:started_at'],
-            'status'      => ['required', Rule::enum(FormationStatus::class)],
-            'capacity'    => ['nullable', 'integer', 'min:1'],
-            'location'       => ['nullable', 'string', 'max:255'],
-            'venue'          => ['nullable', 'string', 'max:255'],
+            'started_at' => ['required', 'date'],
+            'ended_at' => ['nullable', 'date', 'after_or_equal:started_at'],
+            'status' => ['required', Rule::enum(FormationStatus::class)],
+            'capacity' => ['nullable', 'integer', 'min:1'],
+            'location' => ['nullable', 'string', 'max:255'],
+            'venue' => ['nullable', 'string', 'max:255'],
             'referentiel_id' => ['nullable', 'uuid', 'exists:referentiels,id'],
         ];
     }

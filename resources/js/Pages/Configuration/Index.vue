@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { Head, useForm, router } from '@inertiajs/vue3'
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
+import Sortable from 'sortablejs'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
 
 interface Profile { id: string; name: string }
-interface EducationLevel { id: string; name: string }
+interface EducationLevel { id: number | string; name: string }
 interface AgeRange { id: number; name: string; age_min: number; age_max: number; order: number }
 interface Vulnerability { id: string; name: string }
 interface LastDiploma { id: string; name: string }
@@ -24,6 +25,52 @@ const props = defineProps<{
     aiConfig: AiConfig
     attendanceSettings: AttendanceSettings
 }>()
+
+const csrfToken = () =>
+    document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''
+
+const bindSortableList = (el: Element | null, type: string) => {
+    if (!(el instanceof HTMLElement)) return
+    const tagged = el as HTMLElement & { __sortable?: Sortable }
+    if (tagged.__sortable) {
+        tagged.__sortable.destroy()
+        tagged.__sortable = undefined
+    }
+
+    tagged.__sortable = Sortable.create(el, {
+        handle: '.drag-handle',
+        animation: 150,
+        ghostClass: 'ref-ghost',
+        onEnd: async () => {
+            const ids = [...el.querySelectorAll<HTMLElement>('[data-id]')]
+                .map((node) => node.dataset.id)
+                .filter((id): id is string => !!id)
+                .map((id) => (/^\d+$/.test(id) ? Number(id) : id))
+
+            try {
+                await fetch(`/configuration/reorder/${type}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        'X-CSRF-TOKEN': csrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ ordered_ids: ids }),
+                })
+            } catch {
+                router.reload({ only: [
+                    'trainerProfiles', 'educationLevels', 'ageRanges',
+                    'vulnerabilities', 'lastDiplomas',
+                    'internshipContractTypes', 'employmentContractTypes',
+                ] })
+            }
+        },
+    })
+
+    nextTick(() => { /* keep Vue refs stable */ })
+}
 
 // ── Navigation par onglets ──
 const activeTab = ref<'referentiels' | 'ia'>('referentiels')
@@ -360,14 +407,15 @@ const submitAttendanceSettings = () => {
                         <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
                         <span>Aucun profil — ajoutez-en un ci-dessus.</span>
                     </div>
-                    <ul v-else class="ref-list">
-                        <li v-for="p in trainerProfiles" :key="p.id" class="ref-item">
+                    <ul v-else :ref="(el) => bindSortableList(el as Element | null, 'trainer-profiles')" class="ref-list">
+                        <li v-for="p in trainerProfiles" :key="p.id" class="ref-item" :data-id="p.id">
                             <form v-if="editingId === p.id" @submit.prevent="submitEdit(p.id)" class="edit-row">
                                 <input v-model="editForm.name" type="text" class="add-input" :class="{ 'input-error': editForm.errors.name }" autofocus />
                                 <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
                                 <button type="button" class="btn-cancel" @click="cancelEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
                             </form>
                             <template v-else>
+                                <span class="drag-handle material-symbols-outlined" title="Glisser pour réordonner">drag_indicator</span>
                                 <span class="ref-dot"></span>
                                 <span class="ref-name">{{ p.name }}</span>
                                 <div class="ref-actions">
@@ -404,14 +452,15 @@ const submitAttendanceSettings = () => {
                         <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
                         <span>Aucun niveau — ajoutez-en un ci-dessus.</span>
                     </div>
-                    <ul v-else class="ref-list">
-                        <li v-for="e in educationLevels" :key="e.id" class="ref-item">
+                    <ul v-else :ref="(el) => bindSortableList(el as Element | null, 'education-levels')" class="ref-list">
+                        <li v-for="e in educationLevels" :key="e.id" class="ref-item" :data-id="e.id">
                             <form v-if="eduEditingId === e.id" @submit.prevent="submitEduEdit(e.id)" class="edit-row">
                                 <input v-model="eduEditForm.name" type="text" class="add-input" :class="{ 'input-error': eduEditForm.errors.name }" autofocus />
                                 <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
                                 <button type="button" class="btn-cancel" @click="cancelEduEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
                             </form>
                             <template v-else>
+                                <span class="drag-handle material-symbols-outlined" title="Glisser pour réordonner">drag_indicator</span>
                                 <span class="ref-dot"></span>
                                 <span class="ref-name">{{ e.name }}</span>
                                 <div class="ref-actions">
@@ -460,8 +509,8 @@ const submitAttendanceSettings = () => {
                         <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
                         <span>Aucune tranche — ajoutez-en une ci-dessus.</span>
                     </div>
-                    <ul v-else class="ref-list">
-                        <li v-for="a in ageRanges" :key="a.id" class="ref-item">
+                    <ul v-else :ref="(el) => bindSortableList(el as Element | null, 'age-ranges')" class="ref-list">
+                        <li v-for="a in ageRanges" :key="a.id" class="ref-item" :data-id="a.id">
                             <form v-if="ageEditingId === a.id" @submit.prevent="submitAgeEdit(a.id)" class="edit-row edit-row-age">
                                 <input v-model.number="ageEditForm.age_min" type="number" min="0" max="150" class="add-input age-num" placeholder="Min" :class="{ 'input-error': ageEditForm.errors.age_min }" autofocus />
                                 <span class="age-sep">–</span>
@@ -470,6 +519,7 @@ const submitAttendanceSettings = () => {
                                 <button type="button" class="btn-cancel" @click="cancelAgeEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
                             </form>
                             <template v-else>
+                                <span class="drag-handle material-symbols-outlined" title="Glisser pour réordonner">drag_indicator</span>
                                 <span class="age-chip">{{ a.age_max >= 150 ? `${a.age_min}+` : `${a.age_min}–${a.age_max}` }}</span>
                                 <span class="ref-name">{{ a.age_max >= 150 ? `${a.age_min} ans et plus` : `${a.age_min} à ${a.age_max} ans` }}</span>
                                 <div class="ref-actions">
@@ -506,14 +556,15 @@ const submitAttendanceSettings = () => {
                         <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
                         <span>Aucune vulnérabilité — ajoutez-en une ci-dessus.</span>
                     </div>
-                    <ul v-else class="ref-list">
-                        <li v-for="v in vulnerabilities" :key="v.id" class="ref-item">
+                    <ul v-else :ref="(el) => bindSortableList(el as Element | null, 'vulnerabilities')" class="ref-list">
+                        <li v-for="v in vulnerabilities" :key="v.id" class="ref-item" :data-id="v.id">
                             <form v-if="vulnEditingId === v.id" @submit.prevent="submitVulnEdit(v.id)" class="edit-row">
                                 <input v-model="vulnEditForm.name" type="text" class="add-input" :class="{ 'input-error': vulnEditForm.errors.name }" autofocus />
                                 <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
                                 <button type="button" class="btn-cancel" @click="cancelVulnEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
                             </form>
                             <template v-else>
+                                <span class="drag-handle material-symbols-outlined" title="Glisser pour réordonner">drag_indicator</span>
                                 <span class="ref-dot"></span>
                                 <span class="ref-name">{{ v.name }}</span>
                                 <div class="ref-actions">
@@ -550,14 +601,15 @@ const submitAttendanceSettings = () => {
                         <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
                         <span>Aucun diplôme — ajoutez-en un ci-dessus.</span>
                     </div>
-                    <ul v-else class="ref-list">
-                        <li v-for="d in lastDiplomas" :key="d.id" class="ref-item">
+                    <ul v-else :ref="(el) => bindSortableList(el as Element | null, 'last-diplomas')" class="ref-list">
+                        <li v-for="d in lastDiplomas" :key="d.id" class="ref-item" :data-id="d.id">
                             <form v-if="diplEditingId === d.id" @submit.prevent="submitDiplEdit(d.id)" class="edit-row">
                                 <input v-model="diplEditForm.name" type="text" class="add-input" :class="{ 'input-error': diplEditForm.errors.name }" autofocus />
                                 <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
                                 <button type="button" class="btn-cancel" @click="cancelDiplEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
                             </form>
                             <template v-else>
+                                <span class="drag-handle material-symbols-outlined" title="Glisser pour réordonner">drag_indicator</span>
                                 <span class="ref-dot"></span>
                                 <span class="ref-name">{{ d.name }}</span>
                                 <div class="ref-actions">
@@ -629,14 +681,15 @@ const submitAttendanceSettings = () => {
                             <span class="material-symbols-outlined" style="font-size:17px">add</span> Ajouter
                         </button>
                     </form>
-                    <ul v-if="internshipContractTypes.length" class="ref-list">
-                        <li v-for="item in internshipContractTypes" :key="item.id" class="ref-item">
+                    <ul v-if="internshipContractTypes.length" :ref="(el) => bindSortableList(el as Element | null, 'contract-types')" class="ref-list">
+                        <li v-for="item in internshipContractTypes" :key="item.id" class="ref-item" :data-id="item.id">
                             <form v-if="stageTypeEditingId === item.id" @submit.prevent="submitStageTypeEdit(item.id)" class="edit-row">
                                 <input v-model="stageTypeEditForm.name" type="text" class="add-input" autofocus />
                                 <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
                                 <button type="button" class="btn-cancel" @click="cancelStageTypeEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
                             </form>
                             <template v-else>
+                                <span class="drag-handle material-symbols-outlined" title="Glisser pour réordonner">drag_indicator</span>
                                 <span class="ref-dot"></span>
                                 <span class="ref-name">{{ item.name }}</span>
                                 <div class="ref-actions">
@@ -669,14 +722,15 @@ const submitAttendanceSettings = () => {
                             <span class="material-symbols-outlined" style="font-size:17px">add</span> Ajouter
                         </button>
                     </form>
-                    <ul v-if="employmentContractTypes.length" class="ref-list">
-                        <li v-for="item in employmentContractTypes" :key="item.id" class="ref-item">
+                    <ul v-if="employmentContractTypes.length" :ref="(el) => bindSortableList(el as Element | null, 'contract-types')" class="ref-list">
+                        <li v-for="item in employmentContractTypes" :key="item.id" class="ref-item" :data-id="item.id">
                             <form v-if="employmentTypeEditingId === item.id" @submit.prevent="submitEmploymentTypeEdit(item.id)" class="edit-row">
                                 <input v-model="employmentTypeEditForm.name" type="text" class="add-input" autofocus />
                                 <button type="submit" class="btn-ok"><span class="material-symbols-outlined" style="font-size:17px">check</span></button>
                                 <button type="button" class="btn-cancel" @click="cancelEmploymentTypeEdit"><span class="material-symbols-outlined" style="font-size:17px">close</span></button>
                             </form>
                             <template v-else>
+                                <span class="drag-handle material-symbols-outlined" title="Glisser pour réordonner">drag_indicator</span>
                                 <span class="ref-dot"></span>
                                 <span class="ref-name">{{ item.name }}</span>
                                 <div class="ref-actions">
@@ -998,6 +1052,12 @@ const submitAttendanceSettings = () => {
 .ref-item:last-child { border-bottom: none; }
 .ref-item:hover { background: #fafbfc; }
 .ref-item:hover .ref-actions { opacity: 1; }
+.drag-handle {
+    font-size: 18px; color: #c0c8d0; cursor: grab; flex-shrink: 0;
+    user-select: none;
+}
+.drag-handle:active { cursor: grabbing; }
+.ref-ghost { opacity: 0.55; background: #fff0f4 !important; }
 
 .ref-dot { width: 6px; height: 6px; border-radius: 50%; background: #c7cdd4; flex-shrink: 0; }
 .ref-name { flex: 1; font-size: 13px; color: #191c1e; font-weight: 500; }
