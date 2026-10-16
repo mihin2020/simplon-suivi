@@ -30,7 +30,7 @@
             min-height: 100vh;
         }
 
-        /* PAGE A4 — flex column pour coller le footer en bas */
+        /* PAGE A4 - flex column pour coller le footer en bas */
         .page {
             width: 210mm;
             min-height: 297mm;
@@ -233,7 +233,7 @@
             border-top: 1px solid #1a1a2e;
         }
 
-        /* FOOTER — collé en bas de la page A4 */
+        /* FOOTER - collé en bas de la page A4 */
         .footer {
             text-align: center;
             font-size: 8.5pt;
@@ -306,7 +306,7 @@
                 <div class="section-title">Formation</div>
                 <div class="info-line">
                     <span class="label">Intitulé</span>
-                    <span class="value">{{ $formation?->name ?? '—' }}</span>
+                    <span class="value">{{ $formation?->name ?? '-' }}</span>
                 </div>
                 <div class="info-line">
                     <span class="label">Cohorte</span>
@@ -374,7 +374,7 @@
 
     </div>
 
-    <!-- FOOTER — toujours collé en bas de la page A4 -->
+    <!-- FOOTER - toujours collé en bas de la page A4 -->
     <div class="footer">
         <strong>Simplon Burkina Faso</strong> &nbsp;·&nbsp;
         Ce reçu constitue un justificatif officiel de paiement &nbsp;·&nbsp;

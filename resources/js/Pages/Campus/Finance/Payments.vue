@@ -57,6 +57,7 @@ const props = defineProps<{
     formationPlan?: FormationPlanRow[]
     stats: Stats
     paymentMethods: PaymentMethodOpt[]
+    canEdit?: boolean
 }>()
 
 // ── Formatting ────────────────────────────────────────────────────────────
@@ -147,6 +148,33 @@ const submitPaid = () => {
     })
 }
 
+// ── Edit installment modal ────────────────────────────────────────────────
+const showEditModal = ref(false)
+const editTarget    = ref<Payment | null>(null)
+const editLearner   = ref('')
+const editForm      = useForm({ amount: 0 as number, due_date: '', paid_at: '' })
+const editIsPaid    = computed(() => editTarget.value?.status === 'paye')
+
+const openEditModal = (p: Payment, learnerName: string) => {
+    editTarget.value     = p
+    editLearner.value    = learnerName
+    editForm.amount      = p.amount
+    editForm.due_date    = p.due_date ? p.due_date.slice(0, 10) : today()
+    editForm.paid_at     = p.paid_at ? p.paid_at.slice(0, 10) : today()
+    editForm.clearErrors()
+    showEditModal.value  = true
+}
+// A tranche is correctable (by an admin) as long as it is not refunded/cancelled.
+const canEditInstallment = (p: Payment) =>
+    (props.canEdit ?? false) && p.status !== 'rembourse' && p.status !== 'annule'
+const submitEdit = () => {
+    if (!editTarget.value) return
+    editForm.patch(`/campus/payments/${editTarget.value.id}`, {
+        preserveScroll: true,
+        onSuccess: () => { showEditModal.value = false },
+    })
+}
+
 // ── Refund modal ──────────────────────────────────────────────────────────
 const showRefundModal = ref(false)
 const refundTarget    = ref<Payment | null>(null)
@@ -195,7 +223,7 @@ const scheValid     = computed(() =>
     drafts.value.length > 0 &&
     drafts.value.every(d => Number(d.amount) > 0) &&
     scheTotal.value > 0 &&
-    scheRemaining.value >= 0   // partial schedule allowed — only block if over budget
+    scheRemaining.value >= 0   // partial schedule allowed - only block if over budget
 )
 
 const submitSchedule = () => {
@@ -527,6 +555,15 @@ const submitAdd = () => {
                                         Encaisser
                                     </button>
                                     <button
+                                        v-if="canEditInstallment(p)"
+                                        class="btn-edit-t"
+                                        @click.stop="openEditModal(p, `${lp.learner.last_name} ${lp.learner.first_name}`)"
+                                        type="button"
+                                        title="Modifier le montant ou la date de cette tranche"
+                                    >
+                                        <span class="material-symbols-outlined" style="font-size:14px">edit</span>
+                                    </button>
+                                    <button
                                         v-if="!lp.is_abandoned && (canCollect(p) || p.status === 'paye')"
                                         class="btn-del"
                                         @click.stop="askCancel(p, `${lp.learner.last_name} ${lp.learner.first_name}`)"
@@ -554,7 +591,7 @@ const submitAdd = () => {
                             <div class="footer-left">
                                 <span v-if="lp.is_abandoned" class="abandoned-txt">
                                     <span class="material-symbols-outlined" style="font-size:14px">person_off</span>
-                                    Abandonné — aucun frais restant à encaisser
+                                    Abandonné : aucun frais restant à encaisser
                                 </span>
                                 <span v-else-if="lp.remaining_amount > 0" class="remaining-txt">
                                     Restant à percevoir : <strong>{{ fmt(lp.remaining_amount) }}</strong>
@@ -642,6 +679,74 @@ const submitAdd = () => {
                             <span class="spinner" v-if="paidForm.processing" />
                             <span v-else class="material-symbols-outlined" style="font-size:15px">check_circle</span>
                             Confirmer l'encaissement
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </Teleport>
+
+    <!-- ══ Modal : Modifier une tranche ════════════════════════════════════ -->
+    <Teleport to="body">
+        <div v-if="showEditModal" class="backdrop" @click.self="showEditModal = false">
+            <div class="modal" style="max-width:400px">
+                <div class="mhd">
+                    <div>
+                        <h3 class="mtitle">Modifier la tranche</h3>
+                        <p class="msub" v-if="editTarget">
+                            {{ editLearner }} · Tranche {{ editTarget.installment_number }}
+                        </p>
+                    </div>
+                    <button @click="showEditModal = false" class="close-btn" type="button">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+
+                <form @submit.prevent="submitEdit">
+                    <div class="mbody">
+                        <!-- Montant -->
+                        <div class="field">
+                            <label class="label">Montant (FCFA) *</label>
+                            <input
+                                v-model.number="editForm.amount"
+                                type="number"
+                                min="1"
+                                class="input"
+                                :class="{ 'input-err': editForm.errors.amount }"
+                            />
+                            <p v-if="editForm.errors.amount" class="err-msg">{{ editForm.errors.amount }}</p>
+                        </div>
+
+                        <!-- Date prévue -->
+                        <div class="field">
+                            <label class="label">Date d'échéance prévue *</label>
+                            <input
+                                v-model="editForm.due_date"
+                                type="date"
+                                class="input"
+                                :class="{ 'input-err': editForm.errors.due_date }"
+                            />
+                            <p v-if="editForm.errors.due_date" class="err-msg">{{ editForm.errors.due_date }}</p>
+                        </div>
+
+                        <!-- Date d'encaissement (tranches déjà payées) -->
+                        <div v-if="editIsPaid" class="field">
+                            <label class="label">Date d'encaissement *</label>
+                            <input
+                                v-model="editForm.paid_at"
+                                type="date"
+                                class="input"
+                                :class="{ 'input-err': editForm.errors.paid_at }"
+                            />
+                            <p v-if="editForm.errors.paid_at" class="err-msg">{{ editForm.errors.paid_at }}</p>
+                        </div>
+                    </div>
+                    <div class="mft">
+                        <button type="button" class="btn-secondary" @click="showEditModal = false">Annuler</button>
+                        <button type="submit" class="btn-primary" :disabled="editForm.processing">
+                            <span class="spinner" v-if="editForm.processing" />
+                            <span v-else class="material-symbols-outlined" style="font-size:15px">save</span>
+                            Enregistrer
                         </button>
                     </div>
                 </form>
@@ -1286,6 +1391,12 @@ const submitAdd = () => {
     border: 1px solid #e0e3e5; background: transparent; color: #9aaabb; cursor: pointer; transition: all 0.15s;
 }
 .btn-del:hover { color: #e11d48; border-color: #fecdd3; background: #fff1f2; }
+.btn-edit-t {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 6px;
+    border: 1px solid #e0e3e5; background: transparent; color: #9aaabb; cursor: pointer; transition: all 0.15s;
+}
+.btn-edit-t:hover { color: #1F3A4D; border-color: #c9d4de; background: #f1f5f9; }
 
 /* ── Panel footer ── */
 .panel-footer {
@@ -1321,6 +1432,7 @@ const submitAdd = () => {
     position: fixed; inset: 0; background: rgba(0,0,0,0.45);
     display: flex; align-items: center; justify-content: center;
     z-index: 100; padding: 24px;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal {
     background: #fff; border-radius: 16px; width: 100%;
@@ -1342,7 +1454,7 @@ const submitAdd = () => {
 .mbody { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
 .mft   { padding: 16px 24px; border-top: 1px solid #f2f4f6; display: flex; justify-content: flex-end; gap: 10px; }
 
-/* ── Encaisser — method selector ── */
+/* ── Encaisser - method selector ── */
 .method-selector { display: flex; gap: 10px; }
 .method-opt {
     flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -1353,7 +1465,7 @@ const submitAdd = () => {
 .method-opt:hover { border-color: #E5004C; color: #E5004C; }
 .method-active { border-color: #E5004C !important; background: #fff5f8 !important; color: #E5004C !important; }
 
-/* ── Schedule — draft list ── */
+/* ── Schedule - draft list ── */
 .help-txt { font-size: 13px; color: #515f74; }
 .plan-banner {
     display: flex;

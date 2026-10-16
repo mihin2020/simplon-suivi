@@ -45,6 +45,7 @@ const moduleIcons: Record<string, string> = {
     'Configuration':  'settings',
     'Campus':         'apartment',
     'Formulaires':    'dynamic_form',
+    'Contrats':       'contract',
 }
 
 const allModules = computed<ModuleGroup[]>(() => {

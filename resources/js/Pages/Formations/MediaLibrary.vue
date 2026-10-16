@@ -4,7 +4,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import StorageGauge from '@/Components/StorageGauge.vue'
 
-// Laravel refreshes the XSRF-TOKEN cookie on every response — always up-to-date.
+// Laravel refreshes the XSRF-TOKEN cookie on every response - always up-to-date.
 const getCsrfToken = (): string => {
   const match = document.cookie.match(/(?:^|;\s*)XSRF-TOKEN=([^;]+)/)
   return match ? decodeURIComponent(match[1]) : (document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '')
@@ -177,7 +177,7 @@ const saveLink = async () => {
       router.reload({ only: ['links'] })
       showToast('Lien ajouté ✓', 'success')
     } else if (response.status === 419) {
-      showToast('Session expirée — veuillez rafraîchir la page (F5)', 'error')
+      showToast('Session expirée : veuillez rafraîchir la page (F5)', 'error')
     } else {
       const data = await response.json().catch(() => ({}))
       showToast(data.message || 'Erreur : vérifiez l\'URL', 'error')
@@ -1078,7 +1078,7 @@ const fmtDate = (date: string) => {
 .media-album { color: #E5004C; font-weight: 500; }
 .empty-state { text-align: center; padding: 60px 20px; background: #f8f9fa; border-radius: 12px; }
 .empty-icon { font-size: 64px; color: #ddd; margin-bottom: 16px; }
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
 .modal-content { background: #fff; border-radius: 12px; width: 100%; max-width: 480px; }
 .modal-header { display: flex; align-items: center; gap: 12px; padding: 20px 24px; border-bottom: 1px solid #f0f1f3; }
 .modal-icon { font-size: 24px; color: #1F3A4D; }

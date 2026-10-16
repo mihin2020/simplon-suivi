@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListLoading from '@/Components/UI/ListLoading.vue'
 import { ref, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
@@ -143,89 +144,91 @@ const cancelDelete = () => {
         <!-- Tableau -->
         <div class="bg-surface-container-lowest border border-surface-container-highest rounded-xl overflow-hidden shadow-sm">
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-surface border-b border-surface-container-highest">
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Cohorte</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Formation</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Période</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-center">Apprenants</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-center">Statut</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-surface-container-highest">
-                        <tr v-if="cohorts.data.length === 0">
-                            <td colspan="6" class="px-md py-xl text-center text-secondary text-body-md">
-                                Aucune cohorte trouvée.
-                            </td>
-                        </tr>
-                        <tr
-                            v-for="c in cohorts.data"
-                            :key="c.id"
-                            class="hover:bg-surface-bright transition-colors group"
-                        >
-                            <td class="px-md py-sm">
-                                <Link :href="`/campus/cohorts/${c.id}`" class="font-semibold text-on-surface hover:text-primary transition-colors">
-                                    {{ c.name }}
-                                </Link>
-                            </td>
-                            <td class="px-md py-sm text-body-sm text-on-surface-variant">
-                                {{ c.campus_formation?.name ?? '' }}
-                            </td>
-                            <td class="px-md py-sm">
-                                <span class="text-data-tabular text-on-surface">{{ fmt(c.started_at) }}</span>
-                                <span class="text-on-surface-variant text-body-sm"> → {{ fmt(c.ended_at) }}</span>
-                            </td>
-                            <td class="px-md py-sm text-center">
-                                <span class="text-data-tabular font-semibold">{{ c.learners_count }}</span>
-                            </td>
-                            <td class="px-md py-sm text-center">
-                                <span :class="['status-badge', statusClass[c.status]]">
-                                    {{ statusObj(c.status)?.label ?? c.status }}
-                                </span>
-                            </td>
-                            <td class="px-md py-sm text-right">
-                                <div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Link :href="`/campus/cohorts/${c.id}`" class="icon-btn" title="Voir">
-                                        <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
+                <ListLoading :columns="6">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-surface border-b border-surface-container-highest">
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Cohorte</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Formation</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Période</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-center">Apprenants</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-center">Statut</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-surface-container-highest">
+                            <tr v-if="cohorts.data.length === 0">
+                                <td colspan="6" class="px-md py-xl text-center text-secondary text-body-md">
+                                    Aucune cohorte trouvée.
+                                </td>
+                            </tr>
+                            <tr
+                                v-for="c in cohorts.data"
+                                :key="c.id"
+                                class="hover:bg-surface-bright transition-colors group"
+                            >
+                                <td class="px-md py-sm">
+                                    <Link :href="`/campus/cohorts/${c.id}`" class="font-semibold text-on-surface hover:text-primary transition-colors">
+                                        {{ c.name }}
                                     </Link>
-                                    <Can permission="campus.cohorts.update">
-                                        <Link :href="`/campus/cohorts/${c.id}/edit`" class="icon-btn" title="Modifier">
-                                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                                </td>
+                                <td class="px-md py-sm text-body-sm text-on-surface-variant">
+                                    {{ c.campus_formation?.name ?? '' }}
+                                </td>
+                                <td class="px-md py-sm">
+                                    <span class="text-data-tabular text-on-surface">{{ fmt(c.started_at) }}</span>
+                                    <span class="text-on-surface-variant text-body-sm"> → {{ fmt(c.ended_at) }}</span>
+                                </td>
+                                <td class="px-md py-sm text-center">
+                                    <span class="text-data-tabular font-semibold">{{ c.learners_count }}</span>
+                                </td>
+                                <td class="px-md py-sm text-center">
+                                    <span :class="['status-badge', statusClass[c.status]]">
+                                        {{ statusObj(c.status)?.label ?? c.status }}
+                                    </span>
+                                </td>
+                                <td class="px-md py-sm text-right">
+                                    <div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Link :href="`/campus/cohorts/${c.id}`" class="icon-btn" title="Voir">
+                                            <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
                                         </Link>
-                                    </Can>
-                                    <Can :any="['campus.finance.view', 'campus.finance.collect', 'campus.finance.manage']">
-                                        <Link :href="`/campus/cohorts/${c.id}/payments`" class="icon-btn" title="Paiements">
-                                            <span class="material-symbols-outlined" style="font-size:18px">payments</span>
-                                        </Link>
-                                    </Can>
-                                    <Can permission="campus.cohorts.close">
-                                        <button
-                                            v-if="c.status !== 'cloturee'"
-                                            @click="askClose(c)"
-                                            class="icon-btn warn"
-                                            title="Clôturer"
-                                            type="button"
-                                        >
-                                            <span class="material-symbols-outlined" style="font-size:18px">lock</span>
-                                        </button>
-                                    </Can>
-                                    <Can permission="campus.cohorts.delete">
-                                        <button
-                                            @click="askDelete(c)"
-                                            class="icon-btn danger"
-                                            title="Supprimer"
-                                            type="button"
-                                        >
-                                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                                        </button>
-                                    </Can>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                                        <Can permission="campus.cohorts.update">
+                                            <Link :href="`/campus/cohorts/${c.id}/edit`" class="icon-btn" title="Modifier">
+                                                <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                                            </Link>
+                                        </Can>
+                                        <Can :any="['campus.finance.view', 'campus.finance.collect', 'campus.finance.manage']">
+                                            <Link :href="`/campus/cohorts/${c.id}/payments`" class="icon-btn" title="Paiements">
+                                                <span class="material-symbols-outlined" style="font-size:18px">payments</span>
+                                            </Link>
+                                        </Can>
+                                        <Can permission="campus.cohorts.close">
+                                            <button
+                                                v-if="c.status !== 'cloturee'"
+                                                @click="askClose(c)"
+                                                class="icon-btn warn"
+                                                title="Clôturer"
+                                                type="button"
+                                            >
+                                                <span class="material-symbols-outlined" style="font-size:18px">lock</span>
+                                            </button>
+                                        </Can>
+                                        <Can permission="campus.cohorts.delete">
+                                            <button
+                                                @click="askDelete(c)"
+                                                class="icon-btn danger"
+                                                title="Supprimer"
+                                                type="button"
+                                            >
+                                                <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                                            </button>
+                                        </Can>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </ListLoading>
             </div>
 
             <!-- Pagination -->

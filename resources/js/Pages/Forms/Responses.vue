@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListLoading from '@/Components/UI/ListLoading.vue'
 import { computed, ref, watch } from 'vue'
 import { Head, Link, router, usePage } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
@@ -402,7 +403,7 @@ const openDetail = (r: ResponseItem) => {
 </script>
 
 <template>
-    <Head :title="`Réponses — ${form.title}`" />
+    <Head :title="`Réponses · ${form.title}`" />
     <div class="max-w-[1100px] mx-auto space-y-xl">
         <div class="flex items-start justify-between gap-md flex-wrap">
             <div class="page-title-row">
@@ -509,130 +510,132 @@ const openDetail = (r: ResponseItem) => {
 
         <div v-else class="table-card">
             <div class="overflow-x-auto">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th class="w-check">
-                                <input type="checkbox" :checked="allSelected" @change="toggleAll" />
-                            </th>
-                            <th>Candidat</th>
-                            <th>E-mail</th>
-                            <th>Statut</th>
-                            <th>Décision</th>
-                            <th>Soumis le</th>
-                            <th class="text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="r in rows" :key="r.id">
-                            <td>
-                                <input
-                                    type="checkbox"
-                                    :checked="selected.includes(r.id)"
-                                    :disabled="r.status === 'enrolled'"
-                                    @change="toggleOne(r.id)"
-                                />
-                            </td>
-                            <td class="row-title">{{ displayName(r) }}</td>
-                            <td class="row-sub">{{ r.email }}</td>
-                            <td>
-                                <span class="status-badge" :class="badgeClass(r.status_color)">{{ r.status_label }}</span>
-                            </td>
-                            <td class="row-sub">
-                                <template v-if="r.reviewer">
-                                    <span v-if="r.status === 'selected' || r.status === 'enrolled'">Sélectionné par {{ r.reviewer }}</span>
-                                    <span v-else-if="r.status === 'shortlisted'">Présélectionné par {{ r.reviewer }}</span>
-                                    <span v-else-if="r.status === 'rejected'">Refusé par {{ r.reviewer }}</span>
-                                    <span v-else>{{ r.reviewer }}</span>
-                                    <div v-if="r.review_note" class="note-preview">{{ r.review_note }}</div>
-                                </template>
-                                <span v-else>—</span>
-                            </td>
-                            <td class="row-sub">
-                                {{ r.submitted_at ? new Date(r.submitted_at).toLocaleString('fr-FR') : '—' }}
-                            </td>
-                            <td>
-                                <div class="row-actions">
-                                    <button type="button" class="icon-action" title="Détail" @click="openDetail(r)">
-                                        <span class="material-symbols-outlined">visibility</span>
-                                    </button>
-                                    <Can permission="forms.select">
-                                        <button
-                                            v-if="r.status === 'submitted'"
-                                            type="button"
-                                            class="icon-action"
-                                            title="Présélectionner"
-                                            :disabled="actionBusy"
-                                            @click="askConfirm('shortlist', [r.id])"
-                                        >
-                                            <span class="material-symbols-outlined">bookmark_add</span>
+                <ListLoading :columns="7">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th class="w-check">
+                                    <input type="checkbox" :checked="allSelected" @change="toggleAll" />
+                                </th>
+                                <th>Candidat</th>
+                                <th>E-mail</th>
+                                <th>Statut</th>
+                                <th>Décision</th>
+                                <th>Soumis le</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="r in rows" :key="r.id">
+                                <td>
+                                    <input
+                                        type="checkbox"
+                                        :checked="selected.includes(r.id)"
+                                        :disabled="r.status === 'enrolled'"
+                                        @change="toggleOne(r.id)"
+                                    />
+                                </td>
+                                <td class="row-title">{{ displayName(r) }}</td>
+                                <td class="row-sub">{{ r.email }}</td>
+                                <td>
+                                    <span class="status-badge" :class="badgeClass(r.status_color)">{{ r.status_label }}</span>
+                                </td>
+                                <td class="row-sub">
+                                    <template v-if="r.reviewer">
+                                        <span v-if="r.status === 'selected' || r.status === 'enrolled'">Sélectionné par {{ r.reviewer }}</span>
+                                        <span v-else-if="r.status === 'shortlisted'">Présélectionné par {{ r.reviewer }}</span>
+                                        <span v-else-if="r.status === 'rejected'">Refusé par {{ r.reviewer }}</span>
+                                        <span v-else>{{ r.reviewer }}</span>
+                                        <div v-if="r.review_note" class="note-preview">{{ r.review_note }}</div>
+                                    </template>
+                                    <span v-else>-</span>
+                                </td>
+                                <td class="row-sub">
+                                    {{ r.submitted_at ? new Date(r.submitted_at).toLocaleString('fr-FR') : '-' }}
+                                </td>
+                                <td>
+                                    <div class="row-actions">
+                                        <button type="button" class="icon-action" title="Détail" @click="openDetail(r)">
+                                            <span class="material-symbols-outlined">visibility</span>
                                         </button>
-                                        <button
-                                            v-if="['submitted', 'shortlisted'].includes(r.status)"
-                                            type="button"
-                                            class="icon-action ok"
-                                            title="Sélectionner"
-                                            :disabled="actionBusy"
-                                            @click="askConfirm('select', [r.id])"
-                                        >
-                                            <span class="material-symbols-outlined">how_to_reg</span>
-                                        </button>
-                                        <button
-                                            v-if="r.status === 'shortlisted'"
-                                            type="button"
-                                            class="icon-action"
-                                            title="Annuler la présélection"
-                                            :disabled="actionBusy"
-                                            @click="askConfirm('unshortlist', [r.id])"
-                                        >
-                                            <span class="material-symbols-outlined">bookmark_remove</span>
-                                        </button>
-                                        <button
-                                            v-if="r.status === 'selected'"
-                                            type="button"
-                                            class="icon-action"
-                                            title="Désélectionner (annuler)"
-                                            :disabled="actionBusy"
-                                            @click="askConfirm('deselect', [r.id])"
-                                        >
-                                            <span class="material-symbols-outlined">undo</span>
-                                        </button>
-                                        <button
-                                            v-if="r.status === 'selected'"
-                                            type="button"
-                                            class="icon-action ok"
-                                            title="Inscrire"
-                                            :disabled="actionBusy"
-                                            @click="askConfirm('enroll', [r.id])"
-                                        >
-                                            <span class="material-symbols-outlined">school</span>
-                                        </button>
-                                        <button
-                                            v-if="actionable(r)"
-                                            type="button"
-                                            class="icon-action danger"
-                                            title="Refuser"
-                                            :disabled="actionBusy"
-                                            @click="askConfirm('reject', [r.id])"
-                                        >
-                                            <span class="material-symbols-outlined">person_off</span>
-                                        </button>
-                                        <button
-                                            v-if="r.status === 'rejected'"
-                                            type="button"
-                                            class="icon-action"
-                                            title="Annuler le refus"
-                                            :disabled="actionBusy"
-                                            @click="askConfirm('unreject', [r.id])"
-                                        >
-                                            <span class="material-symbols-outlined">restart_alt</span>
-                                        </button>
-                                    </Can>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                                        <Can permission="forms.select">
+                                            <button
+                                                v-if="r.status === 'submitted'"
+                                                type="button"
+                                                class="icon-action"
+                                                title="Présélectionner"
+                                                :disabled="actionBusy"
+                                                @click="askConfirm('shortlist', [r.id])"
+                                            >
+                                                <span class="material-symbols-outlined">bookmark_add</span>
+                                            </button>
+                                            <button
+                                                v-if="['submitted', 'shortlisted'].includes(r.status)"
+                                                type="button"
+                                                class="icon-action ok"
+                                                title="Sélectionner"
+                                                :disabled="actionBusy"
+                                                @click="askConfirm('select', [r.id])"
+                                            >
+                                                <span class="material-symbols-outlined">how_to_reg</span>
+                                            </button>
+                                            <button
+                                                v-if="r.status === 'shortlisted'"
+                                                type="button"
+                                                class="icon-action"
+                                                title="Annuler la présélection"
+                                                :disabled="actionBusy"
+                                                @click="askConfirm('unshortlist', [r.id])"
+                                            >
+                                                <span class="material-symbols-outlined">bookmark_remove</span>
+                                            </button>
+                                            <button
+                                                v-if="r.status === 'selected'"
+                                                type="button"
+                                                class="icon-action"
+                                                title="Désélectionner (annuler)"
+                                                :disabled="actionBusy"
+                                                @click="askConfirm('deselect', [r.id])"
+                                            >
+                                                <span class="material-symbols-outlined">undo</span>
+                                            </button>
+                                            <button
+                                                v-if="r.status === 'selected'"
+                                                type="button"
+                                                class="icon-action ok"
+                                                title="Inscrire"
+                                                :disabled="actionBusy"
+                                                @click="askConfirm('enroll', [r.id])"
+                                            >
+                                                <span class="material-symbols-outlined">school</span>
+                                            </button>
+                                            <button
+                                                v-if="actionable(r)"
+                                                type="button"
+                                                class="icon-action danger"
+                                                title="Refuser"
+                                                :disabled="actionBusy"
+                                                @click="askConfirm('reject', [r.id])"
+                                            >
+                                                <span class="material-symbols-outlined">person_off</span>
+                                            </button>
+                                            <button
+                                                v-if="r.status === 'rejected'"
+                                                type="button"
+                                                class="icon-action"
+                                                title="Annuler le refus"
+                                                :disabled="actionBusy"
+                                                @click="askConfirm('unreject', [r.id])"
+                                            >
+                                                <span class="material-symbols-outlined">restart_alt</span>
+                                            </button>
+                                        </Can>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </ListLoading>
             </div>
         </div>
 
@@ -676,7 +679,7 @@ const openDetail = (r: ResponseItem) => {
                                         {{ a.value || 'Télécharger le fichier' }}
                                     </a>
                                 </div>
-                                <template v-else>{{ a.value || '—' }}</template>
+                                <template v-else>{{ a.value || '-' }}</template>
                             </dd>
                         </div>
                     </dl>

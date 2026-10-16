@@ -794,7 +794,7 @@ const closeDetail = ()           => { showDetailModal.value = false; detailExpen
 </template>
 
 <style scoped>
-/* === Simplon BF — Design System — Expenses === */
+/* === Simplon BF - Design System - Expenses === */
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 .flex { display: flex; }

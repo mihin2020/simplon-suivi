@@ -67,7 +67,7 @@ const updateRow = (i: number, patch: Partial<PlanDraft>) => {
         </div>
 
         <p v-if="modelValue.length === 0" class="empty-plan">
-            Aucune tranche — les échéanciers pourront toujours être définis manuellement sur la cohorte.
+            Aucune tranche. Les échéanciers pourront toujours être définis manuellement sur la cohorte.
         </p>
 
         <template v-else>

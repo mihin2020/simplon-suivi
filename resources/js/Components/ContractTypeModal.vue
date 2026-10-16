@@ -139,6 +139,7 @@ const destroy = (item: ContractTypeItem) => {
     position: fixed; inset: 0; background: rgba(0,0,0,0.45);
     display: flex; align-items: center; justify-content: center;
     z-index: 1100; padding: 20px;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal-box {
     background: #fff; border-radius: 14px; width: 100%; max-width: 480px;

@@ -16,6 +16,10 @@ class UpdateTrainerAction
         ?string $phone2,
         ?UploadedFile $cv,
         bool $removeCv = false,
+        ?string $birthDate = null,
+        ?string $birthPlace = null,
+        ?string $address = null,
+        ?string $idNumber = null,
     ): Trainer {
         $trainer = $user->trainer;
         $cvPath  = $trainer?->cv_path;
@@ -32,7 +36,16 @@ class UpdateTrainerAction
 
         return Trainer::updateOrCreate(
             ['user_id' => $user->id],
-            ['profile_id' => $profileId, 'phone' => $phone, 'phone2' => $phone2, 'cv_path' => $cvPath],
+            [
+                'profile_id'  => $profileId,
+                'phone'       => $phone,
+                'phone2'      => $phone2,
+                'birth_date'  => $birthDate,
+                'birth_place' => $birthPlace,
+                'address'     => $address,
+                'id_number'   => $idNumber,
+                'cv_path'     => $cvPath,
+            ],
         );
     }
 }

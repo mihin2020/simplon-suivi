@@ -112,7 +112,7 @@ function removeFile(index: number) {
                 <RecipientSelector v-model="to" :projects="projects ?? []" />
             </div>
 
-            <!-- Copie (CC) — masqué par défaut -->
+            <!-- Copie (CC) - masqué par défaut -->
             <div v-if="showCc" class="form-section">
                 <div class="form-label-row">
                     <label class="form-label">

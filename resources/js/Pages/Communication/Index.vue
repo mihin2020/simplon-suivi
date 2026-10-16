@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListLoading from '@/Components/UI/ListLoading.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
@@ -299,86 +300,88 @@ onUnmounted(() => {
             </div>
 
             <!-- ── Liste de threads ── -->
-            <div class="thread-list">
+            <ListLoading :columns="3" :rows="8">
+                <div class="thread-list">
 
-                <!-- État vide -->
-                <div v-if="!threads.data.length" class="empty-state">
-                    <span class="material-symbols-outlined empty-icon">{{ search ? 'search_off' : 'mail' }}</span>
-                    <p class="empty-title">
-                        <template v-if="search">Aucun résultat pour « {{ search }} »</template>
-                        <template v-else>{{ filter === 'archived' ? 'Aucun email archivé' : 'Aucun message reçu' }}</template>
-                    </p>
-                    <p class="empty-sub">
-                        <template v-if="search">Essayez d'autres mots-clés.</template>
-                        <template v-else>{{ filter === 'archived' ? 'Les emails archivés apparaîtront ici.' : 'Vos emails entrants apparaîtront ici.' }}</template>
-                    </p>
-                </div>
+                    <!-- État vide -->
+                    <div v-if="!threads.data.length" class="empty-state">
+                        <span class="material-symbols-outlined empty-icon">{{ search ? 'search_off' : 'mail' }}</span>
+                        <p class="empty-title">
+                            <template v-if="search">Aucun résultat pour « {{ search }} »</template>
+                            <template v-else>{{ filter === 'archived' ? 'Aucun email archivé' : 'Aucun message reçu' }}</template>
+                        </p>
+                        <p class="empty-sub">
+                            <template v-if="search">Essayez d'autres mots-clés.</template>
+                            <template v-else>{{ filter === 'archived' ? 'Les emails archivés apparaîtront ici.' : 'Vos emails entrants apparaîtront ici.' }}</template>
+                        </p>
+                    </div>
 
-                <!-- Rows -->
-                <div
-                    v-for="t in threads.data"
-                    :key="t.thread_id"
-                    class="thread-row"
-                    :class="{
-                        'thread-unread': !t.last_email?.is_read,
-                        'thread-selected': t.last_email?.id && selected.includes(t.last_email.id)
-                    }"
-                >
-                    <!-- Checkbox -->
-                    <input
-                        v-if="t.last_email?.id"
-                        type="checkbox"
-                        class="thread-check"
-                        :checked="selected.includes(t.last_email.id)"
-                        @change.stop="toggleSelect(t.last_email.id)"
-                        @click.stop
-                    />
-
-                    <!-- Avatar -->
+                    <!-- Rows -->
                     <div
-                        class="thread-avatar"
-                        :style="{ background: avatarColor(t.last_email?.from_name || t.last_email?.from_email) }"
+                        v-for="t in threads.data"
+                        :key="t.thread_id"
+                        class="thread-row"
+                        :class="{
+                            'thread-unread': !t.last_email?.is_read,
+                            'thread-selected': t.last_email?.id && selected.includes(t.last_email.id)
+                        }"
                     >
-                        {{ avatarLetter(t.last_email?.from_name, t.last_email?.from_email) }}
-                    </div>
+                        <!-- Checkbox -->
+                        <input
+                            v-if="t.last_email?.id"
+                            type="checkbox"
+                            class="thread-check"
+                            :checked="selected.includes(t.last_email.id)"
+                            @change.stop="toggleSelect(t.last_email.id)"
+                            @click.stop
+                        />
 
-                    <!-- Corps -->
-                    <Link :href="`/communication/emails/thread/${t.thread_id}`" class="thread-body">
-                        <div class="thread-sender">
-                            {{ decodeMime(t.last_email?.from_name) || t.last_email?.from_email || '' }}
-                            <span v-if="t.reply_count > 1" class="thread-count-chip">{{ t.reply_count }}</span>
+                        <!-- Avatar -->
+                        <div
+                            class="thread-avatar"
+                            :style="{ background: avatarColor(t.last_email?.from_name || t.last_email?.from_email) }"
+                        >
+                            {{ avatarLetter(t.last_email?.from_name, t.last_email?.from_email) }}
                         </div>
-                        <div class="thread-content">
-                            <span class="thread-subject">{{ decodeMime(t.sent_subject || t.last_email?.subject) || '(Sans sujet)' }}</span>
-                            <span v-if="t.snippet" class="thread-snippet"> {{ t.snippet }}</span>
+
+                        <!-- Corps -->
+                        <Link :href="`/communication/emails/thread/${t.thread_id}`" class="thread-body">
+                            <div class="thread-sender">
+                                {{ decodeMime(t.last_email?.from_name) || t.last_email?.from_email || '' }}
+                                <span v-if="t.reply_count > 1" class="thread-count-chip">{{ t.reply_count }}</span>
+                            </div>
+                            <div class="thread-content">
+                                <span class="thread-subject">{{ decodeMime(t.sent_subject || t.last_email?.subject) || '(Sans sujet)' }}</span>
+                                <span v-if="t.snippet" class="thread-snippet"> {{ t.snippet }}</span>
+                            </div>
+                        </Link>
+
+                        <!-- Indicateur PJ -->
+                        <span v-if="t.has_attachments" class="thread-attach" title="Pièce jointe">
+                            <span class="material-symbols-outlined" style="font-size:16px">attach_file</span>
+                        </span>
+
+                        <!-- Date + indicateur non-lu -->
+                        <div class="thread-right">
+                            <span class="thread-date">{{ fmtDate(t.last_email?.received_at || t.last_email?.created_at) }}</span>
+                            <span v-if="!t.last_email?.is_read" class="unread-dot"></span>
                         </div>
-                    </Link>
 
-                    <!-- Indicateur PJ -->
-                    <span v-if="t.has_attachments" class="thread-attach" title="Pièce jointe">
-                        <span class="material-symbols-outlined" style="font-size:16px">attach_file</span>
-                    </span>
-
-                    <!-- Date + indicateur non-lu -->
-                    <div class="thread-right">
-                        <span class="thread-date">{{ fmtDate(t.last_email?.received_at || t.last_email?.created_at) }}</span>
-                        <span v-if="!t.last_email?.is_read" class="unread-dot"></span>
-                    </div>
-
-                    <!-- Actions rapides au survol -->
-                    <div v-if="t.last_email?.id && can('communication.manage')" class="row-actions" @click.stop>
-                        <button v-if="filter !== 'archived'" class="row-act" title="Archiver" @click.prevent="quickArchive(t.last_email.id)">
-                            <span class="material-symbols-outlined" style="font-size:18px">archive</span>
-                        </button>
-                        <button v-else class="row-act" title="Restaurer" @click.prevent="quickRestore(t.last_email.id)">
-                            <span class="material-symbols-outlined" style="font-size:18px">unarchive</span>
-                        </button>
-                        <button class="row-act row-act-danger" title="Supprimer" @click.prevent="quickDelete(t.last_email.id)">
-                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                        </button>
+                        <!-- Actions rapides au survol -->
+                        <div v-if="t.last_email?.id && can('communication.manage')" class="row-actions" @click.stop>
+                            <button v-if="filter !== 'archived'" class="row-act" title="Archiver" @click.prevent="quickArchive(t.last_email.id)">
+                                <span class="material-symbols-outlined" style="font-size:18px">archive</span>
+                            </button>
+                            <button v-else class="row-act" title="Restaurer" @click.prevent="quickRestore(t.last_email.id)">
+                                <span class="material-symbols-outlined" style="font-size:18px">unarchive</span>
+                            </button>
+                            <button class="row-act row-act-danger" title="Supprimer" @click.prevent="quickDelete(t.last_email.id)">
+                                <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </ListLoading>
         </main>
     </div>
 

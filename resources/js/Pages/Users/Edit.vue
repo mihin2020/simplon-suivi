@@ -40,6 +40,10 @@ interface TrainerData {
     phone2: string | null
     cv_path: string | null
     profile_id: string | null
+    birth_date: string | null
+    birth_place: string | null
+    address: string | null
+    id_number: string | null
 }
 
 const props = defineProps<{
@@ -61,6 +65,10 @@ const form = useForm({
     profile_id:  props.trainerData?.profile_id ?? '',
     phone:       props.trainerData?.phone ?? '',
     phone2:      props.trainerData?.phone2 ?? '',
+    birth_date:  props.trainerData?.birth_date ? props.trainerData.birth_date.slice(0, 10) : '',
+    birth_place: props.trainerData?.birth_place ?? '',
+    address:     props.trainerData?.address ?? '',
+    id_number:   props.trainerData?.id_number ?? '',
     cv:          null as File | null,
     remove_cv:   false,
 })
@@ -92,6 +100,10 @@ const submit = () => {
         form.profile_id = ''
         form.phone = ''
         form.phone2 = ''
+        form.birth_date = ''
+        form.birth_place = ''
+        form.address = ''
+        form.id_number = ''
         form.cv = null
         form.remove_cv = false
     }
@@ -210,6 +222,34 @@ const submit = () => {
                             <label class="label">Téléphone 2</label>
                             <PhoneInput v-model="form.phone2" :error="!!form.errors.phone2" />
                             <p v-if="form.errors.phone2" class="error-msg">{{ form.errors.phone2 }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- État civil (remplit automatiquement les contrats formateur) -->
+                <div>
+                    <p class="section-label">État civil</p>
+                    <p class="hint-text">Utilisé pour remplir automatiquement les contrats formateur.</p>
+                    <div class="grid-2 mt-sm">
+                        <div class="field">
+                            <label class="label">Date de naissance</label>
+                            <input v-model="form.birth_date" type="date" class="input" :class="{ 'input-error': form.errors.birth_date }" />
+                            <p v-if="form.errors.birth_date" class="error-msg">{{ form.errors.birth_date }}</p>
+                        </div>
+                        <div class="field">
+                            <label class="label">Lieu de naissance</label>
+                            <input v-model="form.birth_place" type="text" class="input" :class="{ 'input-error': form.errors.birth_place }" placeholder="Ex : Koudougou" />
+                            <p v-if="form.errors.birth_place" class="error-msg">{{ form.errors.birth_place }}</p>
+                        </div>
+                        <div class="field">
+                            <label class="label">N° pièce d'identité (CNIB)</label>
+                            <input v-model="form.id_number" type="text" class="input" :class="{ 'input-error': form.errors.id_number }" placeholder="Ex : B1234567" />
+                            <p v-if="form.errors.id_number" class="error-msg">{{ form.errors.id_number }}</p>
+                        </div>
+                        <div class="field">
+                            <label class="label">Adresse</label>
+                            <input v-model="form.address" type="text" class="input" :class="{ 'input-error': form.errors.address }" placeholder="Ex : Secteur 22, Ouagadougou" />
+                            <p v-if="form.errors.address" class="error-msg">{{ form.errors.address }}</p>
                         </div>
                     </div>
                 </div>

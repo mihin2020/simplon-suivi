@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListLoading from '@/Components/UI/ListLoading.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import { computed, ref, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
@@ -149,87 +150,89 @@ const photoUrl = (path: string | null) =>
         <!-- Tableau -->
         <div class="bg-surface-container-lowest border border-surface-container-highest rounded-xl overflow-hidden shadow-sm">
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-surface border-b border-surface-container-highest">
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Apprenant</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Email</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Téléphone</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Projet</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Formation</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-surface-container-highest">
-                        <tr v-if="learners.data.length === 0">
-                            <td colspan="6" class="px-md py-xl text-center text-secondary text-body-md">
-                                Aucun apprenant trouvé.
-                            </td>
-                        </tr>
-                        <tr
-                            v-for="learner in learners.data"
-                            :key="learner.id"
-                            class="hover:bg-surface-bright transition-colors group"
-                        >
-                            <td class="px-md py-sm">
-                                <div class="flex items-center gap-sm">
-                                    <!-- Photo ou initiales -->
-                                    <div class="avatar-wrap">
-                                        <img
-                                            v-if="photoUrl(learner.photo_path)"
-                                            :src="photoUrl(learner.photo_path)!"
-                                            :alt="`${learner.first_name} ${learner.last_name}`"
-                                            class="avatar-img"
-                                        />
-                                        <div v-else class="avatar-initials">
-                                            {{ learner.first_name.charAt(0) }}{{ learner.last_name.charAt(0) }}
+                <ListLoading :columns="6">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-surface border-b border-surface-container-highest">
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Apprenant</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Email</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Téléphone</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Projet</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Formation</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-surface-container-highest">
+                            <tr v-if="learners.data.length === 0">
+                                <td colspan="6" class="px-md py-xl text-center text-secondary text-body-md">
+                                    Aucun apprenant trouvé.
+                                </td>
+                            </tr>
+                            <tr
+                                v-for="learner in learners.data"
+                                :key="learner.id"
+                                class="hover:bg-surface-bright transition-colors group"
+                            >
+                                <td class="px-md py-sm">
+                                    <div class="flex items-center gap-sm">
+                                        <!-- Photo ou initiales -->
+                                        <div class="avatar-wrap">
+                                            <img
+                                                v-if="photoUrl(learner.photo_path)"
+                                                :src="photoUrl(learner.photo_path)!"
+                                                :alt="`${learner.first_name} ${learner.last_name}`"
+                                                class="avatar-img"
+                                            />
+                                            <div v-else class="avatar-initials">
+                                                {{ learner.first_name.charAt(0) }}{{ learner.last_name.charAt(0) }}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <Link
+                                                :href="`/learners/${learner.id}`"
+                                                class="font-semibold text-data-tabular text-on-surface hover:text-primary transition-colors"
+                                            >
+                                                {{ learner.last_name }} {{ learner.first_name }}
+                                            </Link>
                                         </div>
                                     </div>
-                                    <div>
-                                        <Link
-                                            :href="`/learners/${learner.id}`"
-                                            class="font-semibold text-data-tabular text-on-surface hover:text-primary transition-colors"
-                                        >
-                                            {{ learner.last_name }} {{ learner.first_name }}
+                                </td>
+                                <td class="px-md py-sm text-data-tabular text-on-surface-variant">
+                                    {{ learner.email ?? '' }}
+                                </td>
+                                <td class="px-md py-sm text-data-tabular text-on-surface-variant">
+                                    {{ learner.phone ?? '' }}
+                                </td>
+                                <td class="px-md py-sm text-data-tabular text-on-surface-variant">
+                                    {{ learner.formations?.[0]?.project?.name ?? '' }}
+                                </td>
+                                <td class="px-md py-sm text-data-tabular text-on-surface-variant">
+                                    {{ learner.formations?.[0]?.name ?? '' }}
+                                </td>
+                                <td class="px-md py-sm text-right">
+                                    <div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Link :href="`/learners/${learner.id}`" class="icon-btn" title="Voir le profil">
+                                            <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
                                         </Link>
+                                        <Link :href="`/learners/${learner.id}?tab=interviews`" class="icon-btn interviews" title="Entretiens">
+                                            <span class="material-symbols-outlined" style="font-size:18px">forum</span>
+                                        </Link>
+                                        <Can permission="learners.update">
+                                            <Link :href="`/learners/${learner.id}/edit`" class="icon-btn" title="Modifier">
+                                                <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                                            </Link>
+                                        </Can>
+                                        <Can permission="learners.delete">
+                                            <button @click="destroy(learner)" class="icon-btn danger" title="Supprimer">
+                                                <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                                            </button>
+                                        </Can>
                                     </div>
-                                </div>
-                            </td>
-                            <td class="px-md py-sm text-data-tabular text-on-surface-variant">
-                                {{ learner.email ?? '' }}
-                            </td>
-                            <td class="px-md py-sm text-data-tabular text-on-surface-variant">
-                                {{ learner.phone ?? '' }}
-                            </td>
-                            <td class="px-md py-sm text-data-tabular text-on-surface-variant">
-                                {{ learner.formations?.[0]?.project?.name ?? '' }}
-                            </td>
-                            <td class="px-md py-sm text-data-tabular text-on-surface-variant">
-                                {{ learner.formations?.[0]?.name ?? '' }}
-                            </td>
-                            <td class="px-md py-sm text-right">
-                                <div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Link :href="`/learners/${learner.id}`" class="icon-btn" title="Voir le profil">
-                                        <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
-                                    </Link>
-                                    <Link :href="`/learners/${learner.id}?tab=interviews`" class="icon-btn interviews" title="Entretiens">
-                                        <span class="material-symbols-outlined" style="font-size:18px">forum</span>
-                                    </Link>
-                                    <Can permission="learners.update">
-                                        <Link :href="`/learners/${learner.id}/edit`" class="icon-btn" title="Modifier">
-                                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                                        </Link>
-                                    </Can>
-                                    <Can permission="learners.delete">
-                                        <button @click="destroy(learner)" class="icon-btn danger" title="Supprimer">
-                                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                                        </button>
-                                    </Can>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </ListLoading>
             </div>
 
             <!-- Pagination -->

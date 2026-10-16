@@ -182,7 +182,7 @@ const scaleMax = computed({
                 <div>
                     <p class="file-preview-title">Zone d’upload fichier</p>
                     <p class="file-preview-hint">
-                        Le candidat pourra choisir un fichier (PDF, JPG, PNG, Word) — max {{ field.settings?.max_size_kb ?? 5120 }} Ko
+                        Le candidat pourra choisir un fichier (PDF, JPG, PNG, Word) de {{ field.settings?.max_size_kb ?? 5120 }} Ko maximum
                     </p>
                 </div>
             </div>

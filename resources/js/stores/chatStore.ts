@@ -7,7 +7,7 @@ export interface ChatMessage {
     error?: boolean
 }
 
-// Module-level singleton — survit aux navigations Inertia (le module n'est jamais rechargé)
+// Module-level singleton - survit aux navigations Inertia (le module n'est jamais rechargé)
 export const chatStore = reactive<{
     messages: ChatMessage[]
     isOpen: boolean

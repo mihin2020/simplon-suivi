@@ -15,8 +15,17 @@ use App\Http\Controllers\Campus\CohortController;
 use App\Http\Controllers\Campus\PaymentController;
 use App\Http\Controllers\ConfigurationController;
 use App\Http\Controllers\ConfigurationReorderController;
+use App\Http\Controllers\ContractBulkController;
+use App\Http\Controllers\ContractController;
+use App\Http\Controllers\ContractDraftController;
+use App\Http\Controllers\ContractFillModelController;
+use App\Http\Controllers\ContractPdfController;
+use App\Http\Controllers\ContractProjectController;
+use App\Http\Controllers\ContractTemplateImportController;
 use App\Http\Controllers\ContractTypeController;
+use App\Http\Controllers\CopyContractController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DuplicateContractController;
 use App\Http\Controllers\EducationLevelController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\ExpenseController;
@@ -34,6 +43,7 @@ use App\Http\Controllers\Learner\MoveLearnerController;
 use App\Http\Controllers\Learner\WithdrawLearnerController;
 use App\Http\Controllers\LearnerController;
 use App\Http\Controllers\LearnerInterviewController;
+use App\Http\Controllers\LetterheadController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PartnerController;
@@ -57,7 +67,7 @@ Route::middleware('guest')->group(function () {
     Route::post('/connexion', [LoginController::class, 'store']);
 });
 
-// Activation de compte — accessible sans être connecté (lien email)
+// Activation de compte - accessible sans être connecté (lien email)
 Route::get('/activation/{token}', [ActivationController::class, 'show'])->name(
     'activation.show',
 );
@@ -90,7 +100,7 @@ Route::post('/deconnexion', [LoginController::class, 'destroy'])
     ->name('logout')
     ->middleware('auth');
 
-// Formulaires publics (candidats — sans authentification)
+// Formulaires publics (candidats - sans authentification)
 Route::prefix('f')->name('public.forms.')->group(function () {
     Route::get('{publicToken}', [PublicFormController::class, 'show'])
         ->where('publicToken', '[A-Za-z0-9]{8,64}')
@@ -126,7 +136,7 @@ Route::middleware('auth')->group(function () {
         'updatePassword',
     ])->name('profile.password');
 
-    // Users (gestion des comptes — Super Admin)
+    // Users (gestion des comptes - Super Admin)
     Route::resource('users', UserController::class)->except(['show']);
     Route::patch('users/{user}/toggle-active', [
         UserController::class,
@@ -144,7 +154,7 @@ Route::middleware('auth')->group(function () {
                     ->parameters(['formations' => 'campusFormation']);
             });
 
-        // ── Cohortes — routes littérales SANS paramètre (doivent précéder {cohort}) ──
+        // ── Cohortes - routes littérales SANS paramètre (doivent précéder {cohort}) ──
         // Règle Laravel : les routes statiques ('create', 'import/template') doivent être
         // enregistrées avant les routes paramétrées ({cohort}) pour éviter le conflit.
         Route::middleware('permission:campus.cohorts.create,campus.cohorts.update,campus.cohorts.delete,campus.cohorts.close')
@@ -154,7 +164,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('cohorts', [CohortController::class, 'store'])->name('cohorts.store');
             });
 
-        // ── Cohortes — consultation (cohort managers + workforce managers) ─────
+        // ── Cohortes - consultation (cohort managers + workforce managers) ─────
         // Les deux profils ont besoin de voir la liste et le détail des cohortes
         Route::middleware('permission:campus.cohorts.view,campus.cohorts.create,campus.cohorts.update,campus.cohorts.close,campus.cohorts.delete')
             ->group(function () {
@@ -162,7 +172,7 @@ Route::middleware('auth')->group(function () {
                 Route::get('cohorts/{cohort}', [CohortController::class, 'show'])->name('cohorts.show');
             });
 
-        // ── Cohortes — gestion CRUD paramétrée ──────────────────────────────────────
+        // ── Cohortes - gestion CRUD paramétrée ──────────────────────────────────────
         Route::middleware('permission:campus.cohorts.create,campus.cohorts.update,campus.cohorts.delete,campus.cohorts.close')
             ->group(function () {
                 Route::get('cohorts/{cohort}/edit', [CohortController::class, 'edit'])->name('cohorts.edit');
@@ -173,7 +183,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('cohorts/{cohort}/import', [CohortController::class, 'importLearners'])->name('cohorts.import');
             });
 
-        // ── Workforce — gestion des apprenants dans les cohortes ─────────────
+        // ── Workforce - gestion des apprenants dans les cohortes ─────────────
         // Séparé : avoir workforce ne donne PAS accès à la gestion des cohortes
         Route::middleware('permission:campus.workforce.view,campus.workforce.enroll,campus.workforce.remove,campus.workforce.move')
             ->group(function () {
@@ -196,6 +206,7 @@ Route::middleware('auth')->group(function () {
                 Route::post('cohorts/{cohort}/payments', [PaymentController::class, 'store'])->name('payments.store');
                 Route::post('payments/{payment}/refund', [PaymentController::class, 'refund'])->name('payments.refund');
                 Route::patch('payments/{payment}/mark-paid', [PaymentController::class, 'markPaid'])->name('payments.mark-paid');
+                Route::patch('payments/{payment}', [PaymentController::class, 'update'])->name('payments.update');
                 Route::get('payments/{payment}/receipt', [PaymentController::class, 'receipt'])->name('payments.receipt');
                 Route::get('payments/{payment}/receipt/download', [PaymentController::class, 'receiptDownload'])->name('payments.receipt.download');
                 Route::delete('payments/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
@@ -225,6 +236,45 @@ Route::middleware('auth')->group(function () {
 
     // Partners (configuration)
     Route::resource('partners', PartnerController::class)->except(['show']);
+
+    // Contrats & conventions
+    Route::middleware('permission:contracts.view,contracts.create,contracts.update,contracts.delete,contracts.templates')->group(function () {
+        // Habillages (paire entête + pied de page importés). Avant la resource contracts.
+        Route::resource('contracts/layouts', LetterheadController::class)
+            ->names('letterheads')
+            ->parameters(['layouts' => 'letterhead'])
+            ->only(['index', 'store', 'update', 'destroy']);
+
+        // Import IA d'un modèle existant (.docx/.txt/.html) → renvoie un brouillon éditable
+        Route::post('contract-templates/import', ContractTemplateImportController::class)
+            ->name('contract-templates.import');
+
+        // Rédaction assistée par IA : questions, brouillon, révisions successives
+        Route::post('contract-templates/draft', ContractDraftController::class)
+            ->name('contract-templates.draft');
+
+        // Projets de contrats (un contrat de base, puis une copie par personne). Avant la resource contracts.
+        Route::resource('contracts/projects', ContractProjectController::class)
+            ->names('contract-projects')
+            ->parameters(['projects' => 'project'])
+            ->only(['index', 'store', 'show', 'update', 'destroy']);
+
+        // Actions groupées sur une sélection de contrats. Avant la resource contracts.
+        Route::post('contracts/bulk/download', [ContractBulkController::class, 'download'])->name('contracts.bulk.download');
+        Route::post('contracts/bulk/email', [ContractBulkController::class, 'email'])->name('contracts.bulk.email');
+        Route::post('contracts/bulk/delete', [ContractBulkController::class, 'destroy'])->name('contracts.bulk.destroy');
+
+        // Actions sur un contrat généré
+        Route::post('contracts/{contract}/copy', CopyContractController::class)->name('contracts.copy');
+        Route::post('contracts/{contract}/duplicate', DuplicateContractController::class)->name('contracts.duplicate');
+        Route::get('contracts/{contract}/fill-model', [ContractFillModelController::class, 'download'])->name('contracts.fill-model');
+        Route::post('contracts/{contract}/fill-model', [ContractFillModelController::class, 'import'])->name('contracts.fill-model.import');
+        Route::post('contracts/{contract}/finalize', [ContractController::class, 'finalize'])->name('contracts.finalize');
+        Route::get('contracts/{contract}/pdf', [ContractPdfController::class, 'stream'])->name('contracts.pdf');
+        Route::get('contracts/{contract}/pdf/download', [ContractPdfController::class, 'download'])->name('contracts.pdf.download');
+
+        Route::resource('contracts', ContractController::class);
+    });
 
     // Formulaires de candidature
     Route::middleware('permission:forms.view,forms.create,forms.update,forms.delete,forms.publish,forms.responses,forms.select,forms.export,forms.stats')->group(function () {
@@ -269,7 +319,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('formations/{formation}/referentiel', [FormationController::class, 'assignReferentiel'])->name('formations.referentiel.assign');
     Route::post('formations/{formation}/duplicate', [FormationController::class, 'duplicate'])->name('formations.duplicate');
 
-    // Import Excel — must be declared BEFORE Route::resource('learners') to avoid
+    // Import Excel - must be declared BEFORE Route::resource('learners') to avoid
     // the {learner} wildcard swallowing /learners/import and /learners/import/template
     Route::get('learners/import', [
         ImportLearnerController::class,
@@ -365,7 +415,7 @@ Route::middleware('auth')->group(function () {
         TrainerController::class,
         'resendInvitation',
     ])->name('trainers.resend-invitation');
-    // Présences — redirection selon le rôle
+    // Présences - redirection selon le rôle
     Route::get('presences', PresenceRedirectController::class)->name(
         'presences',
     );
@@ -409,22 +459,22 @@ Route::middleware('auth')->group(function () {
         Route::resource(
             'education-levels',
             EducationLevelController::class,
-        )->except(['create', 'edit', 'show']);
+        )->only(['store', 'update', 'destroy']);
 
         Route::resource(
             'age-ranges',
             AgeRangeController::class,
-        )->except(['create', 'edit', 'show']);
+        )->only(['store', 'update', 'destroy']);
 
         Route::resource(
             'vulnerabilities',
             VulnerabilityController::class,
-        )->except(['create', 'edit', 'show']);
+        )->only(['store', 'update', 'destroy']);
 
         Route::resource(
             'last-diplomas',
             LastDiplomaController::class,
-        )->except(['create', 'edit', 'show']);
+        )->only(['store', 'update', 'destroy']);
 
         Route::resource(
             'contract-types',
@@ -604,7 +654,7 @@ Route::middleware('auth')->group(function () {
 
     // Communication - Emails & WhatsApp
     Route::prefix('communication')->group(function () {
-        // ── Emails — consultation ──
+        // ── Emails - consultation ──
         Route::middleware('permission:communication.view,communication.send,communication.manage')->group(function () {
             Route::get('/emails', [EmailController::class, 'index'])->name(
                 'emails.index',
@@ -626,7 +676,7 @@ Route::middleware('auth')->group(function () {
             ])->name('emails.attachments.download');
         });
 
-        // ── Emails — envoi ──
+        // ── Emails - envoi ──
         Route::middleware('permission:communication.send,communication.manage')->group(function () {
             Route::get('/emails/compose', [
                 EmailController::class,
@@ -645,7 +695,7 @@ Route::middleware('auth')->group(function () {
             ])->name('emails.forward');
         });
 
-        // ── Emails — gestion ──
+        // ── Emails - gestion ──
         Route::middleware('permission:communication.manage')->group(function () {
             Route::post('/emails/sync', [EmailController::class, 'sync'])->name(
                 'emails.sync',
@@ -664,7 +714,7 @@ Route::middleware('auth')->group(function () {
             ])->name('emails.destroy');
         });
 
-        // ── WhatsApp — consultation ──
+        // ── WhatsApp - consultation ──
         Route::middleware('permission:whatsapp.view,whatsapp.send,whatsapp.manage')->group(function () {
             Route::get('/whatsapp', [EmailController::class, 'whatsapp'])->name('whatsapp.index');
             Route::get('/whatsapp/status', [EmailController::class, 'whatsappStatus'])->name('whatsapp.status');
@@ -677,13 +727,13 @@ Route::middleware('auth')->group(function () {
             Route::get('/whatsapp/diag', [EmailController::class, 'whatsappDiag'])->name('whatsapp.diag');
         });
 
-        // ── WhatsApp — envoi ──
+        // ── WhatsApp - envoi ──
         Route::middleware('permission:whatsapp.send,whatsapp.manage')->group(function () {
             Route::post('/whatsapp/send', [EmailController::class, 'sendWhatsAppBulk'])->name('whatsapp.send');
             Route::post('/whatsapp/reply', [EmailController::class, 'replyWhatsApp'])->name('whatsapp.reply');
         });
 
-        // ── WhatsApp — gestion ──
+        // ── WhatsApp - gestion ──
         Route::middleware('permission:whatsapp.manage')->group(function () {
             Route::post('/whatsapp/sync-replies', [EmailController::class, 'whatsappSyncReplies'])->name('whatsapp.sync');
             Route::post('/whatsapp/logout', [EmailController::class, 'whatsappLogout'])->name('whatsapp.logout');

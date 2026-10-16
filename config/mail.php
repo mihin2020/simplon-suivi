@@ -39,7 +39,7 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            // Railway/dotenv often stores the literal string "null" — treat it as real null.
+            // Railway/dotenv often stores the literal string "null" - treat it as real null.
             'scheme' => (($scheme = env('MAIL_SCHEME')) === null || $scheme === '' || strtolower((string) $scheme) === 'null')
                 ? null
                 : $scheme,

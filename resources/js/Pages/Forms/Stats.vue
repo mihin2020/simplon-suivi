@@ -58,7 +58,7 @@ const formatDay = (iso: string) => {
 </script>
 
 <template>
-    <Head :title="`Stats — ${form.title}`" />
+    <Head :title="`Stats · ${form.title}`" />
     <div class="max-w-[1100px] mx-auto space-y-xl">
         <div class="flex items-start justify-between gap-md flex-wrap">
             <div class="page-title-row">
@@ -179,12 +179,12 @@ const formatDay = (iso: string) => {
                 </thead>
                 <tbody>
                     <tr v-for="r in stats.recent" :key="r.id">
-                        <td>{{ r.email || '—' }}</td>
+                        <td>{{ r.email || '-' }}</td>
                         <td>
                             <span class="status-badge" :class="badgeClass(r.status_color)">{{ r.status_label }}</span>
                         </td>
                         <td class="muted">
-                            {{ r.submitted_at ? new Date(r.submitted_at).toLocaleString('fr-FR') : '—' }}
+                            {{ r.submitted_at ? new Date(r.submitted_at).toLocaleString('fr-FR') : '-' }}
                         </td>
                     </tr>
                 </tbody>

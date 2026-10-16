@@ -71,7 +71,7 @@ const priorities: Array<{ value: string | null; label: string }> = [
 
 const toDateInput = (v?: string | null) => v ? v.slice(0, 10) : ''
 const fmt = (v: string | null) => {
-    if (!v) return '—'
+    if (!v) return '-'
     const [y, m, d] = v.slice(0, 10).split('-')
     return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
 }
@@ -565,16 +565,16 @@ const modalIcon = computed(() => {
 .empty-title { font-size: 15px; font-weight: 700; color: #191c1e; margin: 0; }
 .empty-sub { font-size: 13px; color: #9aaabb; margin: 0; }
 
-/* ── Phase card (level 1 — Navy left border) ─────────── */
+/* ── Phase card (level 1 - Navy left border) ─────────── */
 .phase-list { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
 .phase-card { border: 1px solid #e0e5eb; border-left: 4px solid #1F3A4D; border-radius: 12px; background: #fff; transition: box-shadow 0.15s; }
 .phase-card:hover { box-shadow: 0 2px 8px rgba(31,58,77,0.08); }
 
-/* ── Activity card (level 2 — Rose left border) ──────── */
+/* ── Activity card (level 2 - Rose left border) ──────── */
 .activity-card { border: 1px solid #eef1f4; border-left: 4px solid #E5004C; border-radius: 10px; background: #fafbfc; margin-bottom: 8px; transition: box-shadow 0.15s; }
 .activity-card:hover { box-shadow: 0 2px 6px rgba(229,0,76,0.06); }
 
-/* ── Task row (level 3 — subtle) ─────────────────────── */
+/* ── Task row (level 3 - subtle) ─────────────────────── */
 .task-row { display: flex; align-items: flex-start; gap: 8px; padding: 10px 10px; border-radius: 10px; background: #fff; border: 1px solid #eef1f4; margin-bottom: 6px; transition: all 0.15s; }
 .task-row:hover { border-color: #d5dee6; box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
 .task-row.done { opacity: 0.65; }

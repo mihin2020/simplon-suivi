@@ -390,6 +390,7 @@ textarea.input { resize: vertical; width: 100%; }
 .modal-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,0.45);
     display: flex; align-items: center; justify-content: center; z-index: 1000;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal-box {
     background: #fff; border-radius: 16px; padding: 32px 28px;

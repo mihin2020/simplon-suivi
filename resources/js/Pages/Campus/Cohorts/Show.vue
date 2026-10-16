@@ -822,7 +822,7 @@ const confirmClose = () => {
                         <div class="form-group">
                             <label class="form-label">Niveau d'étude</label>
                             <select v-model="editForm.education_level_id" class="form-input">
-                                <option value="">— Sélectionner —</option>
+                                <option value="">Sélectionner…</option>
                                 <option v-for="el in educationLevels" :key="el.id" :value="el.id">{{ el.name }}</option>
                             </select>
                         </div>
@@ -1009,7 +1009,7 @@ const confirmClose = () => {
                         <div class="form-group">
                             <label class="form-label">Niveau d'étude</label>
                             <select v-model="addForm.education_level_id" class="form-input">
-                                <option value="">— Sélectionner —</option>
+                                <option value="">Sélectionner…</option>
                                 <option v-for="el in educationLevels" :key="el.id" :value="el.id">{{ el.name }}</option>
                             </select>
                         </div>
@@ -1185,7 +1185,7 @@ const confirmClose = () => {
                         <div>
                             <h3 class="enroll-title">Déplacer l'apprenant</h3>
                             <p class="enroll-sub">
-                                {{ moveTarget.last_name }} {{ moveTarget.first_name }} —
+                                {{ moveTarget.last_name }} {{ moveTarget.first_name }} :
                                 ses paiements suivront dans la nouvelle cohorte
                             </p>
                         </div>
@@ -1200,7 +1200,7 @@ const confirmClose = () => {
                             <span class="move-cost-label">Formation actuelle</span>
                             <span class="move-cost-val">
                                 {{ cohort.campus_formation.name }}
-                                <strong v-if="sourceCost"> — {{ fmtCost(sourceCost) }}</strong>
+                                <strong v-if="sourceCost"> · {{ fmtCost(sourceCost) }}</strong>
                             </span>
                         </div>
 
@@ -1208,7 +1208,7 @@ const confirmClose = () => {
                         <div class="form-group">
                             <label class="form-label">Cohorte de destination <span class="req">*</span></label>
                             <select v-model="moveForm.target_cohort_id" class="form-input" required>
-                                <option value="">— Sélectionner une cohorte —</option>
+                                <option value="">Sélectionner une cohorte…</option>
                                 <optgroup
                                     v-for="formationName in [...new Set((availableCohorts ?? []).map(c => c.formation_name))]"
                                     :key="formationName"
@@ -1219,7 +1219,7 @@ const confirmClose = () => {
                                         :key="c.id"
                                         :value="c.id"
                                     >
-                                        {{ c.name }} — {{ fmtCost(c.total_cost) }}
+                                        {{ c.name }} ({{ fmtCost(c.total_cost) }})
                                     </option>
                                 </optgroup>
                             </select>
@@ -1244,7 +1244,7 @@ const confirmClose = () => {
                             </div>
                             <div v-else class="move-alert move-alert-ok">
                                 <span class="material-symbols-outlined" style="font-size:16px;flex-shrink:0">check_circle</span>
-                                Même montant de frais — aucun recalcul nécessaire.
+                                Même montant de frais : aucun recalcul nécessaire.
                             </div>
 
                             <!-- Tranches en attente toujours annulées -->
@@ -1367,7 +1367,7 @@ const confirmClose = () => {
 }
 .btn-secondary:hover { background: #f2f4f6; }
 
-/* Modifier — navy Simplon */
+/* Modifier - navy Simplon */
 .btn-navy {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 14px; background: transparent; color: #1F3A4D;
@@ -1376,7 +1376,7 @@ const confirmClose = () => {
 }
 .btn-navy:hover { background: #1F3A4D; color: #fff; }
 
-/* Paiements — rose Simplon */
+/* Paiements - rose Simplon */
 .btn-brand {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 16px; background: #E5004C; color: #fff;
@@ -1385,7 +1385,7 @@ const confirmClose = () => {
 }
 .btn-brand:hover { background: #c0003e; }
 
-/* Clôturer — ambre (action irréversible) */
+/* Clôturer - ambre (action irréversible) */
 .btn-warn {
     display: inline-flex; align-items: center; gap: 6px;
     padding: 8px 14px; background: transparent; color: #d97706;
@@ -1399,6 +1399,7 @@ const confirmClose = () => {
     position: fixed; inset: 0; background: rgba(0,0,0,0.45);
     display: flex; align-items: center; justify-content: center;
     z-index: 9999; padding: 20px;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .enroll-modal {
     background: #fff; border-radius: 14px; width: 100%; max-width: 500px;

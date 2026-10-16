@@ -39,26 +39,29 @@ class SubmitPublicResponse
             ]);
         }
 
-        if (! $form->acceptsResponses()) {
-            throw ValidationException::withMessages([
-                'form' => 'Ce formulaire n\'accepte plus les réponses.',
-            ]);
-        }
-
         $fields = $form->fields()->get()->keyBy('id');
         $email = $this->extractEmail($fields, $answers);
 
-        $settings = $form->settings ?? [];
-        if (($settings['one_per_email'] ?? true) && $email) {
-            $exists = $form->responses()->where('email', $email)->exists();
-            if ($exists) {
+        $response = DB::transaction(function () use ($form, $fields, $answers, $files, $email, $ip, $userAgent) {
+            // Submissions to one form are serialised on its row: under a rush,
+            // the quota and the one-per-email checks see every response saved
+            // before this one, so neither a double click nor two candidates
+            // at the same second can slip past them.
+            $locked = Form::query()->whereKey($form->id)->lockForUpdate()->firstOrFail();
+
+            if (! $locked->acceptsResponses()) {
+                throw ValidationException::withMessages([
+                    'form' => 'Ce formulaire n\'accepte plus les réponses.',
+                ]);
+            }
+
+            if (($locked->settings['one_per_email'] ?? true) && $email
+                && $locked->responses()->where('email', $email)->exists()) {
                 throw ValidationException::withMessages([
                     'email' => 'Une candidature avec cet e-mail a déjà été enregistrée.',
                 ]);
             }
-        }
 
-        $response = DB::transaction(function () use ($form, $fields, $answers, $files, $email, $ip, $userAgent) {
             $response = FormResponse::create([
                 'form_id' => $form->id,
                 'status' => FormResponseStatus::Submitted,

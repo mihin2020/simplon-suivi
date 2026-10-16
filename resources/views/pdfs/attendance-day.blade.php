@@ -194,7 +194,7 @@
                         @if($code)
                             <span class="code-badge code-{{ $code }}">{{ $code }}</span>
                         @else
-                            <span class="code-nd">—</span>
+                            <span class="code-nd">-</span>
                         @endif
                     </td>
                     <td class="td-sign"></td>
@@ -215,7 +215,7 @@
 
     <!-- Pied de page -->
     <div class="footer">
-        {{ $formation->project->name }} — {{ $formation->name }} · {{ $learners->count() }} apprenant(s) · Généré le {{ now()->format('d/m/Y à H:i') }}
+        {{ $formation->project->name }} · {{ $formation->name }} · {{ $learners->count() }} apprenant(s) · Généré le {{ now()->format('d/m/Y à H:i') }}
     </div>
 
 </body>

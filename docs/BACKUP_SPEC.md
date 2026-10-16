@@ -1,4 +1,4 @@
-# Backup applicatif — Spécification
+# Backup applicatif - Spécification
 
 > Document de référence.  
 > Contexte : développement **local** (Windows), déploiement cible **VPS Linux**.  

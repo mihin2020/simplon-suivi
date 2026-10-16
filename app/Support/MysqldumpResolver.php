@@ -22,7 +22,7 @@ class MysqldumpResolver
             return self::detect() ?? 'mysqldump';
         }
 
-        // Configured but missing on disk — try auto-detect before failing later
+        // Configured but missing on disk - try auto-detect before failing later
         return self::detect() ?? $configured;
     }
 

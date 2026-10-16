@@ -332,7 +332,7 @@ const badgeClass = (color: string) => {
 </script>
 
 <template>
-    <Head :title="`Éditer — ${form.title}`" />
+    <Head :title="`Éditer · ${form.title}`" />
     <div class="page-wrapper">
         <div class="header-row">
             <div class="page-title-row">
@@ -382,7 +382,7 @@ const badgeClass = (color: string) => {
             <div class="min-w-0">
                 <p class="link-label">Lien public</p>
                 <p class="link-url">{{ displayPublicUrl }}</p>
-                <p v-if="localCanShorten" class="link-hint">Lien long — raccourcissez-le avant de le partager.</p>
+                <p v-if="localCanShorten" class="link-hint">Lien long : raccourcissez-le avant de le partager.</p>
             </div>
             <div class="link-actions">
                 <button
@@ -868,6 +868,7 @@ const badgeClass = (color: string) => {
 .modal-backdrop {
     position: fixed; inset: 0; background: rgba(15, 23, 42, 0.45);
     display: flex; align-items: center; justify-content: center; z-index: 80; padding: 16px;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal-box {
     width: 100%; max-width: 440px; background: #fff; border-radius: 16px; padding: 24px;

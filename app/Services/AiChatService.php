@@ -61,6 +61,219 @@ class AiChatService
         }
     }
 
+    // ── Complétion one-shot (prompt système fourni, SANS outils) ─────────────
+
+    /**
+     * Contrairement à chat(), cette méthode sert à transformer du texte
+     * (ex: convertir un modèle de contrat uploadé en HTML propre) et non à
+     * répondre sur les données : elle n'expose donc ni les outils de requête
+     * ni le prompt de l'assistant. En cas d'échec elle lève une exception,
+     * pour que l'appelant puisse se replier au lieu d'insérer un message
+     * d'erreur dans un document.
+     *
+     * @throws \RuntimeException
+     */
+    public function complete(string $systemPrompt, string $userMessage, int $maxTokens = 8192): string
+    {
+        $apiKey   = AppSetting::get('ai_api_key');
+        $provider = AppSetting::get('ai_provider', 'openai');
+        $model    = AppSetting::get('ai_model') ?: (self::PROVIDERS[$provider]['default_model'] ?? '');
+
+        if (empty($apiKey)) {
+            throw new \RuntimeException('Aucune clé API IA configurée.');
+        }
+
+        try {
+            return match ($provider) {
+                'claude' => $this->completeClaude($apiKey, $model, $systemPrompt, $userMessage, $maxTokens),
+                'gemini' => $this->completeGemini($apiKey, $model, $systemPrompt, $userMessage, $maxTokens),
+                default  => $this->completeOpenAiCompatible($provider, $apiKey, $model, $systemPrompt, $userMessage, $maxTokens),
+            };
+        } catch (\Illuminate\Http\Client\ConnectionException) {
+            throw new \RuntimeException('Le provider IA ne répond pas.');
+        }
+    }
+
+    /**
+     * Same as complete(), but reads the answer while it is being written and
+     * reports the number of characters received so far to $onProgress, so a
+     * caller can show real progress. Providers without streaming support here
+     * (Gemini) fall back to complete() and report once, at the end.
+     *
+     * @param  callable(int): void  $onProgress
+     *
+     * @throws \RuntimeException
+     */
+    public function streamComplete(string $systemPrompt, string $userMessage, int $maxTokens, callable $onProgress): string
+    {
+        $apiKey   = AppSetting::get('ai_api_key');
+        $provider = AppSetting::get('ai_provider', 'openai');
+        $model    = AppSetting::get('ai_model') ?: (self::PROVIDERS[$provider]['default_model'] ?? '');
+
+        if (empty($apiKey)) {
+            throw new \RuntimeException('Aucune clé API IA configurée.');
+        }
+
+        if ($provider === 'gemini') {
+            $text = $this->complete($systemPrompt, $userMessage, $maxTokens);
+            $onProgress(mb_strlen($text));
+
+            return $text;
+        }
+
+        if ($provider === 'claude') {
+            $url = self::PROVIDERS['claude']['url'];
+            $request = Http::withHeaders([
+                'x-api-key'         => $apiKey,
+                'anthropic-version' => '2023-06-01',
+            ]);
+            $payload = [
+                'model'      => $model ?: 'claude-opus-4-5',
+                'max_tokens' => $maxTokens,
+                'stream'     => true,
+                'system'     => $systemPrompt,
+                'messages'   => [['role' => 'user', 'content' => $userMessage]],
+            ];
+            // event: content_block_delta → {"delta":{"type":"text_delta","text":"…"}}
+            $extract = fn (array $event) => $event['delta']['text'] ?? null;
+        } else {
+            $url = AppSetting::get('ai_base_url') ?: (self::PROVIDERS[$provider]['url'] ?? self::PROVIDERS['openai']['url']);
+            $request = Http::withToken($apiKey);
+            $payload = [
+                'model'      => $model,
+                'max_tokens' => $maxTokens,
+                'stream'     => true,
+                'messages'   => [
+                    ['role' => 'system', 'content' => $systemPrompt],
+                    ['role' => 'user',   'content' => $userMessage],
+                ],
+            ];
+            // data: {"choices":[{"delta":{"content":"…"}}]}
+            $extract = fn (array $event) => $event['choices'][0]['delta']['content'] ?? null;
+        }
+
+        try {
+            $response = $request->withOptions(['stream' => true])->timeout(150)->connectTimeout(10)->post($url, $payload);
+        } catch (\Illuminate\Http\Client\ConnectionException) {
+            throw new \RuntimeException('Le provider IA ne répond pas.');
+        }
+
+        if (! $response->successful()) {
+            throw new \RuntimeException($this->extractError($response, $provider));
+        }
+
+        $body = $response->toPsrResponse()->getBody();
+        $buffer = '';
+        $text = '';
+
+        // Server-sent events: one "data: {json}" line per chunk.
+        while (! $body->eof()) {
+            $buffer .= $body->read(1024);
+
+            while (($newline = strpos($buffer, "\n")) !== false) {
+                $line = trim(substr($buffer, 0, $newline));
+                $buffer = substr($buffer, $newline + 1);
+
+                if (! str_starts_with($line, 'data:')) {
+                    continue;
+                }
+
+                $event = json_decode(trim(substr($line, 5)), true);
+                $chunk = is_array($event) ? $extract($event) : null;
+
+                if (is_string($chunk) && $chunk !== '') {
+                    $text .= $chunk;
+                    $onProgress(mb_strlen($text));
+                }
+            }
+        }
+
+        if ($text === '') {
+            throw new \RuntimeException('Réponse IA vide.');
+        }
+
+        return $text;
+    }
+
+    private function completeClaude(string $key, string $model, string $system, string $message, int $maxTokens): string
+    {
+        $response = Http::withHeaders([
+            'x-api-key'         => $key,
+            'anthropic-version' => '2023-06-01',
+            'content-type'      => 'application/json',
+        ])->timeout(120)->connectTimeout(10)->post('https://api.anthropic.com/v1/messages', [
+            'model'      => $model ?: 'claude-opus-4-5',
+            'max_tokens' => $maxTokens,
+            'stream'     => false,
+            'system'     => $system,
+            'messages'   => [['role' => 'user', 'content' => $message]],
+        ]);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException($this->extractError($response, 'Claude'));
+        }
+
+        $text = $this->extractClaudeText($response->json());
+
+        if ($text === null || $text === '') {
+            throw new \RuntimeException("Réponse IA vide.");
+        }
+
+        return $text;
+    }
+
+    private function completeOpenAiCompatible(string $provider, string $key, string $model, string $system, string $message, int $maxTokens): string
+    {
+        $url = AppSetting::get('ai_base_url') ?: (self::PROVIDERS[$provider]['url'] ?? self::PROVIDERS['openai']['url']);
+
+        $response = Http::withToken($key)
+            ->timeout(120)->connectTimeout(10)
+            ->post($url, [
+                'model'      => $model,
+                'max_tokens' => $maxTokens,
+                'messages'   => [
+                    ['role' => 'system', 'content' => $system],
+                    ['role' => 'user',   'content' => $message],
+                ],
+            ]);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException($this->extractError($response, $provider));
+        }
+
+        $text = $response->json('choices.0.message.content');
+
+        if (! is_string($text) || $text === '') {
+            throw new \RuntimeException("Réponse IA vide.");
+        }
+
+        return $text;
+    }
+
+    private function completeGemini(string $key, string $model, string $system, string $message, int $maxTokens): string
+    {
+        $model = $model ?: 'gemini-2.0-flash';
+        $url   = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key={$key}";
+
+        $response = Http::timeout(120)->connectTimeout(10)->post($url, [
+            'systemInstruction' => ['parts' => [['text' => $system]]],
+            'contents'          => [['role' => 'user', 'parts' => [['text' => $message]]]],
+            'generationConfig'  => ['maxOutputTokens' => $maxTokens],
+        ]);
+
+        if (! $response->successful()) {
+            throw new \RuntimeException($this->extractError($response, 'Gemini'));
+        }
+
+        $text = $response->json('candidates.0.content.parts.0.text');
+
+        if (! is_string($text) || $text === '') {
+            throw new \RuntimeException("Réponse IA vide.");
+        }
+
+        return $text;
+    }
+
     // ── Prompt système léger (stats globales + navigation + instructions outils) ──
 
     private function buildSystemPrompt(): string
@@ -69,14 +282,14 @@ class AiChatService
         $stats   = $this->dumpStats();
 
         return <<<PROMPT
-Tu es l'assistant intelligent de la plateforme **Simplon Suivi** — Simplon Burkina Faso.
+Tu es l'assistant intelligent de la plateforme **Simplon Suivi** de Simplon Burkina Faso.
 
 ## Rôle
 Tu réponds à des questions sur les données de l'application (projets, formations, apprenants, formateurs, présences, insertion/emploi, partenaires, référentiels, utilisateurs).
 
 ## Règles absolues
 - Réponds TOUJOURS en français.
-- Tu n'as PAS accès à toutes les données par défaut : **utilise les outils mis à ta disposition** pour interroger la base à chaque fois qu'une question porte sur des données précises (liste, détail, recherche, statistique). Ne réponds JAMAIS de mémoire ou en inventant — appelle un outil.
+- Tu n'as PAS accès à toutes les données par défaut : **utilise les outils mis à ta disposition** pour interroger la base à chaque fois qu'une question porte sur des données précises (liste, détail, recherche, statistique). Ne réponds JAMAIS de mémoire ou en inventant : appelle un outil.
 - Tu peux enchaîner plusieurs appels d'outils si une question nécessite plusieurs étapes (ex: trouver une formation puis lister ses apprenants).
 - Si un outil retourne `total_matching` supérieur à `returned`, précise-le dans ta réponse et propose d'affiner la recherche (par formation, projet, etc.) plutôt que de prétendre avoir tout listé.
 - Si une donnée demandée n'existe pas après avoir interrogé les outils pertinents, dis-le clairement plutôt que d'inventer.
@@ -104,7 +317,7 @@ Tu réponds à des questions sur les données de l'application (projets, formati
 | Utilisateurs | $baseUrl/users |
 | Configuration | $baseUrl/configuration |
 
-## URLs des fiches individuelles — remplace {id} par l'UUID réel retourné par les outils
+## URLs des fiches individuelles : remplace {id} par l'UUID réel retourné par les outils
 - Fiche apprenant : $baseUrl/learners/{id}
 - Suivi insertion d'un apprenant : $baseUrl/learners/{id}/insertion
 - Fiche formation : $baseUrl/formations/{id}

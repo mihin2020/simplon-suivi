@@ -26,7 +26,7 @@ class NotifyFormResponseSubmitted
 
         $email = $response->email ?: 'candidat';
         $title = 'Nouvelle candidature';
-        $message = "« {$form->title} » — {$email}";
+        $message = "« {$form->title} » · {$email}";
 
         foreach ($recipients as $user) {
             Notification::create([

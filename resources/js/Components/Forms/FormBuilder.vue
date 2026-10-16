@@ -72,7 +72,7 @@ const addCustom = (type = 'short_text') => {
     const field: BuilderField = {
         type,
         label: type === 'file' ? 'Joindre un fichier' : (meta?.label ?? 'Nouvelle question'),
-        help_text: type === 'file' ? 'PDF, image ou Word — max 5 Mo' : '',
+        help_text: type === 'file' ? 'PDF, image ou Word (5 Mo max)' : '',
         is_required: false,
         learner_attribute: null,
         options: meta?.requires_options
@@ -93,7 +93,7 @@ const addLearnerField = (attr: { key: string; label: string; type: string; requi
     sync([...props.modelValue, {
         type: attr.type,
         label: attr.label,
-        help_text: attr.key === 'photo_path' ? 'JPG, PNG ou WebP — max 2 Mo' : '',
+        help_text: attr.key === 'photo_path' ? 'JPG, PNG ou WebP (2 Mo max)' : '',
         is_required: attr.required ?? ['first_name', 'last_name'].includes(attr.key),
         learner_attribute: attr.key,
         options: attr.key === 'gender'

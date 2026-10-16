@@ -77,6 +77,10 @@ class UserController extends Controller
                     phone:     $request->validated('phone'),
                     phone2:    $request->validated('phone2'),
                     cv:        $request->file('cv'),
+                    birthDate:  $request->validated('birth_date'),
+                    birthPlace: $request->validated('birth_place'),
+                    address:    $request->validated('address'),
+                    idNumber:   $request->validated('id_number'),
                 );
             } else {
                 $user = $inviteUser->execute(
@@ -145,6 +149,10 @@ class UserController extends Controller
                 phone2:    $request->validated('phone2'),
                 cv:        $request->file('cv'),
                 removeCv:  (bool) $request->validated('remove_cv', false),
+                birthDate:  $request->validated('birth_date'),
+                birthPlace: $request->validated('birth_place'),
+                address:    $request->validated('address'),
+                idNumber:   $request->validated('id_number'),
             );
         } else {
             $user->permissions()->sync($request->validated('permissions', []));

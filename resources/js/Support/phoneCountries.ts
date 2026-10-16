@@ -42,7 +42,7 @@ export const PHONE_COUNTRIES: PhoneCountry[] = [
 
 export const DEFAULT_PHONE_COUNTRY = PHONE_COUNTRIES[0] // Burkina Faso
 
-/** PNG flags — Windows does not render emoji flags reliably. */
+/** PNG flags - Windows does not render emoji flags reliably. */
 export function flagUrl(iso: string, width = 40): string {
     return `https://flagcdn.com/w${width}/${iso.toLowerCase()}.png`
 }

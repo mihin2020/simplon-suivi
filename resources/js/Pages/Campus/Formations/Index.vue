@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListLoading from '@/Components/UI/ListLoading.vue'
 import { ref, watch, computed } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
@@ -121,74 +122,76 @@ const formatCost = (n: number) =>
         </div>
 
         <!-- Grille de cartes -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-lg">
-            <div
-                v-for="f in formations.data"
-                :key="f.id"
-                class="formation-card"
-            >
-                <!-- Mode + statut -->
-                <div class="card-top">
-                    <span :class="['mode-badge', `mode-${f.mode}`]">
-                        <span class="material-symbols-outlined" style="font-size:13px">{{ modeIcon[f.mode] }}</span>
-                        {{ modeLabel(f.mode) }}
-                    </span>
-                    <span v-if="!f.is_active" class="inactive-badge">Inactif</span>
-                </div>
-
-                <!-- Titre + description -->
-                <h2 class="card-title">{{ f.name }}</h2>
-                <p v-if="f.description" class="card-desc">{{ f.description }}</p>
-
-                <!-- Stats -->
-                <div class="card-stats">
-                    <div class="stat">
-                        <span class="stat-val">{{ f.duration_months }}</span>
-                        <span class="stat-lbl">mois</span>
+        <ListLoading variant="cards">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-lg">
+                <div
+                    v-for="f in formations.data"
+                    :key="f.id"
+                    class="formation-card"
+                >
+                    <!-- Mode + statut -->
+                    <div class="card-top">
+                        <span :class="['mode-badge', `mode-${f.mode}`]">
+                            <span class="material-symbols-outlined" style="font-size:13px">{{ modeIcon[f.mode] }}</span>
+                            {{ modeLabel(f.mode) }}
+                        </span>
+                        <span v-if="!f.is_active" class="inactive-badge">Inactif</span>
                     </div>
-                    <div class="stat-sep"></div>
-                    <div class="stat">
-                        <span class="stat-val">{{ f.cohorts_count }}</span>
-                        <span class="stat-lbl">Cohortes</span>
+
+                    <!-- Titre + description -->
+                    <h2 class="card-title">{{ f.name }}</h2>
+                    <p v-if="f.description" class="card-desc">{{ f.description }}</p>
+
+                    <!-- Stats -->
+                    <div class="card-stats">
+                        <div class="stat">
+                            <span class="stat-val">{{ f.duration_months }}</span>
+                            <span class="stat-lbl">mois</span>
+                        </div>
+                        <div class="stat-sep"></div>
+                        <div class="stat">
+                            <span class="stat-val">{{ f.cohorts_count }}</span>
+                            <span class="stat-lbl">Cohortes</span>
+                        </div>
+                    </div>
+
+                    <!-- Coût -->
+                    <div class="card-cost">
+                        <span class="material-symbols-outlined" style="font-size:16px;color:#515f74">payments</span>
+                        {{ formatCost(f.total_cost) }}
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="card-actions">
+                        <Link :href="`/campus/formations/${f.id}`" class="btn-secondary flex-1 text-center">
+                            Voir les cohortes
+                        </Link>
+                        <Can permission="campus.formations.update">
+                            <Link :href="`/campus/formations/${f.id}/edit`" class="icon-btn" title="Modifier">
+                                <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                            </Link>
+                        </Can>
+                        <Can permission="campus.formations.delete">
+                            <button @click="askDelete(f)" class="icon-btn danger" title="Supprimer" type="button">
+                                <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                            </button>
+                        </Can>
                     </div>
                 </div>
 
-                <!-- Coût -->
-                <div class="card-cost">
-                    <span class="material-symbols-outlined" style="font-size:16px;color:#515f74">payments</span>
-                    {{ formatCost(f.total_cost) }}
-                </div>
-
-                <!-- Actions -->
-                <div class="card-actions">
-                    <Link :href="`/campus/formations/${f.id}`" class="btn-secondary flex-1 text-center">
-                        Voir les cohortes
-                    </Link>
-                    <Can permission="campus.formations.update">
-                        <Link :href="`/campus/formations/${f.id}/edit`" class="icon-btn" title="Modifier">
-                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                <!-- Empty state -->
+                <div v-if="formations.data.length === 0" class="col-span-full empty-state">
+                    <span class="material-symbols-outlined" style="font-size:56px;color:#b9c7e0">local_library</span>
+                    <p class="empty-title">Aucune formation trouvée</p>
+                    <p class="empty-sub">Commencez par créer votre premier parcours de formation.</p>
+                    <Can permission="campus.formations.create">
+                        <Link href="/campus/formations/create" class="btn-primary mt-md">
+                            Créer une formation
                         </Link>
                     </Can>
-                    <Can permission="campus.formations.delete">
-                        <button @click="askDelete(f)" class="icon-btn danger" title="Supprimer" type="button">
-                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                        </button>
-                    </Can>
                 </div>
             </div>
-
-            <!-- Empty state -->
-            <div v-if="formations.data.length === 0" class="col-span-full empty-state">
-                <span class="material-symbols-outlined" style="font-size:56px;color:#b9c7e0">local_library</span>
-                <p class="empty-title">Aucune formation trouvée</p>
-                <p class="empty-sub">Commencez par créer votre premier parcours de formation.</p>
-                <Can permission="campus.formations.create">
-                    <Link href="/campus/formations/create" class="btn-primary mt-md">
-                        Créer une formation
-                    </Link>
-                </Can>
-            </div>
-        </div>
+        </ListLoading>
 
         <!-- Pagination -->
         <div v-if="formations.links?.length > 3" class="flex items-center justify-between">
@@ -473,6 +476,7 @@ const formatCost = (n: number) =>
     display: flex; align-items: center; justify-content: center;
     z-index: 9999;
     padding: 16px;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal-box {
     background: #fff;

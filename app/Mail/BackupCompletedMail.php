@@ -24,7 +24,7 @@ class BackupCompletedMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Sauvegarde réussie — '.config('app.name'),
+            subject: 'Sauvegarde réussie · '.config('app.name'),
         );
     }
 

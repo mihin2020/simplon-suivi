@@ -67,12 +67,16 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('chatbot', fn (Request $request) => Limit::perMinute(10)->by($request->user()?->id ?? $request->ip())
         );
 
+        // Many candidates share one IP (mobile carriers' NAT, cybercafés, a
+        // training room filling the form together): the IP limit is wide and
+        // only stops floods; the tight limit applies to one browser.
         RateLimiter::for('forms.public', function (Request $request) {
             $token = (string) $request->route('publicToken');
+            $browser = $request->hasSession() ? $request->session()->getId() : $request->ip();
 
             return [
-                Limit::perMinute(30)->by($request->ip()),
-                Limit::perMinute(5)->by($token.'|'.$request->ip()),
+                Limit::perMinute(300)->by('forms-ip|'.$request->ip()),
+                Limit::perMinute(5)->by('forms-browser|'.$token.'|'.$browser),
             ];
         });
     }

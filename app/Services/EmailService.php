@@ -28,7 +28,7 @@ class EmailService
         $client->connect();
 
         // Timeout sur les opérations IMAP (lecture des messages, etc.)
-        // À appeler après connect() — le protocole n'est disponible qu'une fois connecté
+        // À appeler après connect() - le protocole n'est disponible qu'une fois connecté
         try {
             $client->setTimeout(60);
         } catch (\Throwable) {

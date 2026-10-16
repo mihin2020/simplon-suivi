@@ -31,6 +31,11 @@ class UpdateUserRequest extends FormRequest
             'phone2'        => $isTrainer ? ['nullable', 'string', 'max:20'] : ['nullable'],
             'cv'            => $isTrainer ? ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'] : ['nullable'],
             'remove_cv'     => $isTrainer ? ['nullable', 'boolean'] : ['nullable'],
+            // État civil - utilisé pour remplir automatiquement les contrats formateur
+            'birth_date'    => $isTrainer ? ['nullable', 'date'] : ['nullable'],
+            'birth_place'   => $isTrainer ? ['nullable', 'string', 'max:255'] : ['nullable'],
+            'address'       => $isTrainer ? ['nullable', 'string', 'max:500'] : ['nullable'],
+            'id_number'     => $isTrainer ? ['nullable', 'string', 'max:100'] : ['nullable'],
         ];
     }
 

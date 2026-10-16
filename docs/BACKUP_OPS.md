@@ -1,8 +1,8 @@
-# Ops — Sauvegardes
+# Ops - Sauvegardes
 
 ## Local
 
-1. Vérifier `BACKUP_MYSQLDUMP_PATH` dans `.env` (Laragon / XAMPP) — ou laisser la détection auto.
+1. Vérifier `BACKUP_MYSQLDUMP_PATH` dans `.env` (Laragon / XAMPP) - ou laisser la détection auto.
 2. Page : `/configuration/backups` (progression live en %)
 3. Optionnel CLI : `php artisan backup:run --type=manual`
 4. Pour tester le scheduler : `php artisan schedule:work`

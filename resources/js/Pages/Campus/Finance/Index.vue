@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListLoading from '@/Components/UI/ListLoading.vue'
 import { router } from '@inertiajs/vue3'
 import { Head, Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
@@ -238,115 +239,117 @@ const totalCollected = props.globalStats.total_collected
 
             <!-- Cohorts table -->
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-surface border-b border-surface-container-highest">
-                            <th class="th">Cohorte</th>
-                            <th class="th">Période</th>
-                            <th class="th text-center">Statut</th>
-                            <th class="th text-center">Apprenants</th>
-                            <th class="th text-right">Planifié</th>
-                            <th class="th text-right">Encaissé</th>
-                            <th class="th text-right">Restant</th>
-                            <th class="th text-center">Retards</th>
-                            <th class="th" style="min-width:120px">Taux</th>
-                            <th class="th text-right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-surface-container-highest">
-                        <tr
-                            v-for="cohort in formation.cohorts"
-                            :key="cohort.id"
-                            class="hover:bg-surface-bright transition-colors group"
-                        >
-                            <td class="td font-semibold text-on-surface">{{ cohort.name }}</td>
-                            <td class="td text-on-surface-variant text-body-sm">
-                                {{ fmtMonth(cohort.started_at) }} → {{ fmtMonth(cohort.ended_at) }}
-                            </td>
-                            <td class="td text-center">
-                                <span :class="['status-badge', cohortStatusClass[cohort.status]]">
-                                    {{ cohortStatusLabel[cohort.status] ?? cohort.status }}
-                                </span>
-                            </td>
-                            <td class="td text-center">
-                                <span class="font-semibold">{{ cohort.learners_count }}</span>
-                            </td>
-                            <td class="td text-right text-body-sm text-on-surface-variant">
-                                {{ cohort.total_expected > 0 ? fmtShort(cohort.total_expected) + ' FCFA' : '' }}
-                            </td>
-                            <td class="td text-right font-semibold" style="color:#065f46">
-                                {{ cohort.total_collected > 0 ? fmtShort(cohort.total_collected) + ' FCFA' : '' }}
-                            </td>
-                            <td class="td text-right text-body-sm" :style="cohort.total_remaining > 0 ? 'color:#92400e' : 'color:#9aaabb'">
-                                {{ cohort.total_remaining > 0 ? fmtShort(cohort.total_remaining) + ' FCFA' : '' }}
-                            </td>
-                            <td class="td text-center">
-                                <span v-if="cohort.overdue_count > 0" class="overdue-badge">
-                                    {{ cohort.overdue_count }}
-                                </span>
-                                <span v-else class="text-on-surface-variant text-body-sm"></span>
-                            </td>
-                            <td class="td">
-                                <div class="flex items-center gap-sm">
-                                    <div class="progress-track flex-1" style="height:5px">
-                                        <div
-                                            class="progress-fill"
-                                            :style="`width:${cohort.collect_rate}%;background:${progressColor(cohort.collect_rate)}`"
-                                        />
-                                    </div>
-                                    <span class="text-body-sm text-on-surface-variant w-8 text-right shrink-0">
-                                        {{ cohort.collect_rate }}%
+                <ListLoading :columns="8">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-surface border-b border-surface-container-highest">
+                                <th class="th">Cohorte</th>
+                                <th class="th">Période</th>
+                                <th class="th text-center">Statut</th>
+                                <th class="th text-center">Apprenants</th>
+                                <th class="th text-right">Planifié</th>
+                                <th class="th text-right">Encaissé</th>
+                                <th class="th text-right">Restant</th>
+                                <th class="th text-center">Retards</th>
+                                <th class="th" style="min-width:120px">Taux</th>
+                                <th class="th text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-surface-container-highest">
+                            <tr
+                                v-for="cohort in formation.cohorts"
+                                :key="cohort.id"
+                                class="hover:bg-surface-bright transition-colors group"
+                            >
+                                <td class="td font-semibold text-on-surface">{{ cohort.name }}</td>
+                                <td class="td text-on-surface-variant text-body-sm">
+                                    {{ fmtMonth(cohort.started_at) }} → {{ fmtMonth(cohort.ended_at) }}
+                                </td>
+                                <td class="td text-center">
+                                    <span :class="['status-badge', cohortStatusClass[cohort.status]]">
+                                        {{ cohortStatusLabel[cohort.status] ?? cohort.status }}
                                     </span>
-                                </div>
-                            </td>
-                            <td class="td text-right">
-                                <Can :any="['campus.finance.view', 'campus.finance.collect', 'campus.finance.manage']">
-                                    <Link
-                                        :href="`/campus/cohorts/${cohort.id}/payments`"
-                                        class="action-link"
-                                        title="Gérer les paiements"
-                                    >
-                                        <span class="material-symbols-outlined" style="font-size:16px">payments</span>
-                                        Paiements
-                                    </Link>
-                                </Can>
-                            </td>
-                        </tr>
+                                </td>
+                                <td class="td text-center">
+                                    <span class="font-semibold">{{ cohort.learners_count }}</span>
+                                </td>
+                                <td class="td text-right text-body-sm text-on-surface-variant">
+                                    {{ cohort.total_expected > 0 ? fmtShort(cohort.total_expected) + ' FCFA' : '' }}
+                                </td>
+                                <td class="td text-right font-semibold" style="color:#065f46">
+                                    {{ cohort.total_collected > 0 ? fmtShort(cohort.total_collected) + ' FCFA' : '' }}
+                                </td>
+                                <td class="td text-right text-body-sm" :style="cohort.total_remaining > 0 ? 'color:#92400e' : 'color:#9aaabb'">
+                                    {{ cohort.total_remaining > 0 ? fmtShort(cohort.total_remaining) + ' FCFA' : '' }}
+                                </td>
+                                <td class="td text-center">
+                                    <span v-if="cohort.overdue_count > 0" class="overdue-badge">
+                                        {{ cohort.overdue_count }}
+                                    </span>
+                                    <span v-else class="text-on-surface-variant text-body-sm"></span>
+                                </td>
+                                <td class="td">
+                                    <div class="flex items-center gap-sm">
+                                        <div class="progress-track flex-1" style="height:5px">
+                                            <div
+                                                class="progress-fill"
+                                                :style="`width:${cohort.collect_rate}%;background:${progressColor(cohort.collect_rate)}`"
+                                            />
+                                        </div>
+                                        <span class="text-body-sm text-on-surface-variant w-8 text-right shrink-0">
+                                            {{ cohort.collect_rate }}%
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="td text-right">
+                                    <Can :any="['campus.finance.view', 'campus.finance.collect', 'campus.finance.manage']">
+                                        <Link
+                                            :href="`/campus/cohorts/${cohort.id}/payments`"
+                                            class="action-link"
+                                            title="Gérer les paiements"
+                                        >
+                                            <span class="material-symbols-outlined" style="font-size:16px">payments</span>
+                                            Paiements
+                                        </Link>
+                                    </Can>
+                                </td>
+                            </tr>
 
-                        <!-- Formation totals row -->
-                        <tr class="totals-row">
-                            <td class="td font-bold text-on-surface" colspan="4">Total {{ formation.name }}</td>
-                            <td class="td text-right text-body-sm font-semibold text-on-surface-variant">
-                                {{ formation.totals.total_expected > 0 ? fmtShort(formation.totals.total_expected) + ' FCFA' : '' }}
-                            </td>
-                            <td class="td text-right font-bold" style="color:#065f46">
-                                {{ formation.totals.total_collected > 0 ? fmtShort(formation.totals.total_collected) + ' FCFA' : '' }}
-                            </td>
-                            <td class="td text-right font-semibold" :style="formation.totals.total_remaining > 0 ? 'color:#92400e' : 'color:#9aaabb'">
-                                {{ formation.totals.total_remaining > 0 ? fmtShort(formation.totals.total_remaining) + ' FCFA' : '' }}
-                            </td>
-                            <td class="td text-center">
-                                <span v-if="formation.totals.overdue_count > 0" class="overdue-badge">
-                                    {{ formation.totals.overdue_count }}
-                                </span>
-                                <span v-else class="text-on-surface-variant text-body-sm"></span>
-                            </td>
-                            <td class="td" colspan="2">
-                                <div class="flex items-center gap-sm">
-                                    <div class="progress-track flex-1" style="height:7px">
-                                        <div
-                                            class="progress-fill"
-                                            :style="`width:${formation.totals.collect_rate}%;background:${progressColor(formation.totals.collect_rate)}`"
-                                        />
-                                    </div>
-                                    <span class="text-body-sm font-bold text-on-surface w-8 text-right shrink-0">
-                                        {{ formation.totals.collect_rate }}%
+                            <!-- Formation totals row -->
+                            <tr class="totals-row">
+                                <td class="td font-bold text-on-surface" colspan="4">Total {{ formation.name }}</td>
+                                <td class="td text-right text-body-sm font-semibold text-on-surface-variant">
+                                    {{ formation.totals.total_expected > 0 ? fmtShort(formation.totals.total_expected) + ' FCFA' : '' }}
+                                </td>
+                                <td class="td text-right font-bold" style="color:#065f46">
+                                    {{ formation.totals.total_collected > 0 ? fmtShort(formation.totals.total_collected) + ' FCFA' : '' }}
+                                </td>
+                                <td class="td text-right font-semibold" :style="formation.totals.total_remaining > 0 ? 'color:#92400e' : 'color:#9aaabb'">
+                                    {{ formation.totals.total_remaining > 0 ? fmtShort(formation.totals.total_remaining) + ' FCFA' : '' }}
+                                </td>
+                                <td class="td text-center">
+                                    <span v-if="formation.totals.overdue_count > 0" class="overdue-badge">
+                                        {{ formation.totals.overdue_count }}
                                     </span>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                                    <span v-else class="text-on-surface-variant text-body-sm"></span>
+                                </td>
+                                <td class="td" colspan="2">
+                                    <div class="flex items-center gap-sm">
+                                        <div class="progress-track flex-1" style="height:7px">
+                                            <div
+                                                class="progress-fill"
+                                                :style="`width:${formation.totals.collect_rate}%;background:${progressColor(formation.totals.collect_rate)}`"
+                                            />
+                                        </div>
+                                        <span class="text-body-sm font-bold text-on-surface w-8 text-right shrink-0">
+                                            {{ formation.totals.collect_rate }}%
+                                        </span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </ListLoading>
             </div>
         </div>
 
@@ -369,42 +372,44 @@ const totalCollected = props.globalStats.total_collected
                 <p class="font-semibold" style="color:#065f46">Aucun retard de paiement pour cette session</p>
             </div>
             <div v-else class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-surface border-b border-surface-container-highest">
-                            <th class="th">Apprenant</th>
-                            <th class="th">Cohorte</th>
-                            <th class="th text-right">Montant</th>
-                            <th class="th text-right">Échéance</th>
-                            <th class="th text-right">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-surface-container-highest">
-                        <tr
-                            v-for="p in recentOverdue"
-                            :key="p.id"
-                            class="hover:bg-surface-bright transition-colors"
-                        >
-                            <td class="td font-semibold text-on-surface">
-                                {{ p.learner.first_name }} {{ p.learner.last_name }}
-                            </td>
-                            <td class="td text-body-sm text-on-surface-variant">
-                                {{ p.cohort.campus_formation.name }} · {{ p.cohort.name }}
-                            </td>
-                            <td class="td text-right font-bold" style="color:#dc2626">{{ fmt(p.amount) }}</td>
-                            <td class="td text-right text-body-sm text-on-surface-variant">{{ fmtDate(p.due_date) }}</td>
-                            <td class="td text-right">
-                                <Link
-                                    :href="`/campus/cohorts/${p.cohort.id}/payments`"
-                                    class="action-link"
-                                >
-                                    <span class="material-symbols-outlined" style="font-size:14px">open_in_new</span>
-                                    Voir
-                                </Link>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <ListLoading :columns="5">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-surface border-b border-surface-container-highest">
+                                <th class="th">Apprenant</th>
+                                <th class="th">Cohorte</th>
+                                <th class="th text-right">Montant</th>
+                                <th class="th text-right">Échéance</th>
+                                <th class="th text-right">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-surface-container-highest">
+                            <tr
+                                v-for="p in recentOverdue"
+                                :key="p.id"
+                                class="hover:bg-surface-bright transition-colors"
+                            >
+                                <td class="td font-semibold text-on-surface">
+                                    {{ p.learner.first_name }} {{ p.learner.last_name }}
+                                </td>
+                                <td class="td text-body-sm text-on-surface-variant">
+                                    {{ p.cohort.campus_formation.name }} · {{ p.cohort.name }}
+                                </td>
+                                <td class="td text-right font-bold" style="color:#dc2626">{{ fmt(p.amount) }}</td>
+                                <td class="td text-right text-body-sm text-on-surface-variant">{{ fmtDate(p.due_date) }}</td>
+                                <td class="td text-right">
+                                    <Link
+                                        :href="`/campus/cohorts/${p.cohort.id}/payments`"
+                                        class="action-link"
+                                    >
+                                        <span class="material-symbols-outlined" style="font-size:14px">open_in_new</span>
+                                        Voir
+                                    </Link>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </ListLoading>
             </div>
         </div>
 

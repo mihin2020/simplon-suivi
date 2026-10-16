@@ -35,7 +35,7 @@ class BackupService
 
             $this->markProgress($backup, 10, 'Export de la base de données…');
             $sqlPath = $this->dumpDatabase($workDir);
-            $this->markProgress($backup, 40, 'Base exportée — création de l\'archive…');
+            $this->markProgress($backup, 40, 'Base exportée, création de l\'archive…');
 
             $filename = 'backup-'.now()->format('Y-m-d-His').'.zip';
             $absoluteZip = storage_path('app/backups/'.$filename);

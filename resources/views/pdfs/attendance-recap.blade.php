@@ -274,7 +274,7 @@
                                 @if($code)
                                     <span class="code-badge code-{{ $code }}">{{ $code }}</span>
                                 @else
-                                    <span class="code-nd">—</span>
+                                    <span class="code-nd">-</span>
                                 @endif
                                 <span class="sign-line"></span>
                             </td>
@@ -299,7 +299,7 @@
 
 <!-- Pied de page (apparaît sur chaque page DomPDF en mode fixed) -->
 <div class="footer">
-    {{ $formation->project->name }} — {{ $formation->name }} · {{ $rows->count() }} apprenant(s) · Généré le {{ now()->format('d/m/Y à H:i') }}
+    {{ $formation->project->name }} · {{ $formation->name }} · {{ $rows->count() }} apprenant(s) · Généré le {{ now()->format('d/m/Y à H:i') }}
 </div>
 
 </body>

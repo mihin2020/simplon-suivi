@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListLoading from '@/Components/UI/ListLoading.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref, watch, computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
@@ -202,82 +203,84 @@ const isFormationSelected = (formationId: string) => {
         <!-- Tableau -->
         <div class="bg-surface-container-lowest border border-surface-container-highest rounded-xl overflow-hidden shadow-sm">
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-surface border-b border-surface-container-highest">
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Formateur</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Email</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Formations assignées</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Statut</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-surface-container-highest">
-                        <tr v-if="trainers.data.length === 0">
-                            <td colspan="5" class="px-md py-xl text-center text-secondary text-body-md">
-                                Aucun formateur trouvé.
-                            </td>
-                        </tr>
-                        <tr
-                            v-for="trainer in trainers.data"
-                            :key="trainer.id"
-                            class="hover:bg-surface-bright transition-colors group"
-                        >
-                            <td class="px-md py-sm">
-                                <div class="flex items-center gap-sm">
-                                    <div class="avatar">
-                                        {{ trainer.user.first_name.charAt(0) }}{{ trainer.user.last_name.charAt(0) }}
-                                    </div>
-                                    <Link
-                                        :href="`/trainers/${trainer.id}`"
-                                        class="font-semibold text-on-surface hover:text-primary transition-colors"
-                                    >
-                                        {{ trainer.user.last_name }} {{ trainer.user.first_name }}
-                                    </Link>
-                                </div>
-                            </td>
-                            <td class="px-md py-sm text-data-tabular text-on-surface-variant">{{ trainer.user.email }}</td>
-                            <td class="px-md py-sm">
-                                <div v-if="trainer.formations.length === 0" class="text-on-surface-variant text-body-sm"></div>
-                                <div v-else class="flex flex-wrap gap-xs">
-                                    <div
-                                        v-for="formation in trainer.formations"
-                                        :key="formation.id"
-                                        class="formation-badge"
-                                    >
-                                        <span class="formation-project">{{ formation.project.name }}</span>
-                                        <span class="formation-name">{{ formation.name }}</span>
-                                        <button
-                                            @click="unassign(trainer, formation)"
-                                            class="formation-remove"
-                                            title="Retirer de cette formation"
+                <ListLoading :columns="5">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-surface border-b border-surface-container-highest">
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Formateur</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Email</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Formations assignées</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Statut</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-surface-container-highest">
+                            <tr v-if="trainers.data.length === 0">
+                                <td colspan="5" class="px-md py-xl text-center text-secondary text-body-md">
+                                    Aucun formateur trouvé.
+                                </td>
+                            </tr>
+                            <tr
+                                v-for="trainer in trainers.data"
+                                :key="trainer.id"
+                                class="hover:bg-surface-bright transition-colors group"
+                            >
+                                <td class="px-md py-sm">
+                                    <div class="flex items-center gap-sm">
+                                        <div class="avatar">
+                                            {{ trainer.user.first_name.charAt(0) }}{{ trainer.user.last_name.charAt(0) }}
+                                        </div>
+                                        <Link
+                                            :href="`/trainers/${trainer.id}`"
+                                            class="font-semibold text-on-surface hover:text-primary transition-colors"
                                         >
-                                            <span class="material-symbols-outlined" style="font-size:12px">close</span>
-                                        </button>
+                                            {{ trainer.user.last_name }} {{ trainer.user.first_name }}
+                                        </Link>
                                     </div>
-                                </div>
-                            </td>
-                            <td class="px-md py-sm">
-                                <span class="active-badge" :class="trainer.user.is_active ? 'badge-active' : 'badge-pending'">
-                                    {{ trainer.user.is_active ? 'Actif' : 'En attente' }}
-                                </span>
-                            </td>
-                            <td class="px-md py-sm text-right">
-                                <div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button @click="openAssignModal(trainer)" class="icon-btn assign" title="Assigner à une formation">
-                                        <span class="material-symbols-outlined" style="font-size:18px">assignment_ind</span>
-                                    </button>
-                                    <Link :href="`/trainers/${trainer.id}`" class="icon-btn" title="Voir le profil">
-                                        <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
-                                    </Link>
-                                    <Link :href="`/users/${trainer.user.id}/edit`" class="icon-btn" title="Modifier">
-                                        <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                                    </Link>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                                </td>
+                                <td class="px-md py-sm text-data-tabular text-on-surface-variant">{{ trainer.user.email }}</td>
+                                <td class="px-md py-sm">
+                                    <div v-if="trainer.formations.length === 0" class="text-on-surface-variant text-body-sm"></div>
+                                    <div v-else class="flex flex-wrap gap-xs">
+                                        <div
+                                            v-for="formation in trainer.formations"
+                                            :key="formation.id"
+                                            class="formation-badge"
+                                        >
+                                            <span class="formation-project">{{ formation.project.name }}</span>
+                                            <span class="formation-name">{{ formation.name }}</span>
+                                            <button
+                                                @click="unassign(trainer, formation)"
+                                                class="formation-remove"
+                                                title="Retirer de cette formation"
+                                            >
+                                                <span class="material-symbols-outlined" style="font-size:12px">close</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-md py-sm">
+                                    <span class="active-badge" :class="trainer.user.is_active ? 'badge-active' : 'badge-pending'">
+                                        {{ trainer.user.is_active ? 'Actif' : 'En attente' }}
+                                    </span>
+                                </td>
+                                <td class="px-md py-sm text-right">
+                                    <div class="flex items-center justify-end gap-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button @click="openAssignModal(trainer)" class="icon-btn assign" title="Assigner à une formation">
+                                            <span class="material-symbols-outlined" style="font-size:18px">assignment_ind</span>
+                                        </button>
+                                        <Link :href="`/trainers/${trainer.id}`" class="icon-btn" title="Voir le profil">
+                                            <span class="material-symbols-outlined" style="font-size:18px">visibility</span>
+                                        </Link>
+                                        <Link :href="`/users/${trainer.user.id}/edit`" class="icon-btn" title="Modifier">
+                                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                                        </Link>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </ListLoading>
             </div>
 
             <!-- Pagination -->
@@ -682,6 +685,7 @@ const isFormationSelected = (formationId: string) => {
     justify-content: center;
     z-index: 50;
     padding: 20px;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal-content {
     background: #fff;

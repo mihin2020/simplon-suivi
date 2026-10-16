@@ -25,7 +25,7 @@ class FormSchemaService
     }
 
     /**
-     * Always resolve from DB — never cache Eloquent models (breaks public access / images).
+     * Always resolve from DB - never cache Eloquent models (breaks public access / images).
      *
      * @return array{form: Form, fields: \Illuminate\Database\Eloquent\Collection}|null
      */

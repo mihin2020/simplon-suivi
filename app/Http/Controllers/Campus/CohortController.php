@@ -429,7 +429,7 @@ class CohortController extends Controller
             'status' => 'actif',
         ]);
 
-        // Transfer only paid payments — they represent real money received
+        // Transfer only paid payments - they represent real money received
         $transferred = Payment::where('cohort_id', $cohort->id)
             ->where('learner_id', $learner->id)
             ->where('status', 'paye')
@@ -440,7 +440,7 @@ class CohortController extends Controller
             ->where('status', 'paye')
             ->update(['cohort_id' => $targetCohort->id]);
 
-        // Cancel pending/overdue installments — amounts were sized for the old formation
+        // Cancel pending/overdue installments - amounts were sized for the old formation
         $cancelled = Payment::where('cohort_id', $cohort->id)
             ->where('learner_id', $learner->id)
             ->whereIn('status', ['en_attente', 'en_retard'])

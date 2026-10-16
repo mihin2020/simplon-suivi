@@ -76,7 +76,7 @@ const optionalColumns = [
                         {{ formation.name }}<template v-if="formation.project"> · {{ formation.project.name }}</template>
                     </template>
                     <template v-else>
-                        Import général — les apprenants ne seront pas inscrits dans une formation.
+                        Import général : les apprenants ne seront pas inscrits dans une formation.
                     </template>
                 </p>
             </div>

@@ -46,8 +46,8 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
 
         $latestInsertionMap ??= self::latestInsertionRecordsFor($this->formation->learners->pluck('id')->all());
 
-        $this->projectName = $this->formation->project?->name ?? '—';
-        $this->statusLabel = $this->formation->status?->label() ?? '—';
+        $this->projectName = $this->formation->project?->name ?? '-';
+        $this->statusLabel = $this->formation->status?->label() ?? '-';
         $this->stats = self::computeStats($this->formation, $latestInsertionMap);
         $this->learners = self::buildLearnerRows($this->formation, $latestInsertionMap);
         $this->learnerCount = $this->learners->count();
@@ -148,7 +148,7 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
                 return [
                     'last_name' => $learner->last_name,
                     'first_name' => $learner->first_name,
-                    'gender_label' => $learner->gender?->label() ?? '—',
+                    'gender_label' => $learner->gender?->label() ?? '-',
                     'email' => $learner->email,
                     'status_label' => $statusLabels[$learner->pivot->status] ?? $learner->pivot->status,
                     'insertion_label' => $insertionLabel,
@@ -190,7 +190,7 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
         $rows[] = ['#', 'Nom', 'Prénom', 'Genre', 'Email', 'Statut formation', 'Statut insertion'];
 
         if ($this->learnerCount === 0) {
-            $rows[] = ['—', 'Aucun apprenant inscrit', '', '', '', '', ''];
+            $rows[] = ['-', 'Aucun apprenant inscrit', '', '', '', '', ''];
         } else {
             $i = 1;
             foreach ($this->learners as $learner) {

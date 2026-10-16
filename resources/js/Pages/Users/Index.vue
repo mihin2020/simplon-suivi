@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListLoading from '@/Components/UI/ListLoading.vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import { ref, watch, computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
@@ -253,60 +254,62 @@ watch(() => props.users, () => {
         <!-- Tableau -->
         <div class="bg-surface-container-lowest border border-surface-container-highest rounded-xl overflow-hidden shadow-sm">
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-surface border-b border-surface-container-highest">
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Utilisateur</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Email</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Rôle</th>
-                            <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Statut</th>
-                            <th class="px-md py-sm w-10"></th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-surface-container-highest">
-                        <tr v-if="users.data.length === 0">
-                            <td colspan="5" class="px-md py-xl text-center text-secondary text-body-md">
-                                Aucun utilisateur trouvé.
-                            </td>
-                        </tr>
-                        <tr
-                            v-for="user in users.data"
-                            :key="user.id"
-                            class="row-clickable hover:bg-surface-bright transition-colors group"
-                            @click="openDrawer(user)"
-                        >
-                            <td class="px-md py-sm">
-                                <div class="flex items-center gap-sm">
-                                    <div class="avatar">
-                                        {{ user.first_name.charAt(0) }}{{ user.last_name.charAt(0) }}
-                                    </div>
-                                    <div>
-                                        <div class="font-semibold text-on-surface">
-                                            {{ user.last_name }} {{ user.first_name }}
+                <ListLoading :columns="5">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-surface border-b border-surface-container-highest">
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Utilisateur</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Email</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Rôle</th>
+                                <th class="px-md py-sm text-label-caps text-on-surface-variant uppercase tracking-wide">Statut</th>
+                                <th class="px-md py-sm w-10"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-surface-container-highest">
+                            <tr v-if="users.data.length === 0">
+                                <td colspan="5" class="px-md py-xl text-center text-secondary text-body-md">
+                                    Aucun utilisateur trouvé.
+                                </td>
+                            </tr>
+                            <tr
+                                v-for="user in users.data"
+                                :key="user.id"
+                                class="row-clickable hover:bg-surface-bright transition-colors group"
+                                @click="openDrawer(user)"
+                            >
+                                <td class="px-md py-sm">
+                                    <div class="flex items-center gap-sm">
+                                        <div class="avatar">
+                                            {{ user.first_name.charAt(0) }}{{ user.last_name.charAt(0) }}
                                         </div>
-                                        <div v-if="user.role === 'super_admin'" class="text-body-sm text-primary font-medium">
-                                            Compte principal
+                                        <div>
+                                            <div class="font-semibold text-on-surface">
+                                                {{ user.last_name }} {{ user.first_name }}
+                                            </div>
+                                            <div v-if="user.role === 'super_admin'" class="text-body-sm text-primary font-medium">
+                                                Compte principal
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </td>
-                            <td class="px-md py-sm text-data-tabular text-on-surface-variant">{{ user.email }}</td>
-                            <td class="px-md py-sm">
-                                <span class="role-badge" :class="'role-' + user.role">
-                                    {{ user.role_label }}
-                                </span>
-                            </td>
-                            <td class="px-md py-sm">
-                                <span class="active-badge" :class="user.is_active ? 'badge-active' : 'badge-inactive'">
-                                    {{ user.is_active ? 'Actif' : 'Inactif' }}
-                                </span>
-                            </td>
-                            <td class="px-md py-sm text-right">
-                                <span class="material-symbols-outlined row-chevron" style="font-size:20px">chevron_right</span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                                </td>
+                                <td class="px-md py-sm text-data-tabular text-on-surface-variant">{{ user.email }}</td>
+                                <td class="px-md py-sm">
+                                    <span class="role-badge" :class="'role-' + user.role">
+                                        {{ user.role_label }}
+                                    </span>
+                                </td>
+                                <td class="px-md py-sm">
+                                    <span class="active-badge" :class="user.is_active ? 'badge-active' : 'badge-inactive'">
+                                        {{ user.is_active ? 'Actif' : 'Inactif' }}
+                                    </span>
+                                </td>
+                                <td class="px-md py-sm text-right">
+                                    <span class="material-symbols-outlined row-chevron" style="font-size:20px">chevron_right</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </ListLoading>
             </div>
 
             <!-- Pagination -->
@@ -814,6 +817,7 @@ watch(() => props.users, () => {
 .modal-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.45);
     display: flex; align-items: center; justify-content: center; z-index: 9999;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal-box {
     background: #fff; border-radius: 14px; padding: 28px 28px 22px;
@@ -870,6 +874,7 @@ watch(() => props.users, () => {
     position: fixed; inset: 0; background: rgba(0,0,0,0.45);
     display: flex; align-items: center; justify-content: center; z-index: 9999;
     padding: 16px;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal-content {
     background: #fff; border-radius: 14px;
@@ -977,6 +982,7 @@ watch(() => props.users, () => {
 .drawer-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,0.4);
     z-index: 9000; display: flex; justify-content: flex-end;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .drawer {
     width: 100%; max-width: 420px; height: 100%; background: #fff;

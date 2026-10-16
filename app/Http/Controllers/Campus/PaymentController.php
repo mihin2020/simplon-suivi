@@ -6,10 +6,12 @@ use App\Actions\Campus\RefundPayment;
 use App\Enums\CohortStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\PaymentStatus;
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Campus\RefundPaymentRequest;
 use App\Models\Cohort;
 use App\Models\Payment;
+use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -83,7 +85,19 @@ class PaymentController extends Controller
                 'label' => $m->label(),
                 'icon' => $m->icon(),
             ]),
+            // Editing an installment (amount/date correction) is reserved to admins.
+            'canEdit' => $this->canEditPayments(auth()->user()),
         ]);
+    }
+
+    /**
+     * Correcting an installment is an administrative action: restricted to
+     * Super Admin and Admin roles only (collectors cannot rewrite history).
+     */
+    private function canEditPayments(?User $user): bool
+    {
+        return $user !== null
+            && in_array($user->role, [UserRole::SuperAdmin, UserRole::Admin], true);
     }
 
     public function generateSchedule(Request $request, Cohort $cohort): RedirectResponse
@@ -253,6 +267,64 @@ class PaymentController extends Controller
         return back()->with('success', 'Paiement encaissé.');
     }
 
+    public function update(Request $request, Payment $payment): RedirectResponse
+    {
+        if (! $this->canEditPayments($request->user())) {
+            abort(403, 'Seul un administrateur peut corriger une tranche.');
+        }
+
+        if (in_array($payment->status, [PaymentStatus::Rembourse, PaymentStatus::Annule], true)) {
+            return back()->withErrors([
+                'payment' => 'Une tranche remboursée ou annulée ne peut pas être modifiée.',
+            ]);
+        }
+
+        $isPaid = $payment->status === PaymentStatus::Paye;
+
+        $data = $request->validate([
+            'amount' => ['required', 'integer', 'min:1'],
+            'due_date' => ['required', 'date'],
+            // The collection date only exists (and is required) for a paid installment.
+            'paid_at' => [$isPaid ? 'required' : 'nullable', 'date'],
+        ]);
+
+        $payment->load(['cohort' => fn ($q) => $q->with(['campusFormation' => fn ($q2) => $q2->withTrashed()])]);
+        $totalCost = $payment->cohort?->campusFormation?->total_cost ?? 0;
+
+        // Budget check: the sum of all installments still counting toward the
+        // plan (paid + pending + overdue), with this one replaced, must fit.
+        $otherAmount = Payment::where('cohort_id', $payment->cohort_id)
+            ->where('learner_id', $payment->learner_id)
+            ->whereIn('status', [
+                PaymentStatus::Paye->value,
+                PaymentStatus::EnAttente->value,
+                PaymentStatus::EnRetard->value,
+            ])
+            ->where('id', '!=', $payment->id)
+            ->sum('amount');
+
+        if ($totalCost > 0 && $otherAmount + $data['amount'] > $totalCost) {
+            $available = max(0, $totalCost - $otherAmount);
+
+            return back()->withErrors([
+                'amount' => "Le montant dépasse le solde planifiable ({$available} FCFA).",
+            ]);
+        }
+
+        $payload = [
+            'amount' => $data['amount'],
+            'due_date' => $data['due_date'],
+        ];
+
+        if ($isPaid) {
+            $payload['paid_at'] = $data['paid_at'];
+        }
+
+        $payment->update($payload);
+
+        return back()->with('success', 'Tranche mise à jour.');
+    }
+
     public function refund(
         RefundPaymentRequest $request,
         Payment $payment,
@@ -347,8 +419,8 @@ class PaymentController extends Controller
             'totalCost' => $totalCost,
             'totalPaid' => $totalPaid,
             'remaining' => $remaining,
-            'methodLabel' => $methodLabels[$payment->payment_method?->value ?? ''] ?? '—',
-            'paidAt' => $payment->paid_at?->format('d/m/Y') ?? '—',
+            'methodLabel' => $methodLabels[$payment->payment_method?->value ?? ''] ?? '-',
+            'paidAt' => $payment->paid_at?->format('d/m/Y') ?? '-',
             'receiptNumber' => $receiptNumber,
             'issuedAt' => now()->format('d/m/Y à H:i'),
             'issuedBy' => $user ? trim("{$user->first_name} {$user->last_name}") : null,

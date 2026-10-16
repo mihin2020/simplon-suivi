@@ -19,7 +19,7 @@
 ## Configuration .env - Option 1 : SSL (Port 465)
 
 ```env
-# Configuration Mail (SMTP) — Laravel 12+
+# Configuration Mail (SMTP) - Laravel 12+
 MAIL_MAILER=smtp
 MAIL_SCHEME=smtps
 MAIL_HOST=mail.adsel.org
@@ -30,7 +30,7 @@ MAIL_FROM_ADDRESS=talentora@adsel.org
 MAIL_FROM_NAME="Talentora Simplon"
 ```
 
-## Configuration .env - Option 2 : STARTTLS (Port 587) — recommandée
+## Configuration .env - Option 2 : STARTTLS (Port 587) - recommandée
 
 ```env
 # Configuration Mail (SMTP) - STARTTLS (Laravel 12+)

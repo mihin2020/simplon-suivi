@@ -60,6 +60,7 @@ const emit = defineEmits<{
     justify-content: center;
     z-index: 9999;
     padding: 20px;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 
 .modal {

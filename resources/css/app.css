@@ -7,9 +7,9 @@
 @source "../**/*.vue";
 
 @theme {
-    /* === Simplon BF — Design System (Material Design 3) === */
+    /* === Simplon BF - Design System (Material Design 3) === */
 
-    /* Primary — couleurs officielles Simplon Burkina Faso */
+    /* Primary - couleurs officielles Simplon Burkina Faso */
     --color-primary: #E5004C;
     --color-on-primary: #ffffff;
     --color-primary-container: #b8003c;

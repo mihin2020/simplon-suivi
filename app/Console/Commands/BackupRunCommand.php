@@ -20,7 +20,7 @@ class BackupRunCommand extends Command
         $typeValue = $this->option('type') === 'manual' ? BackupType::Manual : BackupType::Auto;
 
         if ($typeValue === BackupType::Auto && ! BackupSettings::all()['auto_enabled']) {
-            $this->info('Backups automatiques désactivés — rien à faire.');
+            $this->info('Backups automatiques désactivés : rien à faire.');
 
             return self::SUCCESS;
         }

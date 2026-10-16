@@ -405,7 +405,7 @@ const submitAttendanceSettings = () => {
                     <p v-if="createForm.errors.name" class="err">{{ createForm.errors.name }}</p>
                     <div v-if="trainerProfiles.length === 0" class="empty-inline">
                         <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
-                        <span>Aucun profil — ajoutez-en un ci-dessus.</span>
+                        <span>Aucun profil. Ajoutez-en un ci-dessus.</span>
                     </div>
                     <ul v-else :ref="(el) => bindSortableList(el as Element | null, 'trainer-profiles')" class="ref-list">
                         <li v-for="p in trainerProfiles" :key="p.id" class="ref-item" :data-id="p.id">
@@ -450,7 +450,7 @@ const submitAttendanceSettings = () => {
                     <p v-if="eduCreateForm.errors.name" class="err">{{ eduCreateForm.errors.name }}</p>
                     <div v-if="educationLevels.length === 0" class="empty-inline">
                         <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
-                        <span>Aucun niveau — ajoutez-en un ci-dessus.</span>
+                        <span>Aucun niveau. Ajoutez-en un ci-dessus.</span>
                     </div>
                     <ul v-else :ref="(el) => bindSortableList(el as Element | null, 'education-levels')" class="ref-list">
                         <li v-for="e in educationLevels" :key="e.id" class="ref-item" :data-id="e.id">
@@ -507,7 +507,7 @@ const submitAttendanceSettings = () => {
                     <p v-if="ageCreateForm.errors.age_max" class="err">{{ ageCreateForm.errors.age_max }}</p>
                     <div v-if="ageRanges.length === 0" class="empty-inline">
                         <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
-                        <span>Aucune tranche — ajoutez-en une ci-dessus.</span>
+                        <span>Aucune tranche. Ajoutez-en une ci-dessus.</span>
                     </div>
                     <ul v-else :ref="(el) => bindSortableList(el as Element | null, 'age-ranges')" class="ref-list">
                         <li v-for="a in ageRanges" :key="a.id" class="ref-item" :data-id="a.id">
@@ -554,7 +554,7 @@ const submitAttendanceSettings = () => {
                     <p v-if="vulnCreateForm.errors.name" class="err">{{ vulnCreateForm.errors.name }}</p>
                     <div v-if="vulnerabilities.length === 0" class="empty-inline">
                         <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
-                        <span>Aucune vulnérabilité — ajoutez-en une ci-dessus.</span>
+                        <span>Aucune vulnérabilité. Ajoutez-en une ci-dessus.</span>
                     </div>
                     <ul v-else :ref="(el) => bindSortableList(el as Element | null, 'vulnerabilities')" class="ref-list">
                         <li v-for="v in vulnerabilities" :key="v.id" class="ref-item" :data-id="v.id">
@@ -599,7 +599,7 @@ const submitAttendanceSettings = () => {
                     <p v-if="diplCreateForm.errors.name" class="err">{{ diplCreateForm.errors.name }}</p>
                     <div v-if="lastDiplomas.length === 0" class="empty-inline">
                         <span class="material-symbols-outlined" style="font-size:28px;color:#dde1e5">inbox</span>
-                        <span>Aucun diplôme — ajoutez-en un ci-dessus.</span>
+                        <span>Aucun diplôme. Ajoutez-en un ci-dessus.</span>
                     </div>
                     <ul v-else :ref="(el) => bindSortableList(el as Element | null, 'last-diplomas')" class="ref-list">
                         <li v-for="d in lastDiplomas" :key="d.id" class="ref-item" :data-id="d.id">
@@ -645,7 +645,7 @@ const submitAttendanceSettings = () => {
                                 max="999"
                                 class="add-input"
                                 :class="{ 'input-error': attendanceSettingsForm.errors.absence_alert_threshold }"
-                                placeholder="Ex : 5 — laisser vide pour désactiver"
+                                placeholder="Ex : 5 (laisser vide pour désactiver)"
                             />
                             <button type="submit" class="add-btn" :disabled="attendanceSettingsForm.processing">
                                 <span class="material-symbols-outlined" style="font-size:17px">save</span>
@@ -699,7 +699,7 @@ const submitAttendanceSettings = () => {
                             </template>
                         </li>
                     </ul>
-                    <div v-else class="empty-inline">Aucun type — ajoutez-en un ci-dessus.</div>
+                    <div v-else class="empty-inline">Aucun type. Ajoutez-en un ci-dessus.</div>
                 </div>
             </div>
 
@@ -740,7 +740,7 @@ const submitAttendanceSettings = () => {
                             </template>
                         </li>
                     </ul>
-                    <div v-else class="empty-inline">Aucun type — ajoutez-en un ci-dessus.</div>
+                    <div v-else class="empty-inline">Aucun type. Ajoutez-en un ci-dessus.</div>
                 </div>
             </div>
 

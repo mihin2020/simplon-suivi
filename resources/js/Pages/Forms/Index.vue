@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListLoading from '@/Components/UI/ListLoading.vue'
 import { computed, ref, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
@@ -183,81 +184,83 @@ const archive = () => {
 
         <div v-else class="table-card">
             <div class="overflow-x-auto">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Titre</th>
-                            <th>Projet / Formation</th>
-                            <th>Réponses</th>
-                            <th>Statut</th>
-                            <th class="text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="form in forms.data" :key="form.id">
-                            <td>
-                                <Link :href="`/forms/${form.id}/edit`" class="row-title">
-                                    {{ form.title }}
-                                </Link>
-                            </td>
-                            <td>
-                                <div class="row-meta">{{ form.project?.name }}</div>
-                                <div class="row-sub">{{ form.formation?.name }}</div>
-                            </td>
-                            <td>
-                                <span class="count-pill">{{ form.responses_count }}</span>
-                            </td>
-                            <td>
-                                <span class="status-badge" :class="badgeClass(statusMeta(form.status).color)">
-                                    {{ statusMeta(form.status).label }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="row-actions">
-                                    <Can permission="forms.stats">
-                                        <Link :href="`/forms/${form.id}/stats`" class="icon-btn" title="Statistiques">
-                                            <span class="material-symbols-outlined" style="font-size:18px">bar_chart</span>
-                                        </Link>
-                                    </Can>
-                                    <Can permission="forms.responses">
-                                        <Link :href="`/forms/${form.id}/responses`" class="icon-btn" title="Réponses">
-                                            <span class="material-symbols-outlined" style="font-size:18px">inbox</span>
-                                        </Link>
-                                    </Can>
-                                    <Can permission="forms.create">
-                                        <button
-                                            type="button"
-                                            class="icon-btn"
-                                            title="Dupliquer"
-                                            @click="router.post(`/forms/${form.id}/duplicate`)"
-                                        >
-                                            <span class="material-symbols-outlined" style="font-size:18px">content_copy</span>
-                                        </button>
-                                    </Can>
-                                    <Link :href="`/forms/${form.id}/edit`" class="icon-btn" title="Éditer">
-                                        <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                <ListLoading :columns="5">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Titre</th>
+                                <th>Projet / Formation</th>
+                                <th>Réponses</th>
+                                <th>Statut</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="form in forms.data" :key="form.id">
+                                <td>
+                                    <Link :href="`/forms/${form.id}/edit`" class="row-title">
+                                        {{ form.title }}
                                     </Link>
-                                    <Can v-if="form.status !== 'archived'" permission="forms.delete">
-                                        <button type="button" class="icon-btn danger" title="Archiver" @click="confirmTarget = form">
-                                            <span class="material-symbols-outlined" style="font-size:18px">inventory_2</span>
-                                        </button>
-                                    </Can>
-                                    <Can v-else permission="forms.delete">
-                                        <button
-                                            type="button"
-                                            class="btn-recover"
-                                            title="Désarchiver et remettre en brouillon"
-                                            @click="router.post(`/forms/${form.id}/unarchive`)"
-                                        >
-                                            <span class="material-symbols-outlined" style="font-size:16px">unarchive</span>
-                                            Récupérer
-                                        </button>
-                                    </Can>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                                </td>
+                                <td>
+                                    <div class="row-meta">{{ form.project?.name }}</div>
+                                    <div class="row-sub">{{ form.formation?.name }}</div>
+                                </td>
+                                <td>
+                                    <span class="count-pill">{{ form.responses_count }}</span>
+                                </td>
+                                <td>
+                                    <span class="status-badge" :class="badgeClass(statusMeta(form.status).color)">
+                                        {{ statusMeta(form.status).label }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="row-actions">
+                                        <Can permission="forms.stats">
+                                            <Link :href="`/forms/${form.id}/stats`" class="icon-btn" title="Statistiques">
+                                                <span class="material-symbols-outlined" style="font-size:18px">bar_chart</span>
+                                            </Link>
+                                        </Can>
+                                        <Can permission="forms.responses">
+                                            <Link :href="`/forms/${form.id}/responses`" class="icon-btn" title="Réponses">
+                                                <span class="material-symbols-outlined" style="font-size:18px">inbox</span>
+                                            </Link>
+                                        </Can>
+                                        <Can permission="forms.create">
+                                            <button
+                                                type="button"
+                                                class="icon-btn"
+                                                title="Dupliquer"
+                                                @click="router.post(`/forms/${form.id}/duplicate`)"
+                                            >
+                                                <span class="material-symbols-outlined" style="font-size:18px">content_copy</span>
+                                            </button>
+                                        </Can>
+                                        <Link :href="`/forms/${form.id}/edit`" class="icon-btn" title="Éditer">
+                                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                                        </Link>
+                                        <Can v-if="form.status !== 'archived'" permission="forms.delete">
+                                            <button type="button" class="icon-btn danger" title="Archiver" @click="confirmTarget = form">
+                                                <span class="material-symbols-outlined" style="font-size:18px">inventory_2</span>
+                                            </button>
+                                        </Can>
+                                        <Can v-else permission="forms.delete">
+                                            <button
+                                                type="button"
+                                                class="btn-recover"
+                                                title="Désarchiver et remettre en brouillon"
+                                                @click="router.post(`/forms/${form.id}/unarchive`)"
+                                            >
+                                                <span class="material-symbols-outlined" style="font-size:16px">unarchive</span>
+                                                Récupérer
+                                            </button>
+                                        </Can>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </ListLoading>
             </div>
         </div>
 
@@ -400,6 +403,7 @@ const archive = () => {
 .modal-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,0.45);
     display: flex; align-items: center; justify-content: center; z-index: 1000;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal-box {
     background: #fff; border-radius: 16px; padding: 32px 28px;

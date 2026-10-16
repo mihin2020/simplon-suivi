@@ -47,7 +47,7 @@ class AbandonCohortLearner
                     'abandoned_at' => now(),
                 ]);
 
-            // Pending installments are cancelled — paid ones stay (no auto-refund).
+            // Pending installments are cancelled - paid ones stay (no auto-refund).
             Payment::query()
                 ->where('cohort_id', $cohort->id)
                 ->where('learner_id', $learner->id)

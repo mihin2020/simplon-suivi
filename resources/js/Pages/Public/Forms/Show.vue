@@ -320,7 +320,7 @@ const fieldError = (id: string) =>
                             <span class="file-drop-title">
                                 {{ fileInputs[field.id]?.name || 'Choisir un fichier à envoyer' }}
                             </span>
-                            <span class="file-drop-hint">PDF, JPG, PNG ou Word — max 5 Mo</span>
+                            <span class="file-drop-hint">PDF, JPG, PNG ou Word (5 Mo max)</span>
                             <input
                                 :id="field.id"
                                 type="file"

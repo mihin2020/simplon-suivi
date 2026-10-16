@@ -1075,6 +1075,7 @@ const filteredInactiveLearners = computed(() => {
     justify-content: center;
     z-index: 50;
     padding: 16px;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal-content {
     background: #fff;
@@ -1446,6 +1447,7 @@ const filteredInactiveLearners = computed(() => {
 .ref-overlay {
     position: fixed; inset: 0; background: rgba(0,0,0,0.45);
     display: flex; align-items: center; justify-content: center; z-index: 9999;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .ref-box {
     background: #fff; border-radius: 14px;

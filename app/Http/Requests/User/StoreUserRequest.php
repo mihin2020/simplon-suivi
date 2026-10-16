@@ -29,6 +29,11 @@ class StoreUserRequest extends FormRequest
             'phone'         => $isTrainer ? ['nullable', 'string', 'max:20'] : ['nullable', 'prohibited'],
             'phone2'        => $isTrainer ? ['nullable', 'string', 'max:20'] : ['nullable', 'prohibited'],
             'cv'            => $isTrainer ? ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'] : ['nullable', 'prohibited'],
+            // État civil - utilisé pour remplir automatiquement les contrats formateur
+            'birth_date'    => $isTrainer ? ['nullable', 'date'] : ['nullable', 'prohibited'],
+            'birth_place'   => $isTrainer ? ['nullable', 'string', 'max:255'] : ['nullable', 'prohibited'],
+            'address'       => $isTrainer ? ['nullable', 'string', 'max:500'] : ['nullable', 'prohibited'],
+            'id_number'     => $isTrainer ? ['nullable', 'string', 'max:100'] : ['nullable', 'prohibited'],
         ];
     }
 

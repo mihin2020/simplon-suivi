@@ -100,7 +100,7 @@ const props = defineProps<{
 const showPartnersModal = ref(false)
 const partnerSaved = ref(false)
 
-// Association partenaires — réactif aux props Inertia
+// Association partenaires - réactif aux props Inertia
 const partnerForm = useForm({
     partner_ids: props.project.partners.map(p => p.id),
 })
@@ -268,10 +268,10 @@ const duplicateFormation = (formation: Formation) => {
                                 </p>
                             </td>
                             <td class="px-md py-sm text-body-sm text-on-surface-variant whitespace-nowrap">
-                                {{ formation.location || '—' }}
+                                {{ formation.location || '-' }}
                             </td>
                             <td class="px-md py-sm text-body-sm text-on-surface-variant whitespace-nowrap">
-                                {{ formation.venue || '—' }}
+                                {{ formation.venue || '-' }}
                             </td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant whitespace-nowrap">{{ fmt(formation.started_at) }}</td>
                             <td class="px-md py-sm text-data-tabular text-on-surface-variant whitespace-nowrap">{{ fmt(formation.ended_at) }}</td>
@@ -370,7 +370,7 @@ const duplicateFormation = (formation: Formation) => {
                                 <span class="partner-section-count">{{ selectedPartners.length }}</span>
                             </div>
                             <div v-if="selectedPartners.length === 0" class="partner-section-empty">
-                                Aucun partenaire associé — cliquez sur un partenaire ci-dessous pour l'ajouter.
+                                Aucun partenaire associé. Cliquez sur un partenaire ci-dessous pour l'ajouter.
                             </div>
                             <div v-else class="partner-chips-row">
                                 <div v-for="p in selectedPartners" :key="p.id" class="partner-chip-item">

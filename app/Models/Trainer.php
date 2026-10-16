@@ -19,6 +19,10 @@ class Trainer extends Model
         'profile_id',
         'phone',
         'phone2',
+        'birth_date',
+        'birth_place',
+        'address',
+        'id_number',
         'cv_path',
         'is_active',
     ];
@@ -26,6 +30,7 @@ class Trainer extends Model
     protected function casts(): array
     {
         return [
+            'birth_date' => 'date',
             'is_active' => 'boolean',
         ];
     }

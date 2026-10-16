@@ -24,7 +24,7 @@ class BackupFailedMail extends Mailable implements ShouldQueue
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Échec de sauvegarde — '.config('app.name'),
+            subject: 'Échec de sauvegarde · '.config('app.name'),
         );
     }
 

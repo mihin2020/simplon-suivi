@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="utf-8">
-    <title>Candidatures — {{ $form->title }}</title>
+    <title>Candidatures · {{ $form->title }}</title>
     <style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #191c1e; }
         h1 { font-size: 18px; color: #1F3A4D; margin: 0 0 4px; }
@@ -45,9 +45,9 @@
                         : null;
                 @endphp
                 <tr>
-                    <td>{{ $response->email ?? '—' }}</td>
+                    <td>{{ $response->email ?? '-' }}</td>
                     <td>{{ $response->status->label() }}</td>
-                    <td>{{ optional($response->submitted_at)->format('d/m/Y H:i') ?? '—' }}</td>
+                    <td>{{ optional($response->submitted_at)->format('d/m/Y H:i') ?? '-' }}</td>
                     <td>
                         @if ($reviewer)
                             {{ $reviewer }}
@@ -55,14 +55,14 @@
                                 <br><em>{{ $response->review_note }}</em>
                             @endif
                         @else
-                            —
+                            -
                         @endif
                     </td>
                     @foreach ($form->fields->filter(fn ($f) => $f->type->isAnswerable()) as $field)
                         @php $answer = $answersByField->get($field->id); @endphp
                         <td>
                             @if (! $answer)
-                                —
+                                -
                             @elseif ($answer->file_original_name)
                                 {{ $answer->file_original_name }}
                             @elseif (is_array($answer->value_json))
@@ -83,6 +83,6 @@
         </tbody>
     </table>
 
-    <p class="footer">Document généré automatiquement — Simplon Burkina Faso</p>
+    <p class="footer">Document généré automatiquement par Simplon Burkina Faso</p>
 </body>
 </html>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListLoading from '@/Components/UI/ListLoading.vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import { ref } from 'vue'
@@ -156,62 +157,64 @@ function recipientsLabel(to: any[]) {
 
             <!-- Liste -->
             <div class="thread-list">
-                <div v-if="!emails.data.length" class="empty-state">
-                    <span class="material-symbols-outlined empty-icon">{{ search ? 'search_off' : 'send' }}</span>
-                    <p class="empty-title">
-                        <template v-if="search">Aucun résultat pour « {{ search }} »</template>
-                        <template v-else>Aucun email envoyé</template>
-                    </p>
-                    <p class="empty-sub">
-                        <template v-if="search">Essayez d'autres mots-clés.</template>
-                        <template v-else>Vos emails envoyés apparaîtront ici.</template>
-                    </p>
-                    <Link v-if="!search && can('communication.send')" href="/communication/emails/compose" class="compose-btn-empty">
-                        <span class="material-symbols-outlined" style="font-size:18px">edit_square</span>
-                        Rédiger un message
-                    </Link>
-                </div>
+                <ListLoading :columns="3" :rows="8">
+                    <div v-if="!emails.data.length" class="empty-state">
+                        <span class="material-symbols-outlined empty-icon">{{ search ? 'search_off' : 'send' }}</span>
+                        <p class="empty-title">
+                            <template v-if="search">Aucun résultat pour « {{ search }} »</template>
+                            <template v-else>Aucun email envoyé</template>
+                        </p>
+                        <p class="empty-sub">
+                            <template v-if="search">Essayez d'autres mots-clés.</template>
+                            <template v-else>Vos emails envoyés apparaîtront ici.</template>
+                        </p>
+                        <Link v-if="!search && can('communication.send')" href="/communication/emails/compose" class="compose-btn-empty">
+                            <span class="material-symbols-outlined" style="font-size:18px">edit_square</span>
+                            Rédiger un message
+                        </Link>
+                    </div>
 
-                <div
-                    v-for="e in emails.data"
-                    :key="e.id"
-                    class="thread-row"
-                >
-                    <!-- Avatar initiale du premier destinataire -->
                     <div
-                        class="thread-avatar"
-                        :style="{ background: avatarColor(e.to?.[0]?.name || e.to?.[0]?.email) }"
+                        v-for="e in emails.data"
+                        :key="e.id"
+                        class="thread-row"
                     >
-                        {{ avatarLetter(e.to?.[0]?.name, e.to?.[0]?.email) }}
-                    </div>
-
-                    <!-- Corps cliquable -->
-                    <Link :href="`/communication/emails/sent/${e.id}`" class="thread-body">
-                        <div class="thread-sender">
-                            <span class="sent-to-label">À :</span>
-                            {{ recipientsLabel(e.to) }}
+                        <!-- Avatar initiale du premier destinataire -->
+                        <div
+                            class="thread-avatar"
+                            :style="{ background: avatarColor(e.to?.[0]?.name || e.to?.[0]?.email) }"
+                        >
+                            {{ avatarLetter(e.to?.[0]?.name, e.to?.[0]?.email) }}
                         </div>
-                        <div class="thread-content">
-                            <span class="thread-subject">{{ e.subject || '(Sans sujet)' }}</span>
-                            <span v-if="e.snippet" class="thread-snippet"> {{ e.snippet }}</span>
+
+                        <!-- Corps cliquable -->
+                        <Link :href="`/communication/emails/sent/${e.id}`" class="thread-body">
+                            <div class="thread-sender">
+                                <span class="sent-to-label">À :</span>
+                                {{ recipientsLabel(e.to) }}
+                            </div>
+                            <div class="thread-content">
+                                <span class="thread-subject">{{ e.subject || '(Sans sujet)' }}</span>
+                                <span v-if="e.snippet" class="thread-snippet"> {{ e.snippet }}</span>
+                            </div>
+                        </Link>
+
+                        <!-- Indicateur PJ -->
+                        <span v-if="e.has_attachments" class="thread-attach" title="Pièce jointe">
+                            <span class="material-symbols-outlined" style="font-size:16px">attach_file</span>
+                        </span>
+
+                        <!-- Date + action supprimer -->
+                        <div class="thread-right">
+                            <span class="thread-date">{{ fmtDate(e.sent_at) }}</span>
                         </div>
-                    </Link>
-
-                    <!-- Indicateur PJ -->
-                    <span v-if="e.has_attachments" class="thread-attach" title="Pièce jointe">
-                        <span class="material-symbols-outlined" style="font-size:16px">attach_file</span>
-                    </span>
-
-                    <!-- Date + action supprimer -->
-                    <div class="thread-right">
-                        <span class="thread-date">{{ fmtDate(e.sent_at) }}</span>
+                        <div v-if="can('communication.manage')" class="row-actions" @click.stop>
+                            <button class="row-act row-act-danger" title="Supprimer" @click.prevent="confirmDelete(e.id)">
+                                <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                            </button>
+                        </div>
                     </div>
-                    <div v-if="can('communication.manage')" class="row-actions" @click.stop>
-                        <button class="row-act row-act-danger" title="Supprimer" @click.prevent="confirmDelete(e.id)">
-                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                        </button>
-                    </div>
-                </div>
+                </ListLoading>
             </div>
         </main>
     </div>

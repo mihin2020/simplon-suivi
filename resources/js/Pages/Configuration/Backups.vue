@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListLoading from '@/Components/UI/ListLoading.vue'
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3'
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
@@ -319,7 +320,7 @@ const destroyBackup = (row: BackupRow) => {
 }
 
 const formatDate = (iso: string | null) => {
-    if (!iso) return '—'
+    if (!iso) return '-'
     return new Date(iso).toLocaleString('fr-FR', {
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit',
@@ -394,7 +395,7 @@ onUnmounted(() => stopPoll())
                 </div>
                 <div>
                     <h1 class="bk-title">Sauvegardes</h1>
-                    <p class="bk-subtitle">Base de données + fichiers — stockage serveur et copie cloud optionnelle</p>
+                    <p class="bk-subtitle">Base de données et fichiers : stockage serveur et copie cloud optionnelle</p>
                 </div>
                 <button
                     type="button"
@@ -534,57 +535,59 @@ onUnmounted(() => stopPoll())
                     {{ hasActiveFilters ? 'Aucun résultat pour ces filtres.' : 'Aucune sauvegarde pour le moment.' }}
                 </div>
                 <div v-else class="bk-table-wrap">
-                    <table class="bk-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Type</th>
-                                <th>Statut</th>
-                                <th>Taille</th>
-                                <th>Cloud</th>
-                                <th>Par</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="row in backups.data" :key="row.id">
-                                <td>{{ formatDate(row.created_at) }}</td>
-                                <td>{{ row.type_label }}</td>
-                                <td>
-                                    <span class="bk-badge" :data-status="row.status">{{ row.status_label }}</span>
-                                    <div v-if="row.status === 'running' || row.status === 'pending'" class="bk-mini-progress">
-                                        <div class="bk-mini-fill" :style="{ width: `${row.id === activeBackup?.id ? liveProgress : row.progress}%` }" />
-                                    </div>
-                                    <p v-if="row.error_message" class="bk-err-inline">{{ row.error_message }}</p>
-                                </td>
-                                <td>{{ row.size_label ?? '—' }}</td>
-                                <td>
-                                    <span v-if="row.remote_synced" class="bk-badge" data-status="success">Sync</span>
-                                    <span v-else-if="row.remote_error" class="bk-badge" data-status="failed" :title="row.remote_error">Échec</span>
-                                    <span v-else class="bk-muted">—</span>
-                                </td>
-                                <td>{{ row.triggered_by ?? '—' }}</td>
-                                <td class="bk-actions">
-                                    <a
-                                        v-if="row.is_downloadable"
-                                        class="bk-icon-btn"
-                                        :href="`/configuration/backups/${row.id}/download`"
-                                        title="Télécharger"
-                                    >
-                                        <span class="material-symbols-outlined" style="font-size:18px">download</span>
-                                    </a>
-                                    <button
-                                        type="button"
-                                        class="bk-icon-btn danger"
-                                        title="Supprimer"
-                                        @click="destroyBackup(row)"
-                                    >
-                                        <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <ListLoading :columns="7">
+                        <table class="bk-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Statut</th>
+                                    <th>Taille</th>
+                                    <th>Cloud</th>
+                                    <th>Par</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="row in backups.data" :key="row.id">
+                                    <td>{{ formatDate(row.created_at) }}</td>
+                                    <td>{{ row.type_label }}</td>
+                                    <td>
+                                        <span class="bk-badge" :data-status="row.status">{{ row.status_label }}</span>
+                                        <div v-if="row.status === 'running' || row.status === 'pending'" class="bk-mini-progress">
+                                            <div class="bk-mini-fill" :style="{ width: `${row.id === activeBackup?.id ? liveProgress : row.progress}%` }" />
+                                        </div>
+                                        <p v-if="row.error_message" class="bk-err-inline">{{ row.error_message }}</p>
+                                    </td>
+                                    <td>{{ row.size_label ?? '-' }}</td>
+                                    <td>
+                                        <span v-if="row.remote_synced" class="bk-badge" data-status="success">Sync</span>
+                                        <span v-else-if="row.remote_error" class="bk-badge" data-status="failed" :title="row.remote_error">Échec</span>
+                                        <span v-else class="bk-muted">-</span>
+                                    </td>
+                                    <td>{{ row.triggered_by ?? '-' }}</td>
+                                    <td class="bk-actions">
+                                        <a
+                                            v-if="row.is_downloadable"
+                                            class="bk-icon-btn"
+                                            :href="`/configuration/backups/${row.id}/download`"
+                                            title="Télécharger"
+                                        >
+                                            <span class="material-symbols-outlined" style="font-size:18px">download</span>
+                                        </a>
+                                        <button
+                                            type="button"
+                                            class="bk-icon-btn danger"
+                                            title="Supprimer"
+                                            @click="destroyBackup(row)"
+                                        >
+                                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </ListLoading>
                 </div>
 
                 <div v-if="backups.total > 0" class="bk-pager-bar">
@@ -779,6 +782,7 @@ onUnmounted(() => stopPoll())
 .modal-overlay {
     position: fixed; inset: 0; background: rgba(15, 23, 42, .45);
     display: grid; place-items: center; z-index: 90; padding: 1rem;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal-box { background: #fff; border-radius: 14px; padding: 1.25rem; max-width: 420px; width: 100%; }
 .modal-title { margin: 0 0 .5rem; color: #1F3A4D; }

@@ -20,6 +20,10 @@ class CreateTrainerAction
         ?string $phone,
         ?string $phone2,
         ?UploadedFile $cv,
+        ?string $birthDate = null,
+        ?string $birthPlace = null,
+        ?string $address = null,
+        ?string $idNumber = null,
     ): Trainer {
         $user = $this->inviteUser->execute(
             firstName: $firstName,
@@ -31,11 +35,15 @@ class CreateTrainerAction
         $cvPath = $cv?->store('trainers/cvs', 'public');
 
         return Trainer::create([
-            'user_id'    => $user->id,
-            'profile_id' => $profileId,
-            'phone'      => $phone,
-            'phone2'     => $phone2,
-            'cv_path'    => $cvPath,
+            'user_id'     => $user->id,
+            'profile_id'  => $profileId,
+            'phone'       => $phone,
+            'phone2'      => $phone2,
+            'birth_date'  => $birthDate,
+            'birth_place' => $birthPlace,
+            'address'     => $address,
+            'id_number'   => $idNumber,
+            'cv_path'     => $cvPath,
         ]);
     }
 }

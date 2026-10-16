@@ -7,7 +7,6 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
-use Illuminate\Support\Facades\Artisan;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -16,28 +15,8 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        
-        // Configuration spéciale pour SQLite
-        if (config('database.default') === 'sqlite') {
-            \DB::statement('PRAGMA foreign_keys = OFF;');
-        }
-        
-        // Run migrations before each test (sans VACUUM pour SQLite)
-        if (config('database.default') === 'sqlite') {
-            // Désactiver le VACUUM pour SQLite
-            \DB::statement('PRAGMA auto_vacuum = NONE;');
-        }
-        
-        Artisan::call('migrate:fresh', [
-            '--force' => true,
-            '--seed' => false,
-        ]);
-        
-        if (config('database.default') === 'sqlite') {
-            \DB::statement('PRAGMA foreign_keys = ON;');
-        }
-        
-        // Seed necessary data
+
+        // RefreshDatabase migrates once per run, then wraps each test in a transaction.
         $this->seedEssentialData();
     }
 
@@ -46,7 +25,7 @@ abstract class TestCase extends BaseTestCase
         // Créer les rôles de base si nécessaire
         $roles = ['admin', 'trainer', 'super-admin'];
         foreach ($roles as $role) {
-            if (!Role::where('name', $role)->exists()) {
+            if (! Role::where('name', $role)->exists()) {
                 Role::create(['name' => $role, 'slug' => $role]);
             }
         }
@@ -55,7 +34,7 @@ abstract class TestCase extends BaseTestCase
     protected function createUser(?UserRole $role = null, bool $active = true): User
     {
         $role ??= UserRole::Trainer;
-        
+
         return User::factory()->create([
             'role' => $role,
             'is_active' => $active,
@@ -90,13 +69,5 @@ abstract class TestCase extends BaseTestCase
     protected function actingAsTrainer(): self
     {
         return $this->actingAs($this->createTrainer());
-    }
-
-    protected function assignRole(User $user, string $roleName): void
-    {
-        if (!\Spatie\Permission\Models\Role::where('name', $roleName)->exists()) {
-            \Spatie\Permission\Models\Role::create(['name' => $roleName]);
-        }
-        $user->assignRole($roleName);
     }
 }

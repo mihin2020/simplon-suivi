@@ -7,6 +7,9 @@ use App\Models\Formation;
 use App\Models\Learner;
 use App\Models\WhatsAppMessage;
 use Illuminate\Support\Str;
+use App\Enums\WhatsAppMessageStatus;
+use App\Jobs\SendBulkEmail;
+use App\Jobs\SendWhatsAppBroadcast;
 use App\Services\EmailService;
 use App\Services\WhatsAppWWebService;
 use Illuminate\Http\JsonResponse;
@@ -248,44 +251,20 @@ class EmailController extends Controller
             }
         }
 
-        // Extraire uniquement les valeurs scalaires pour éviter la sérialisation
-        // des objets UploadedFile présents dans $data
-        $to = $data["to"];
-        $subject = $data["subject"];
-        $body = $data["body"];
-        $cc = $data["cc"] ?? null;
-        $emailService = $this->emailService;
-        $sentBy = auth()->id();
-
-        // Envoi après la réponse HTTP (non bloquant, sans worker)
-        dispatch(function () use (
-            $emailService,
-            $to,
-            $subject,
-            $body,
+        // Sent by the queue worker: a mailing to hundreds of people takes many
+        // SMTP calls; the sender is notified in the app when it is done.
+        SendBulkEmail::dispatch(
+            $data["to"],
+            $data["subject"],
+            $data["body"],
             $attachments,
-            $cc,
-            $sentBy,
-        ) {
-            try {
-                $emailService->sendEmail(
-                    $to,
-                    $subject,
-                    $body,
-                    $attachments,
-                    null,
-                    $sentBy,
-                    $cc,
-                    null,
-                );
-            } catch (\Throwable $e) {
-                // silence
-            }
-        })->afterResponse();
+            $data["cc"] ?? null,
+            (string) auth()->id(),
+        );
 
         return redirect()
             ->route("emails.sent")
-            ->with("success", "Email en cours d'envoi.");
+            ->with("success", "Email en cours d'envoi en arrière-plan. Vous serez notifié à la fin de l'envoi.");
     }
 
     public function reply(Request $request, Email $email)
@@ -390,7 +369,7 @@ class EmailController extends Controller
         return back()->with("success", $msg);
     }
 
-    public function whatsapp(WhatsAppWWebService $service)
+    public function whatsapp()
     {
         $formations = Formation::with([
             "project",
@@ -416,17 +395,11 @@ class EmailController extends Controller
                 ]),
             ]);
 
-        $waStatus = $service->getStatus();
-
+        // The service status takes about a second to answer: the page is shown at
+        // once and asks for it right after (the status endpoint already exists).
         return Inertia::render("Communication/WhatsApp", [
             "formations"      => $formations,
-            "initialWaStatus" => [
-                'connected'     => $waStatus['connected']     ?? false,
-                'authenticating' => $waStatus['authenticating'] ?? false,
-                'qr'            => $waStatus['qr']             ?? null,
-                'available'     => !isset($waStatus['unavailable']),
-                'phone'         => $waStatus['phone']          ?? null,
-            ],
+            "initialWaStatus" => null,
         ]);
     }
 
@@ -444,9 +417,6 @@ class EmailController extends Controller
 
     public function sendWhatsAppBulk(Request $request, WhatsAppWWebService $service)
     {
-        // L'envoi peut prendre N×1s pour N apprenants — on lève la limite PHP
-        set_time_limit(300);
-
         $validated = $request->validate([
             'recipients'              => 'required|array|min:1',
             'recipients.*.phone'      => 'required|string',
@@ -458,6 +428,11 @@ class EmailController extends Controller
             'attachments'             => 'nullable|array|max:10',
             'attachments.*'           => 'file|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,xls,xlsx,mp4,mp3,ogg|max:16384',
         ]);
+
+        // Checked now rather than in the background: nothing can go out anyway.
+        if (! ($service->getStatus()['connected'] ?? false)) {
+            return back()->with('error', 'WhatsApp n\'est pas connecté : aucun message envoyé. Reconnectez-vous puis réessayez.');
+        }
 
         $messageText = $validated['message'] ?? '';
         $broadcastId = (string) Str::uuid();
@@ -474,53 +449,31 @@ class EmailController extends Controller
             }
         }
 
-        $totalSuccess = 0;
-        $totalFailed  = 0;
-
+        // Each part (text, then each file) is recorded for every recipient with
+        // the status "sending"; the job sends them and updates each status.
         foreach ($sends as $send) {
-            $attachmentPayload = null;
-            $attachmentPath    = null;
-            $attachmentMime    = null;
-            $attachmentName    = null;
+            $attachmentPath = null;
+            $attachmentMime = null;
+            $attachmentName = null;
 
             if ($send['file']) {
                 $file           = $send['file'];
                 $ext            = $file->extension() ?: last(explode('/', $file->getMimeType() ?? 'bin'));
-                $storedName     = \Illuminate\Support\Str::uuid() . '.' . $ext;
+                $storedName     = Str::uuid() . '.' . $ext;
                 $attachmentPath = 'whatsapp_media/' . $storedName;
                 $attachmentMime = $file->getMimeType();
                 $attachmentName = $file->getClientOriginalName();
                 \Illuminate\Support\Facades\Storage::disk('local')->putFileAs('whatsapp_media', $file, $storedName);
-                $attachmentPayload = [
-                    'data'     => base64_encode(file_get_contents($file->getRealPath())),
-                    'mimetype' => $attachmentMime,
-                    'filename' => $attachmentName,
-                ];
             }
 
-            $results = $service->sendBulk($validated['recipients'], $send['message'], $attachmentPayload);
-            $totalSuccess += $results['success'] ?? 0;
-            $totalFailed  += $results['failed']  ?? 0;
-
-            $errorsByPhone = collect($results['errors'] ?? [])
-                ->mapWithKeys(fn($e) => [preg_replace('/\D/', '', $e['phone'] ?? '') => $e['error'] ?? 'Échec inconnu'])
-                ->toArray();
-
-            $sentIds = $results['sentIds'] ?? [];
-
             foreach ($validated['recipients'] as $r) {
-                $normalizedPhone = preg_replace('/\D/', '', $r['phone']);
-                $failed          = array_key_exists($normalizedPhone, $errorsByPhone);
-                $waId            = $sentIds[$normalizedPhone] ?? null;
-
                 WhatsAppMessage::create([
                     'phone'               => $r['phone'],
                     'recipient_name'      => $r['name'] ?? null,
                     'message'             => $send['message'],
                     'direction'           => 'sent',
                     'provider'            => 'wwebjs',
-                    'status'              => $failed ? 'failed' : 'sent',
-                    'error'               => $failed ? $errorsByPhone[$normalizedPhone] : null,
+                    'status'              => WhatsAppMessageStatus::Sending->value,
                     'learner_id'          => $r['learner_id'] ?? null,
                     'formation_name'      => $validated['formation_name'] ?? null,
                     'project_name'        => $validated['project_name'] ?? null,
@@ -528,18 +481,15 @@ class EmailController extends Controller
                     'attachment_path'     => $attachmentPath,
                     'attachment_mimetype' => $attachmentMime,
                     'attachment_filename' => $attachmentName,
-                    'external_id'         => $waId,
                 ]);
             }
         }
 
-        if ($totalFailed === 0) {
-            return back()->with('success', "{$totalSuccess} message(s) WhatsApp envoyé(s) !");
-        } elseif ($totalSuccess === 0) {
-            return back()->with('error', 'Aucun message envoyé. Vérifiez la connexion WhatsApp.');
-        }
+        SendWhatsAppBroadcast::dispatch($broadcastId, (string) $request->user()->id);
 
-        return back()->with('warning', "{$totalSuccess} envoyé(s), {$totalFailed} échec(s)");
+        $count = count($validated['recipients']);
+
+        return back()->with('success', "Envoi de {$count} message(s) WhatsApp en cours. Le suivi s'affiche dans l'historique.");
     }
 
     public function whatsappMessages(): JsonResponse
@@ -600,7 +550,7 @@ class EmailController extends Controller
             // Numéro réduit aux chiffres, sans préfixe pays 226
             $shortPhone = preg_replace('/^226/', '', preg_replace('/\D/', '', $from));
 
-            // Un numéro valide a au moins 8 chiffres — sinon le LIKE matcherait n'importe qui
+            // Un numéro valide a au moins 8 chiffres - sinon le LIKE matcherait n'importe qui
             if (strlen($shortPhone) < 8) {
                 continue;
             }
@@ -613,7 +563,7 @@ class EmailController extends Controller
 
             if ($alreadyExists) continue;
 
-            // Retrouver l'apprenant — UNIQUEMENT parmi ceux à qui on a écrit.
+            // Retrouver l'apprenant - UNIQUEMENT parmi ceux à qui on a écrit.
             // On essaie plusieurs variantes du numéro car les téléphones peuvent être
             // stockés en base sous différents formats (local, national, international).
             $withPrefix    = '226' . ltrim($shortPhone, '0');
@@ -741,6 +691,8 @@ class EmailController extends Controller
                     'failed_count'    => $msgs->where('status', 'failed')
                         ->pluck('learner_id')->filter()->unique()->count()
                         ?: $msgs->where('status', 'failed')->pluck('phone')->unique()->count(),
+                    // Still going out in the background (SendWhatsAppBroadcast).
+                    'sending_count'   => $msgs->where('status', WhatsAppMessageStatus::Sending->value)->pluck('phone')->unique()->count(),
                 ];
             })
             ->values()

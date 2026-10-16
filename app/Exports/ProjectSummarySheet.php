@@ -30,7 +30,7 @@ class ProjectSummarySheet implements FromArray, WithColumnWidths, WithStyles, Wi
 
             return [
                 'name' => $formation->name,
-                'status' => $formation->status?->label() ?? '—',
+                'status' => $formation->status?->label() ?? '-',
                 'total' => $stats['Total apprenants'],
                 'male' => $stats['Hommes'],
                 'female' => $stats['Femmes'],

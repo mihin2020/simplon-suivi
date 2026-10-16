@@ -41,14 +41,14 @@ const emit = defineEmits<{ switchTab: [tab: 'stage' | 'employment' | 'formations
 const today = new Date().toISOString().slice(0, 10)
 const toDateInput = (value?: string | null) => value ? value.slice(0, 10) : ''
 const fmt = (value: string | null) => {
-    if (!value) return '—'
+    if (!value) return '-'
     const [y, m, d] = value.slice(0, 10).split('-')
     return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('fr-FR', {
         day: 'numeric', month: 'long', year: 'numeric',
     })
 }
 const conductorName = (user?: Conductor | InterviewUser | null) =>
-    user ? `${user.first_name} ${user.last_name}`.trim() : '—'
+    user ? `${user.first_name} ${user.last_name}`.trim() : '-'
 
 const stripHtml = (value?: string | null) => {
     if (!value) return ''
@@ -308,7 +308,7 @@ const remainingUpcoming = computed(() => {
                     <ul v-if="(interview.custom_fields ?? []).length" class="custom-preview">
                         <li v-for="(field, idx) in (interview.custom_fields ?? []).slice(0, 3)" :key="`${interview.id}-cf-${idx}`">
                             <strong>{{ field.label }}</strong>
-                            <span v-if="field.value"> — {{ excerpt(field.value, 60) }}</span>
+                            <span v-if="field.value"> : {{ excerpt(field.value, 60) }}</span>
                         </li>
                     </ul>
                     <p v-if="interview.next_follow_up_at" class="next">Prochain suivi : {{ fmt(interview.next_follow_up_at) }}</p>
@@ -436,7 +436,7 @@ const remainingUpcoming = computed(() => {
                             <dl class="custom-view">
                                 <template v-for="(field, idx) in viewing.custom_fields" :key="`view-cf-${idx}`">
                                     <dt>{{ field.label }}</dt>
-                                    <dd>{{ field.value || '—' }}</dd>
+                                    <dd>{{ field.value || '-' }}</dd>
                                 </template>
                             </dl>
                         </div>

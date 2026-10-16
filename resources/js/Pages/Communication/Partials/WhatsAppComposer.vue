@@ -22,7 +22,7 @@ const emit = defineEmits<{
 }>()
 
 // Ce composant est volontairement ISOLÉ du polling de statut du parent.
-// Seule la prop `connected` le re-rend (rare) — les selects natifs restent
+// Seule la prop `connected` le re-rend (rare) - les selects natifs restent
 // donc ouverts pendant que l'utilisateur choisit projet/formation.
 
 const selectedProjectId   = ref('')
@@ -211,9 +211,9 @@ defineExpose({ reset })
 
             <div v-if="riskLevel !== 'safe'" class="risk-alert" :class="'risk-' + riskLevel">
                 <span class="material-symbols-outlined" style="font-size:15px">{{ riskLevel === 'critical' ? 'block' : 'warning' }}</span>
-                <span v-if="riskLevel === 'critical'"><strong>Interdit ({{ selectedLearnerIds.length }})</strong> — WhatsApp bannira votre numéro. Maximum 200.</span>
-                <span v-else-if="riskLevel === 'high'"><strong>Risque élevé ({{ selectedLearnerIds.length }})</strong> — Déconseillé au-delà de 80.</span>
-                <span v-else><strong>Risque modéré ({{ selectedLearnerIds.length }})</strong> — Restez vigilant.</span>
+                <span v-if="riskLevel === 'critical'"><strong>Interdit ({{ selectedLearnerIds.length }})</strong> : WhatsApp bannira votre numéro. Maximum 200.</span>
+                <span v-else-if="riskLevel === 'high'"><strong>Risque élevé ({{ selectedLearnerIds.length }})</strong> : Déconseillé au-delà de 80.</span>
+                <span v-else><strong>Risque modéré ({{ selectedLearnerIds.length }})</strong> : Restez vigilant.</span>
             </div>
         </template>
 

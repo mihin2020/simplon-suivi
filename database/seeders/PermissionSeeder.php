@@ -87,26 +87,26 @@ class PermissionSeeder extends Seeder
             ['name' => 'Lancer une sauvegarde',       'slug' => 'backup.run',   'group' => 'Sauvegardes'],
             ['name' => 'Gérer les sauvegardes (config, supprimer)', 'slug' => 'backup.manage', 'group' => 'Sauvegardes'],
 
-            // Campus — Formations
+            // Campus - Formations
             ['name' => 'Voir le catalogue formations',    'slug' => 'campus.formations.view',   'group' => 'Campus — Formations'],
             ['name' => 'Créer une formation',             'slug' => 'campus.formations.create', 'group' => 'Campus — Formations'],
             ['name' => 'Modifier une formation',          'slug' => 'campus.formations.update', 'group' => 'Campus — Formations'],
             ['name' => 'Supprimer une formation',         'slug' => 'campus.formations.delete', 'group' => 'Campus — Formations'],
 
-            // Campus — Cohortes
+            // Campus - Cohortes
             ['name' => 'Voir les cohortes',               'slug' => 'campus.cohorts.view',   'group' => 'Campus — Cohortes'],
             ['name' => 'Créer une cohorte',               'slug' => 'campus.cohorts.create', 'group' => 'Campus — Cohortes'],
             ['name' => 'Modifier une cohorte',            'slug' => 'campus.cohorts.update', 'group' => 'Campus — Cohortes'],
             ['name' => 'Clôturer une cohorte',            'slug' => 'campus.cohorts.close',  'group' => 'Campus — Cohortes'],
             ['name' => 'Supprimer une cohorte',           'slug' => 'campus.cohorts.delete', 'group' => 'Campus — Cohortes'],
 
-            // Campus — Finance
+            // Campus - Finance
             ['name' => 'Voir les paiements',              'slug' => 'campus.finance.view',   'group' => 'Campus — Finance'],
             ['name' => 'Encaisser un paiement',           'slug' => 'campus.finance.collect', 'group' => 'Campus — Finance'],
             ['name' => 'Gérer les échéanciers',           'slug' => 'campus.finance.manage', 'group' => 'Campus — Finance'],
             ['name' => 'Voir le tableau de bord financier', 'slug' => 'campus.finance.dashboard', 'group' => 'Campus — Finance'],
 
-            // Campus — Workforce (gestion des apprenants campus)
+            // Campus - Workforce (gestion des apprenants campus)
             ['name' => 'Voir les apprenants de cohorte',  'slug' => 'campus.workforce.view',   'group' => 'Campus — Workforce'],
             ['name' => 'Inscrire un apprenant',           'slug' => 'campus.workforce.enroll', 'group' => 'Campus — Workforce'],
             ['name' => 'Retirer un apprenant',            'slug' => 'campus.workforce.remove', 'group' => 'Campus — Workforce'],
@@ -122,6 +122,13 @@ class PermissionSeeder extends Seeder
             ['name' => 'Sélectionner des candidats',      'slug' => 'forms.select',    'group' => 'Formulaires'],
             ['name' => 'Exporter les réponses',           'slug' => 'forms.export',    'group' => 'Formulaires'],
             ['name' => 'Voir les statistiques formulaires', 'slug' => 'forms.stats',  'group' => 'Formulaires'],
+
+            // Contrats & conventions
+            ['name' => 'Voir les contrats et les projets',                             'slug' => 'contracts.view',      'group' => 'Contrats'],
+            ['name' => 'Créer, dupliquer et générer des contrats',                     'slug' => 'contracts.create',    'group' => 'Contrats'],
+            ['name' => 'Modifier et finaliser les contrats et les projets',            'slug' => 'contracts.update',    'group' => 'Contrats'],
+            ['name' => 'Supprimer des contrats et des projets (avec leurs contrats)', 'slug' => 'contracts.delete',    'group' => 'Contrats'],
+            ['name' => 'Gérer les en-têtes et pieds de page',                          'slug' => 'contracts.templates', 'group' => 'Contrats'],
         ];
 
         foreach ($permissions as $permission) {

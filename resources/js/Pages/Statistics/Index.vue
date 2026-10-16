@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import TableSkeleton from '@/Components/UI/TableSkeleton.vue'
 import { Head, Link } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import { ref } from 'vue'
@@ -315,9 +316,8 @@ const statusColorLearner: Record<string, string> = {
                 </div>
 
                 <div class="modal-body">
-                    <div v-if="modalLoading" class="text-center py-xl">
-                        <span class="material-symbols-outlined spin" style="font-size:32px;color:#9aaabb">progress_activity</span>
-                        <p class="mt-sm text-secondary">Chargement...</p>
+                    <div v-if="modalLoading" class="p-lg">
+                        <TableSkeleton :rows="5" :columns="3" />
                     </div>
 
                     <div v-else-if="modalLearners.length === 0" class="text-center py-xl text-secondary">
@@ -486,6 +486,7 @@ table td {
     justify-content: center;
     z-index: 50;
     padding: 20px;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 
 .modal-content {

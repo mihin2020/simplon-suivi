@@ -137,7 +137,7 @@
             <td>
                 <div class="section-title">Formation</div>
                 <table class="info-row">
-                    <tr><td class="lbl">Intitulé</td><td class="val">{{ $formation?->name ?? '—' }}</td></tr>
+                    <tr><td class="lbl">Intitulé</td><td class="val">{{ $formation?->name ?? '-' }}</td></tr>
                     <tr><td class="lbl">Cohorte</td><td class="val">{{ $cohort->name }}</td></tr>
                     <tr><td class="lbl">Tranche</td><td class="val">N° {{ $payment->installment_number }}</td></tr>
                 </table>

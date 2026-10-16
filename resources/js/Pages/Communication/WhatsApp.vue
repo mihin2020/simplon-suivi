@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Skeleton from '@/Components/UI/Skeleton.vue'
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
@@ -14,7 +15,7 @@ interface Formation { id: string; name: string; project: { id: string; name: str
 interface WaStatus  { connected: boolean; authenticating: boolean; qr: string | null; available: boolean; phone: string | null }
 interface Broadcast {
     broadcast_id: string; formation_name: string | null; project_name: string | null
-    message: string; sent_at: string; recipient_count: number; reply_count: number; failed_count: number
+    message: string; sent_at: string; recipient_count: number; reply_count: number; failed_count: number; sending_count: number
 }
 interface Recipient {
     id: number; phone: string; learner_id: string | null; name: string
@@ -27,11 +28,17 @@ interface ThreadMsg {
     attachment_path: string | null; attachment_mimetype: string | null; attachment_filename: string | null
 }
 
-const props = defineProps<{ formations: Formation[]; initialWaStatus: WaStatus }>()
+const props = defineProps<{ formations: Formation[]; initialWaStatus: WaStatus | null }>()
 const csrf  = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? ''
 
 // ── WhatsApp status ───────────────────────────────────────────────────────────
-const waStatus      = ref<WaStatus>({ ...props.initialWaStatus, authenticating: false, phone: null })
+const waStatus      = ref<WaStatus>({
+    connected: false, available: true, qr: null,
+    ...(props.initialWaStatus ?? {}),
+    authenticating: false, phone: null,
+})
+// The status is fetched after the page is shown: until then, skeletons.
+const statusKnown   = ref(props.initialWaStatus !== null)
 const disconnecting = ref(false)
 // Horodatage de déconnexion : ignore les réponses "connecté" résiduelles du microservice
 let loggedOutAt = 0
@@ -76,7 +83,7 @@ async function fetchStatus() {
                 : { connected: false, authenticating: !!d.authenticating, available: true,
                     qr: d.authenticating ? null : (d.qr ?? waStatus.value.qr), phone: null }
 
-        // Ne mettre à jour QUE si l'état réel a changé — évite les re-renders inutiles
+        // Ne mettre à jour QUE si l'état réel a changé - évite les re-renders inutiles
         const cur = waStatus.value
         if (next.connected !== cur.connected ||
             next.authenticating !== cur.authenticating ||
@@ -134,7 +141,7 @@ watch(() => waStatus.value, (s) => {
 }, { deep: true })
 
 function logout() {
-    // Bascule INSTANTANÉE de l'interface — on n'attend pas le microservice.
+    // Bascule INSTANTANÉE de l'interface - on n'attend pas le microservice.
     // Le watcher sur waStatus.connected relance automatiquement le polling.
     disconnecting.value = true
     loggedOutAt = Date.now()
@@ -147,23 +154,28 @@ function logout() {
     }).catch(() => {}).finally(() => { disconnecting.value = false })
 }
 
-onMounted(() => {
+onMounted(async () => {
     notifPermission.value = ('Notification' in window ? Notification.permission : 'denied') as NotificationPermission
+    loadBroadcasts()
+    if (!statusKnown.value) {
+        await fetchStatus()
+        statusKnown.value = true
+    }
     if (waStatus.value.connected) { requestNotifPermission(); startAutoSync() }
     else {
         startPolling(2000)
         if (waStatus.value.available && !waStatus.value.qr && !waStatus.value.authenticating)
             startWaitTimer()
     }
-    loadBroadcasts()
 })
-onUnmounted(() => { stopPolling(); stopAutoSync(); stopWaitTimer() })
+onUnmounted(() => { stopPolling(); stopAutoSync(); stopWaitTimer(); stopBroadcastWatch() })
+
 
 // ── Navigation : broadcasts → recipients → thread ─────────────────────────────
 type HistoryView = 'broadcasts' | 'recipients' | 'thread'
 const historyView = ref<HistoryView>('broadcasts')
 
-// Niveau 1 — Campagnes
+// Niveau 1 - Campagnes
 const broadcasts        = ref<Broadcast[]>([])
 const loadingBroadcasts = ref(false)
 
@@ -231,8 +243,25 @@ async function loadBroadcasts(silent = false) {
     } finally { if (!silent) loadingBroadcasts.value = false }
 }
 
-// Niveau 2 — Destinataires d'une campagne
+// Niveau 2 - Destinataires d'une campagne
 const selectedBroadcast   = ref<Broadcast | null>(null)
+
+// While a broadcast is going out in the background, refresh its counters
+// (and the open recipient list) every few seconds until it is done.
+let broadcastWatch: ReturnType<typeof setInterval> | null = null
+function stopBroadcastWatch() { if (broadcastWatch) { clearInterval(broadcastWatch); broadcastWatch = null } }
+watch(() => broadcasts.value.some(b => b.sending_count > 0), sending => {
+    if (!sending) { stopBroadcastWatch(); return }
+    if (broadcastWatch) return
+    broadcastWatch = setInterval(async () => {
+        await loadBroadcasts(true)
+        const open = selectedBroadcast.value
+        if (open && historyView.value === 'recipients') {
+            const fresh = broadcasts.value.find(b => b.broadcast_id === open.broadcast_id)
+            if (fresh) await openBroadcast(fresh, true)
+        }
+    }, 4000)
+}, { immediate: true })
 const broadcastRecipients = ref<Recipient[]>([])
 const loadingRecipients   = ref(false)
 const recipientFilter     = ref<'all' | 'replied' | 'pending'>('all')
@@ -267,7 +296,7 @@ async function openBroadcast(b: Broadcast, silent = false) {
     } finally { if (!silent) loadingRecipients.value = false }
 }
 
-// Niveau 3 — Thread individuel
+// Niveau 3 - Thread individuel
 const activeRecipient = ref<Recipient | null>(null)
 const threadMessages  = ref<ThreadMsg[]>([])
 const loadingThread   = ref(false)
@@ -298,7 +327,7 @@ async function openThread(recipient: Recipient, silent = false) {
         method: 'POST',
         headers: { 'X-CSRF-TOKEN': csrf, 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
     }).then(() => {
-        // Mise à jour locale uniquement — pas de changement de vue
+        // Mise à jour locale uniquement - pas de changement de vue
         const idx = broadcastRecipients.value.findIndex(r => r.learner_id === recipient.learner_id)
         if (idx !== -1) broadcastRecipients.value[idx] = { ...broadcastRecipients.value[idx], reply_count: 0 }
     }).catch(() => {})
@@ -448,7 +477,7 @@ async function sendReply() {
     }
     threadMessages.value = [...threadMessages.value, optimistic]
 
-    // Vide l'input immédiatement — l'utilisateur peut continuer à écrire
+    // Vide l'input immédiatement - l'utilisateur peut continuer à écrire
     replyText.value = ''
     replyAttachment.value = null
     if (attachInputRef.value) attachInputRef.value.value = ''
@@ -514,7 +543,7 @@ const form = useForm<{ recipients: any[]; message: string; formation_name: strin
 
 watch(() => form.processing, v => {
     if (v) {
-        sendEstimate.value = form.recipients.length
+        sendEstimate.value = Math.min(form.recipients.length, 3)
         countdownTimer = setInterval(() => { if (sendEstimate.value > 0) sendEstimate.value-- }, 1000)
     } else if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null }
 })
@@ -556,7 +585,7 @@ function isVideo(mime: string | null) { return !!mime && /^video\//i.test(mime) 
 function isAudio(mime: string | null) { return !!mime && /^audio\//i.test(mime) }
 function mediaUrl(path: string | null) {
     if (!path) return ''
-    // Aperçu local instantané (envoi optimiste) — ne pas passer par le serveur
+    // Aperçu local instantané (envoi optimiste) - ne pas passer par le serveur
     if (path.startsWith('blob:') || path.startsWith('data:')) return path
     return `/communication/whatsapp/media/${path.split('/').pop()}`
 }
@@ -621,7 +650,11 @@ function groupByDate(msgs: ThreadMsg[]) {
                 <span class="material-symbols-outlined" style="font-size:15px">{{ notifPermission === 'denied' ? 'notifications_off' : 'add_alert' }}</span>
                 {{ notifPermission === 'denied' ? 'Notifs bloquées' : 'Activer les notifs' }}
             </button>
-            <template v-if="waStatus.connected">
+            <div v-if="!statusKnown" class="status-skeleton" role="status" aria-label="Vérification de la connexion WhatsApp">
+                <Skeleton width="110px" height="30px" radius="99px" />
+                <Skeleton width="120px" height="34px" radius="8px" />
+            </div>
+            <template v-else-if="waStatus.connected">
                 <div class="connected-info">
                     <div class="status-pill connected"><span class="dot dot-green"></span>Connecté</div>
                     <div v-if="waStatus.phone" class="connected-phone">
@@ -646,17 +679,27 @@ function groupByDate(msgs: ThreadMsg[]) {
         </div>
     </div>
 
-    <div v-if="!waStatus.available" class="alert-banner">
+    <div v-if="!statusKnown" class="panel-skeleton" role="status" aria-label="Chargement de l'état WhatsApp">
+        <Skeleton width="56px" height="56px" radius="14px" />
+        <div class="panel-skeleton-lines">
+            <Skeleton width="45%" height="16px" />
+            <Skeleton width="80%" height="11px" />
+            <Skeleton width="65%" height="11px" />
+        </div>
+        <Skeleton width="150px" height="150px" radius="12px" />
+    </div>
+
+    <div v-else-if="!waStatus.available" class="alert-banner">
         <span class="material-symbols-outlined" style="font-size:17px">terminal</span>
         Démarrez le microservice : <code>cd whatsapp-service &amp;&amp; npm start</code>
     </div>
 
-    <div v-if="waStatus.available && !waStatus.connected && waStatus.authenticating" class="auth-panel">
+    <div v-if="statusKnown && waStatus.available && !waStatus.connected && waStatus.authenticating" class="auth-panel">
         <div class="auth-spinner-wrap"><div class="spinner-ring"></div><span class="material-symbols-outlined" style="font-size:26px;color:#25d366">phone_android</span></div>
-        <div><h2 class="auth-title">Connexion en cours…</h2><p class="auth-sub">QR code scanné — synchronisation avec votre téléphone.</p></div>
+        <div><h2 class="auth-title">Connexion en cours…</h2><p class="auth-sub">QR code scanné, synchronisation avec votre téléphone.</p></div>
     </div>
 
-    <div v-if="waStatus.available && !waStatus.connected && !waStatus.authenticating" class="qr-panel">
+    <div v-if="statusKnown && waStatus.available && !waStatus.connected && !waStatus.authenticating" class="qr-panel">
         <div class="qr-left">
             <h2 class="qr-title">Connecter votre WhatsApp</h2>
             <ol class="qr-steps">
@@ -678,10 +721,10 @@ function groupByDate(msgs: ThreadMsg[]) {
                         <p class="startup-label">QR en cours de génération…</p>
                         <p v-if="waitingSeconds < 15" class="startup-hint">Démarrage du service (30–60 s environ)</p>
                         <p v-else-if="waitingSeconds < 60" class="startup-hint">
-                            {{ waitingSeconds }}s — patience, Edge / Chrome charge WhatsApp…
+                            {{ waitingSeconds }} s : patience, Edge / Chrome charge WhatsApp…
                         </p>
                         <p v-else class="startup-warn">
-                            {{ waitingSeconds }}s — si rien n'apparaît, vérifiez que le terminal <code>npm start</code> est ouvert
+                            {{ waitingSeconds }} s : si rien n'apparaît, vérifiez que le terminal <code>npm start</code> est ouvert
                         </p>
                     </div>
                 </div>
@@ -725,6 +768,7 @@ function groupByDate(msgs: ThreadMsg[]) {
                                 <span class="stat-chip stat-sent">✓ {{ selectedBroadcast.recipient_count }}</span>
                                 <span class="stat-chip stat-reply">💬 {{ selectedBroadcast.reply_count }}</span>
                                 <span v-if="selectedBroadcast.failed_count > 0" class="stat-chip stat-fail">✗ {{ selectedBroadcast.failed_count }}</span>
+                                <span v-if="selectedBroadcast.sending_count > 0" class="stat-chip stat-sending">⏳ {{ selectedBroadcast.sending_count }} en cours</span>
                             </div>
                         </div>
                     </template>
@@ -745,8 +789,14 @@ function groupByDate(msgs: ThreadMsg[]) {
 
             <!-- ═══ NIVEAU 1 : CAMPAGNES ═══ -->
             <div v-if="historyView === 'broadcasts'" class="scroll-area">
-                <div v-if="loadingBroadcasts" class="empty-feed">
-                    <div class="spinner spinner-lg"></div><p>Chargement…</p>
+                <div v-if="loadingBroadcasts" class="feed-skeleton" role="status" aria-label="Chargement">
+                    <div v-for="i in 5" :key="i" class="feed-skeleton-row">
+                        <Skeleton width="38px" height="38px" radius="50%" />
+                        <div class="feed-skeleton-lines">
+                            <Skeleton :width="i % 2 ? '55%' : '40%'" height="12px" />
+                            <Skeleton :width="i % 2 ? '80%' : '70%'" height="10px" />
+                        </div>
+                    </div>
                 </div>
                 <div v-else-if="broadcasts.length === 0" class="empty-feed">
                     <span class="material-symbols-outlined" style="font-size:48px;color:#d1d5db">campaign</span>
@@ -767,6 +817,7 @@ function groupByDate(msgs: ThreadMsg[]) {
                             <span class="stat-chip stat-sent">✓ {{ b.recipient_count }} envoyé{{ b.recipient_count > 1 ? 's' : '' }}</span>
                             <span v-if="b.reply_count > 0" class="stat-chip stat-reply">💬 {{ b.reply_count }} réponse{{ b.reply_count > 1 ? 's' : '' }}</span>
                             <span v-if="b.failed_count > 0" class="stat-chip stat-fail">✗ {{ b.failed_count }}</span>
+                            <span v-if="b.sending_count > 0" class="stat-chip stat-sending">⏳ {{ b.sending_count }} en cours d'envoi</span>
                         </div>
                     </div>
                     <div style="display:flex;align-items:center;gap:4px;flex-shrink:0" @click.stop>
@@ -793,8 +844,14 @@ function groupByDate(msgs: ThreadMsg[]) {
                     <input v-model="recipientSearch" type="text" class="search-input" placeholder="Rechercher…" />
                 </div>
                 <div class="scroll-area">
-                    <div v-if="loadingRecipients" class="empty-feed">
-                        <div class="spinner spinner-lg"></div><p>Chargement…</p>
+                    <div v-if="loadingRecipients" class="feed-skeleton" role="status" aria-label="Chargement">
+                        <div v-for="i in 6" :key="i" class="feed-skeleton-row">
+                            <Skeleton width="38px" height="38px" radius="50%" />
+                            <div class="feed-skeleton-lines">
+                                <Skeleton :width="i % 2 ? '55%' : '40%'" height="12px" />
+                                <Skeleton :width="i % 2 ? '80%' : '70%'" height="10px" />
+                            </div>
+                        </div>
                     </div>
                     <div v-else-if="filteredRecipients.length === 0" class="empty-feed">
                         <span class="material-symbols-outlined" style="font-size:36px;color:#d1d5db">search_off</span>
@@ -819,6 +876,7 @@ function groupByDate(msgs: ThreadMsg[]) {
                                     <span class="material-symbols-outlined" style="font-size:11px;color:#ef4444">error</span>
                                     {{ truncate(r.error ?? 'Non délivré', 45) }}
                                 </span>
+                                <span v-else-if="r.status === 'sending'" class="rec-pending">Envoi en cours…</span>
                                 <span v-else class="rec-pending">Pas encore de réponse</span>
                             </div>
                         </div>
@@ -1105,6 +1163,7 @@ function groupByDate(msgs: ThreadMsg[]) {
 .stat-sent  { background:#f0fdf4;color:#166534; }
 .stat-reply { background:#eff6ff;color:#1d4ed8; }
 .stat-fail  { background:#fee2e2;color:#991b1b; }
+.stat-sending { background:#f3f4f6;color:#4b5563; }
 
 /* Broadcast list */
 .broadcast-item { display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #f3f4f6;cursor:pointer;transition:background .12s; }
@@ -1218,7 +1277,7 @@ function groupByDate(msgs: ThreadMsg[]) {
 .reply-send-btn:disabled { background:#f3c1ce;cursor:not-allowed;opacity:.7; }
 
 /* Modal de confirmation */
-.modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px; }
+.modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
 .modal-box { background:#fff;border-radius:14px;padding:24px;max-width:400px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2); }
 .modal-head { display:flex;align-items:center;gap:10px;margin-bottom:10px; }
 .modal-title { font-size:15px;font-weight:700;color:#191c1e;margin:0; }
@@ -1237,4 +1296,10 @@ function groupByDate(msgs: ThreadMsg[]) {
 .spinning   { animation:spin 1s linear infinite; }
 @keyframes spin  { to{ transform:rotate(360deg); } }
 @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.35} }
+.status-skeleton { display: flex; align-items: center; gap: 10px; }
+.panel-skeleton { display: flex; align-items: center; gap: 24px; padding: 24px 28px; border: 1px solid #e8edf2; border-radius: 14px; background: #fff; }
+.feed-skeleton { display: flex; flex-direction: column; }
+.feed-skeleton-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #f5f6f8; }
+.feed-skeleton-lines { flex: 1; display: flex; flex-direction: column; gap: 7px; }
+.panel-skeleton-lines { flex: 1; display: flex; flex-direction: column; gap: 10px; }
 </style>

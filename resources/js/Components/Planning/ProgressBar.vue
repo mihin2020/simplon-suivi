@@ -29,7 +29,7 @@ const statusLabel = computed(() => {
 
 <template>
     <div class="progress" :class="[`size-${size}`, `tone-${tone}`]">
-        <div class="progress-track" :title="`${safe} % — ${statusLabel}`">
+        <div class="progress-track" :title="`${safe} % · ${statusLabel}`">
             <div class="progress-fill" :style="{ width: `${safe}%` }" />
         </div>
         <span v-if="showLabel" class="progress-label">{{ safe }} %</span>

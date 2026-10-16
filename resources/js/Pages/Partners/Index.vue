@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ListLoading from '@/Components/UI/ListLoading.vue'
 import { ref, watch } from 'vue'
 import { Head, Link, router } from '@inertiajs/vue3'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
@@ -97,46 +98,48 @@ const destroy = () => {
             </Can>
         </div>
 
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md">
-            <div
-                v-for="partner in partners.data"
-                :key="partner.id"
-                class="partner-card group"
-            >
-                <!-- Logo -->
-                <div class="partner-logo-wrap">
-                    <img
-                        v-if="partner.logo_path"
-                        :src="`/storage/${partner.logo_path}`"
-                        :alt="partner.name"
-                        class="partner-logo"
-                    />
-                    <div v-else class="partner-logo-placeholder">
-                        {{ partner.name.charAt(0).toUpperCase() }}
+        <ListLoading v-else variant="cards">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-md">
+                <div
+                    v-for="partner in partners.data"
+                    :key="partner.id"
+                    class="partner-card group"
+                >
+                    <!-- Logo -->
+                    <div class="partner-logo-wrap">
+                        <img
+                            v-if="partner.logo_path"
+                            :src="`/storage/${partner.logo_path}`"
+                            :alt="partner.name"
+                            class="partner-logo"
+                        />
+                        <div v-else class="partner-logo-placeholder">
+                            {{ partner.name.charAt(0).toUpperCase() }}
+                        </div>
+                    </div>
+
+                    <!-- Infos -->
+                    <div class="partner-info">
+                        <p class="partner-name">{{ partner.name }}</p>
+                        <PartnerCategoryBadge :category="partner.category" size="sm" />
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="partner-actions opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Can permission="partners.update">
+                            <Link :href="`/partners/${partner.id}/edit`" class="icon-btn" title="Modifier">
+                                <span class="material-symbols-outlined" style="font-size:18px">edit</span>
+                            </Link>
+                        </Can>
+                        <Can permission="partners.delete">
+                            <button @click="confirmTarget = partner" class="icon-btn danger" title="Supprimer">
+                                <span class="material-symbols-outlined" style="font-size:18px">delete</span>
+                            </button>
+                        </Can>
                     </div>
                 </div>
-
-                <!-- Infos -->
-                <div class="partner-info">
-                    <p class="partner-name">{{ partner.name }}</p>
-                    <PartnerCategoryBadge :category="partner.category" size="sm" />
-                </div>
-
-                <!-- Actions -->
-                <div class="partner-actions opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Can permission="partners.update">
-                        <Link :href="`/partners/${partner.id}/edit`" class="icon-btn" title="Modifier">
-                            <span class="material-symbols-outlined" style="font-size:18px">edit</span>
-                        </Link>
-                    </Can>
-                    <Can permission="partners.delete">
-                        <button @click="confirmTarget = partner" class="icon-btn danger" title="Supprimer">
-                            <span class="material-symbols-outlined" style="font-size:18px">delete</span>
-                        </button>
-                    </Can>
-                </div>
             </div>
-        </div>
+        </ListLoading>
 
         <!-- Pagination -->
         <div v-if="partners.total > 20" class="flex items-center justify-center gap-xs">
@@ -286,6 +289,7 @@ const destroy = () => {
     position: fixed; inset: 0; background: rgba(0,0,0,0.45);
     display: flex; align-items: center; justify-content: center;
     z-index: 1000;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
 .modal-box {
     background: #fff; border-radius: 16px; padding: 32px 28px;
