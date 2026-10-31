@@ -298,6 +298,16 @@ function rateClass(rate: number | null): string {
 
             <!-- Zone collante : dates + jours de cours + avancement -->
             <div class="sticky-zone">
+                <div class="zone-title">
+                    <span class="zone-name">
+                        <span class="material-symbols-outlined" style="font-size:15px">school</span>
+                        {{ formation.name }}
+                    </span>
+                    <a :href="`${baseUrl}/pdf?date=${date}`" class="zone-pdf" title="Feuille du jour (PDF)">
+                        <span class="material-symbols-outlined" style="font-size:15px">picture_as_pdf</span>
+                        PDF du jour
+                    </a>
+                </div>
                 <div class="date-nav">
                     <button class="nav-arrow" :disabled="!prevDate" @click="goToDate(prevDate)" title="Jour de cours précédent">
                         <span class="material-symbols-outlined">chevron_left</span>
@@ -632,11 +642,16 @@ function rateClass(rate: number | null): string {
 
 /* ── Zone collante ── */
 .sticky-zone {
-    position: sticky; top: 0; z-index: 20;
+    /* <main> has 32px of padding: the card sticks at that inset, so we cancel it to stay flush under the top bar. */
+    position: sticky; top: calc(-1 * var(--spacing-xl, 32px)); z-index: 20;
     display: flex; flex-direction: column; gap: 8px;
     padding: 10px 14px; background: #fff; border: 1px solid #e0e3e5; border-radius: 12px;
     box-shadow: 0 4px 14px rgba(25, 28, 30, 0.08);
 }
+.zone-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.zone-name { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: #9aaabb; text-transform: uppercase; letter-spacing: 0.05em; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.zone-pdf { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #1F3A4D; text-decoration: none; white-space: nowrap; }
+.zone-pdf:hover { color: #E5004C; }
 .date-nav { display: flex; align-items: center; justify-content: center; gap: 10px; }
 .nav-arrow {
     display: flex; align-items: center; justify-content: center; width: 34px; height: 34px;
