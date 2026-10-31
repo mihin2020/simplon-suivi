@@ -31,7 +31,7 @@ interface Trainer {
     phone: string | null
     phone2: string | null
     cv_path: string | null
-    profile: Profile | null
+    profiles: Profile[]
     user: User
     formations: Formation[]
 }
@@ -79,8 +79,8 @@ const statusLabels: Record<string, string> = {
                             <span class="active-badge" :class="trainer.user.is_active ? 'badge-active' : 'badge-pending'">
                                 {{ trainer.user.is_active ? 'Compte actif' : 'Invitation en attente' }}
                             </span>
-                            <span v-if="trainer.profile" class="text-body-sm text-secondary">
-                                · {{ trainer.profile.name }}
+                            <span v-if="trainer.profiles.length" class="text-body-sm text-secondary">
+                                · {{ trainer.profiles.map(p => p.name).join(', ') }}
                             </span>
                             <button v-if="!trainer.user.is_active" @click="resendInvitation" class="btn-resend" :disabled="form.processing">
                                 <span class="material-symbols-outlined" style="font-size:16px">send</span>
@@ -116,8 +116,8 @@ const statusLabels: Record<string, string> = {
                             <dd>{{ trainer.phone2 ?? '' }}</dd>
                         </div>
                         <div class="info-row">
-                            <dt>Profil</dt>
-                            <dd>{{ trainer.profile?.name ?? '' }}</dd>
+                            <dt>Profils</dt>
+                            <dd>{{ trainer.profiles.map(p => p.name).join(', ') }}</dd>
                         </div>
                         <div class="info-row">
                             <dt>Dernière connexion</dt>

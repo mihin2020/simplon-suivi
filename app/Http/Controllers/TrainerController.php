@@ -20,7 +20,7 @@ class TrainerController extends Controller
     {
         $this->authorize('viewAny', Trainer::class);
 
-        $trainers = Trainer::with(['user', 'profile', 'formations.project'])
+        $trainers = Trainer::with(['user', 'profiles', 'formations.project'])
             ->whereHas('user')
             ->when(request('search'), function ($q, $s) {
                 $q->whereHas('user', fn ($u) => $u->where('first_name', 'like', "%{$s}%")
@@ -45,7 +45,7 @@ class TrainerController extends Controller
     {
         $this->authorize('view', $trainer);
 
-        $trainer->load(['user', 'profile', 'formations.project']);
+        $trainer->load(['user', 'profiles', 'formations.project']);
 
         return Inertia::render('Trainers/Show', [
             'trainer' => $trainer,

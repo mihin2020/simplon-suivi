@@ -4,6 +4,7 @@ import { computed, ref } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import PermissionPicker from '@/Components/PermissionPicker.vue'
 import PhoneInput from '@/Components/UI/PhoneInput.vue'
+import ProfileMultiSelect from '@/Components/UI/ProfileMultiSelect.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -39,7 +40,6 @@ interface TrainerData {
     phone: string | null
     phone2: string | null
     cv_path: string | null
-    profile_id: string | null
     birth_date: string | null
     birth_place: string | null
     address: string | null
@@ -53,6 +53,7 @@ const props = defineProps<{
     userPermissions: number[]
     trainerProfiles: TrainerProfile[]
     trainerData: TrainerData | null
+    trainerProfileIds: string[]
 }>()
 
 const form = useForm({
@@ -62,7 +63,7 @@ const form = useForm({
     role:        props.user.role,
     is_active:   props.user.is_active,
     permissions: [...props.userPermissions],
-    profile_id:  props.trainerData?.profile_id ?? '',
+    profile_ids: [...props.trainerProfileIds],
     phone:       props.trainerData?.phone ?? '',
     phone2:      props.trainerData?.phone2 ?? '',
     birth_date:  props.trainerData?.birth_date ? props.trainerData.birth_date.slice(0, 10) : '',
@@ -97,7 +98,7 @@ const removeExistingCv = () => {
 
 const submit = () => {
     if (form.role !== 'trainer') {
-        form.profile_id = ''
+        form.profile_ids = []
         form.phone = ''
         form.phone2 = ''
         form.birth_date = ''
@@ -196,17 +197,15 @@ const submit = () => {
                 <!-- Profil -->
                 <div class="field">
                     <div class="flex items-center justify-between">
-                        <label class="label">Profil</label>
+                        <label class="label">Profils</label>
                         <Link href="/trainer-profiles" class="config-link" target="_blank">
                             <span class="material-symbols-outlined" style="font-size:14px">settings</span>
                             Configurer les profils
                         </Link>
                     </div>
-                    <select v-model="form.profile_id" class="input" :class="{ 'input-error': form.errors.profile_id }">
-                        <option value="">Sélectionner un profil</option>
-                        <option v-for="p in props.trainerProfiles" :key="p.id" :value="p.id">{{ p.name }}</option>
-                    </select>
-                    <p v-if="form.errors.profile_id" class="error-msg">{{ form.errors.profile_id }}</p>
+                    <ProfileMultiSelect v-model="form.profile_ids" :options="props.trainerProfiles" />
+                    <p class="hint-text">Un formateur peut cumuler plusieurs profils : cliquez pour en sélectionner plusieurs.</p>
+                    <p v-if="form.errors.profile_ids" class="error-msg">{{ form.errors.profile_ids }}</p>
                 </div>
 
                 <!-- Téléphones -->

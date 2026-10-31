@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class TrainerProfile extends Model
 {
@@ -12,8 +12,8 @@ class TrainerProfile extends Model
 
     protected $fillable = ['name', 'order'];
 
-    public function trainers(): HasMany
+    public function trainers(): BelongsToMany
     {
-        return $this->hasMany(Trainer::class, 'profile_id');
+        return $this->belongsToMany(Trainer::class);
     }
 }

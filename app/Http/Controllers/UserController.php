@@ -73,7 +73,7 @@ class UserController extends Controller
                     firstName: $request->validated('first_name'),
                     lastName:  $request->validated('last_name'),
                     email:     $request->validated('email'),
-                    profileId: $request->validated('profile_id'),
+                    profileIds: $request->validated('profile_ids', []),
                     phone:     $request->validated('phone'),
                     phone2:    $request->validated('phone2'),
                     cv:        $request->file('cv'),
@@ -111,7 +111,7 @@ class UserController extends Controller
     {
         $this->authorize('update', $user);
 
-        $user->load(['permissions', 'trainer']);
+        $user->load(['permissions', 'trainer.profiles']);
 
         return Inertia::render('Users/Edit', [
             'user'            => $user,
@@ -123,6 +123,7 @@ class UserController extends Controller
             'userPermissions' => $user->permissions->pluck('id'),
             'trainerProfiles' => TrainerProfile::orderBy('name')->get(['id', 'name']),
             'trainerData'     => $user->trainer,
+            'trainerProfileIds' => $user->trainer?->profiles->pluck('id')->values() ?? [],
         ]);
     }
 
@@ -144,7 +145,7 @@ class UserController extends Controller
         if ($role === UserRole::Trainer) {
             $updateTrainer->execute(
                 user:      $user,
-                profileId: $request->validated('profile_id'),
+                profileIds: $request->validated('profile_ids', []),
                 phone:     $request->validated('phone'),
                 phone2:    $request->validated('phone2'),
                 cv:        $request->file('cv'),

@@ -16,7 +16,7 @@ class CreateTrainerAction
         string $firstName,
         string $lastName,
         string $email,
-        ?string $profileId,
+        array $profileIds,
         ?string $phone,
         ?string $phone2,
         ?UploadedFile $cv,
@@ -34,9 +34,8 @@ class CreateTrainerAction
 
         $cvPath = $cv?->store('trainers/cvs', 'public');
 
-        return Trainer::create([
+        $trainer = Trainer::create([
             'user_id'     => $user->id,
-            'profile_id'  => $profileId,
             'phone'       => $phone,
             'phone2'      => $phone2,
             'birth_date'  => $birthDate,
@@ -45,5 +44,9 @@ class CreateTrainerAction
             'id_number'   => $idNumber,
             'cv_path'     => $cvPath,
         ]);
+
+        $trainer->profiles()->sync($profileIds);
+
+        return $trainer;
     }
 }

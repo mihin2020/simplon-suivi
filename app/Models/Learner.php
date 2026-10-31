@@ -62,6 +62,12 @@ class Learner extends Model
         return "{$this->first_name} {$this->last_name}";
     }
 
+    /** "LAST First" form, used wherever lists are sorted by family name. */
+    public function getDisplayNameAttribute(): string
+    {
+        return mb_strtoupper($this->last_name).' '.$this->first_name;
+    }
+
     public function educationLevel(): BelongsTo
     {
         return $this->belongsTo(EducationLevel::class);

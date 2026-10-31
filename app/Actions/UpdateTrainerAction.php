@@ -11,7 +11,7 @@ class UpdateTrainerAction
 {
     public function execute(
         User $user,
-        ?string $profileId,
+        array $profileIds,
         ?string $phone,
         ?string $phone2,
         ?UploadedFile $cv,
@@ -34,10 +34,9 @@ class UpdateTrainerAction
             $cvPath = null;
         }
 
-        return Trainer::updateOrCreate(
+        $trainer = Trainer::updateOrCreate(
             ['user_id' => $user->id],
             [
-                'profile_id'  => $profileId,
                 'phone'       => $phone,
                 'phone2'      => $phone2,
                 'birth_date'  => $birthDate,
@@ -47,5 +46,9 @@ class UpdateTrainerAction
                 'cv_path'     => $cvPath,
             ],
         );
+
+        $trainer->profiles()->sync($profileIds);
+
+        return $trainer;
     }
 }

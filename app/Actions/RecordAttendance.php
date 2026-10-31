@@ -11,21 +11,25 @@ use Illuminate\Support\Carbon;
 class RecordAttendance
 {
     /**
-     * Upsert attendance records for a full day.
+     * Upsert attendance records for a day. A reason is only kept for justified codes.
      *
-     * @param  array<string, string>  $records  ['learner_uuid' => 'P'|'AJ'|'AN'|'RJ'|'RN']
+     * @param  array<string, array{code: string, comment?: string|null}>  $records  Indexed by learner uuid
      */
     public function execute(Formation $formation, Carbon $date, array $records, User $recorder): void
     {
-        foreach ($records as $learnerId => $code) {
+        foreach ($records as $learnerId => $record) {
+            $code = AttendanceCode::from($record['code']);
+            $comment = isset($record['comment']) ? trim($record['comment']) : null;
+
             Attendance::updateOrCreate(
                 [
                     'formation_id' => $formation->id,
-                    'learner_id'   => $learnerId,
-                    'date'         => $date->toDateString(),
+                    'learner_id' => $learnerId,
+                    'date' => $date->toDateString(),
                 ],
                 [
-                    'code'        => AttendanceCode::from($code)->value,
+                    'code' => $code->value,
+                    'comment' => $code->acceptsReason() && $comment !== '' ? $comment : null,
                     'recorded_by' => $recorder->id,
                 ]
             );

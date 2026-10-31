@@ -4,6 +4,8 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\AgeRangeController;
 use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AttendanceController;
+use App\Http\Controllers\AttendancePdfController;
+use App\Http\Controllers\FormationLearnersExportController;
 use App\Http\Controllers\Auth\ActivationController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
@@ -360,6 +362,10 @@ Route::middleware('auth')->group(function () {
     Route::delete('learners/{learner}/interviews/{interview}', [LearnerInterviewController::class, 'destroy'])->name('learners.interviews.destroy');
 
     // Enrollment / withdrawal / move
+    Route::get(
+        'formations/{formation}/learners/export',
+        FormationLearnersExportController::class,
+    )->name('formations.learners.export');
     Route::get('formations/{formation}/learners/enroll', [
         EnrollLearnerController::class,
         'create',
@@ -622,12 +628,12 @@ Route::middleware('auth')->group(function () {
         'recap',
     ])->name('attendances.recap');
     Route::get('formations/{formation}/attendances/pdf', [
-        AttendanceController::class,
-        'pdf',
+        AttendancePdfController::class,
+        'day',
     ])->name('attendances.pdf');
     Route::get('formations/{formation}/attendances/pdf-recap', [
-        AttendanceController::class,
-        'pdfRecap',
+        AttendancePdfController::class,
+        'recap',
     ])->name('attendances.pdf-recap');
 
     // Expenses (Finance - dépenses par formation)

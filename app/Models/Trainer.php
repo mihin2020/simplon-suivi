@@ -16,7 +16,6 @@ class Trainer extends Model
 
     protected $fillable = [
         'user_id',
-        'profile_id',
         'phone',
         'phone2',
         'birth_date',
@@ -40,9 +39,9 @@ class Trainer extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function profile(): BelongsTo
+    public function profiles(): BelongsToMany
     {
-        return $this->belongsTo(TrainerProfile::class, 'profile_id');
+        return $this->belongsToMany(TrainerProfile::class);
     }
 
     public function formations(): BelongsToMany

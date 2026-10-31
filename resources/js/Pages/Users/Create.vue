@@ -4,6 +4,7 @@ import { ref, computed, watch } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 import PermissionPicker from '@/Components/PermissionPicker.vue'
 import PhoneInput from '@/Components/UI/PhoneInput.vue'
+import ProfileMultiSelect from '@/Components/UI/ProfileMultiSelect.vue'
 
 defineOptions({ layout: AdminLayout })
 
@@ -36,7 +37,7 @@ const form = useForm({
     email:       '',
     role:        '',
     permissions: [] as number[],
-    profile_id:  '',
+    profile_ids: [] as string[],
     phone:       '',
     phone2:      '',
     birth_date:  '',
@@ -67,7 +68,7 @@ watch(selectedRole, (val) => {
     form.role = val
     if (val !== 'admin') form.permissions = []
     if (val !== 'trainer') {
-        form.profile_id = ''
+        form.profile_ids = []
         form.phone = ''
         form.phone2 = ''
         form.birth_date = ''
@@ -153,17 +154,15 @@ const submit = () => {
                 <!-- Profil -->
                 <div class="field">
                     <div class="flex items-center justify-between">
-                        <label class="label">Profil</label>
+                        <label class="label">Profils</label>
                         <Link href="/trainer-profiles" class="config-link" target="_blank">
                             <span class="material-symbols-outlined" style="font-size:14px">settings</span>
                             Configurer les profils
                         </Link>
                     </div>
-                    <select v-model="form.profile_id" class="input" :class="{ 'input-error': form.errors.profile_id }">
-                        <option value="">Sélectionner un profil</option>
-                        <option v-for="p in props.trainerProfiles" :key="p.id" :value="p.id">{{ p.name }}</option>
-                    </select>
-                    <p v-if="form.errors.profile_id" class="error-msg">{{ form.errors.profile_id }}</p>
+                    <ProfileMultiSelect v-model="form.profile_ids" :options="props.trainerProfiles" />
+                    <p class="hint-text">Un formateur peut cumuler plusieurs profils : cliquez pour en sélectionner plusieurs.</p>
+                    <p v-if="form.errors.profile_ids" class="error-msg">{{ form.errors.profile_ids }}</p>
                     <p v-if="props.trainerProfiles.length === 0" class="hint-text">
                         Aucun profil configuré.
                         <Link href="/trainer-profiles" class="text-primary underline">Ajouter des profils →</Link>

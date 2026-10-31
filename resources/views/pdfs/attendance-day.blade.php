@@ -96,6 +96,19 @@
     table.att-table td.td-sign {
         height: 30px;
     }
+    table.att-table td.td-reason {
+        font-size: 8pt;
+        color: #515f74;
+    }
+    .tag-new {
+        font-size: 6.5pt;
+        font-weight: bold;
+        color: #1e40af;
+        background: #dbeafe;
+        padding: 1px 4px;
+        border-radius: 3px;
+        margin-left: 4px;
+    }
     table.att-table tr:nth-child(even) td { background: #fafbfc; }
 
     .code-badge {
@@ -169,27 +182,29 @@
     <table class="att-table">
         <colgroup>
             <col style="width:5%">
-            <col style="width:45%">
-            <col style="width:15%">
-            <col style="width:35%">
+            <col style="width:32%">
+            <col style="width:11%">
+            <col style="width:22%">
+            <col style="width:30%">
         </colgroup>
         <thead>
             <tr>
                 <th>N°</th>
                 <th class="th-name">Nom &amp; Prénom</th>
                 <th>Présence</th>
+                <th>Motif</th>
                 <th>Signature de l'apprenant</th>
             </tr>
         </thead>
         <tbody>
-            @foreach($learners as $idx => $learner)
-                @php
-                    $att  = $attendances->get($learner->id);
-                    $code = $att?->code?->value;
-                @endphp
+            @foreach($rows as $idx => $row)
+                @php $code = $row['attendance']['code'] ?? null; @endphp
                 <tr>
                     <td class="td-num">{{ str_pad($idx + 1, 2, '0', STR_PAD_LEFT) }}</td>
-                    <td class="td-name">{{ $learner->full_name }}</td>
+                    <td class="td-name">
+                        {{ $row['name'] }}
+                        @if($row['joined_today'])<span class="tag-new">Arrivé ce jour</span>@endif
+                    </td>
                     <td class="td-code">
                         @if($code)
                             <span class="code-badge code-{{ $code }}">{{ $code }}</span>
@@ -197,6 +212,7 @@
                             <span class="code-nd">-</span>
                         @endif
                     </td>
+                    <td class="td-reason">{{ $row['attendance']['comment'] ?? '' }}</td>
                     <td class="td-sign"></td>
                 </tr>
             @endforeach
@@ -215,7 +231,7 @@
 
     <!-- Pied de page -->
     <div class="footer">
-        {{ $formation->project->name }} · {{ $formation->name }} · {{ $learners->count() }} apprenant(s) · Généré le {{ now()->format('d/m/Y à H:i') }}
+        {{ $formation->project->name }} · {{ $formation->name }} · {{ $rows->count() }} apprenant(s) · Généré le {{ now()->format('d/m/Y à H:i') }}
     </div>
 
 </body>

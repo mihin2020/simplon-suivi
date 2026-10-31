@@ -37,6 +37,12 @@ enum AttendanceCode: string
         return in_array($this, [self::AbsentJustified, self::AbsentNotJustified]);
     }
 
+    /** Only justified absences/lateness carry a reason. */
+    public function acceptsReason(): bool
+    {
+        return $this === self::AbsentJustified || $this === self::LateJustified;
+    }
+
     public function countsAsPresent(): bool
     {
         return $this === self::Present || $this === self::LateJustified || $this === self::LateNotJustified;

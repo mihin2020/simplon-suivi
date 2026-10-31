@@ -145,7 +145,7 @@ class ContractVariableResolver
      */
     private function resolveTrainer(Trainer $trainer): array
     {
-        $trainer->loadMissing(['user', 'profile']);
+        $trainer->loadMissing(['user', 'profiles']);
         $user = $trainer->user;
 
         return [
@@ -158,7 +158,7 @@ class ContractVariableResolver
             'trainer.id_number' => (string) $trainer->id_number,
             'trainer.birth_date' => $trainer->birth_date?->locale('fr')->translatedFormat('d F Y') ?? '',
             'trainer.birth_place' => (string) $trainer->birth_place,
-            'trainer.profile' => (string) ($trainer->profile?->name),
+            'trainer.profile' => $trainer->profiles->pluck('name')->implode(', '),
         ];
     }
 
