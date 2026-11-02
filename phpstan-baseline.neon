@@ -109,88 +109,10 @@ parameters:
 			path: app/Actions/DeletePhase.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$help_text\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/Forms/DuplicateForm.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_required\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/Forms/DuplicateForm.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$label\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/Forms/DuplicateForm.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$learner_attribute\.$#'
 			identifier: property.notFound
 			count: 1
-			path: app/Actions/Forms/DuplicateForm.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$options\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/Forms/DuplicateForm.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$position\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/Forms/DuplicateForm.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$settings\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/Forms/DuplicateForm.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/Forms/DuplicateForm.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$validation\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/Forms/DuplicateForm.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$field\.$#'
-			identifier: property.notFound
-			count: 1
 			path: app/Actions/Forms/EnrollSelectedCandidates.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$value_text\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/Forms/EnrollSelectedCandidates.php
-
-		-
-			message: '#^Parameter \#1 \$formation of method App\\Actions\\EnrollLearner\:\:execute\(\) expects App\\Models\\Formation, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/Forms/EnrollSelectedCandidates.php
-
-		-
-			message: '#^Parameter \#1 \$fields of method App\\Actions\\Forms\\SubmitPublicResponse\:\:extractEmail\(\) expects Illuminate\\Support\\Collection\<string, App\\Models\\FormField\>, Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), Illuminate\\Database\\Eloquent\\Model\> given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/Forms/SyncFormFields.php
 
 		-
 			message: '#^Parameter \#1 \$array \(list\<array\<string, mixed\>\>\) of array_values is already a list, call has no effect\.$#'
@@ -217,56 +139,8 @@ parameters:
 			path: app/Actions/UpdateTrainerAction.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$answers\.$#'
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$learner_attribute\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Exports/FormResponsesExport.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Exports/FormResponsesExport.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Exports/FormResponsesExport.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$label\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Exports/FormResponsesExport.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Exports/FormResponsesExport.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$submitted_at\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Exports/FormResponsesExport.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Exports/FormResponsesExport.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$field\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Exports/FormResponsesLearnerExport.php
-
-		-
-			message: '#^Parameter \#2 \$answer of method App\\Exports\\FormResponsesLearnerExport\:\:formatAnswer\(\) expects App\\Models\\FormAnswer, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Exports/FormResponsesLearnerExport.php
 
@@ -361,30 +235,6 @@ parameters:
 			path: app/Http/Controllers/Auth/ResetPasswordController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/BackupController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$first_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/BackupController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$last_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/BackupController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,App\\Models\\Backup\>\:\:through\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/BackupController.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$full_name\.$#'
 			identifier: property.notFound
 			count: 1
@@ -399,12 +249,6 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/ContractController.php
-
-		-
-			message: '#^PHPDoc tag @return with type array\<string, mixed\> is incompatible with native type Inertia\\Response\.$#'
-			identifier: return.phpDocType
 			count: 1
 			path: app/Http/Controllers/ContractController.php
 
@@ -445,146 +289,14 @@ parameters:
 			path: app/Http/Controllers/ExpenseController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$field\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$file_path\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$first_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$form_field_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$last_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$value_json\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$value_text\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\Form\\FormResponseController\:\:streamAnswerFile\(\) never returns Symfony\\Component\\HttpFoundation\\BinaryFileResponse so it can be removed from the return type\.$#'
 			identifier: return.unusedType
 			count: 1
 			path: app/Http/Controllers/Form/FormResponseController.php
 
 		-
-			message: '#^Parameter \#1 \$answer of method App\\Http\\Controllers\\Form\\FormResponseController\:\:isImageAnswer\(\) expects App\\Models\\FormAnswer, Illuminate\\Database\\Eloquent\\Model given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:through\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:through\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: string, email\: string\|null, status\: ''enrolled''\|''rejected''\|''selected''\|''shortlisted''\|''submitted'', status_label\: string, status_color\: string, submitted_at\: mixed, reviewed_at\: mixed, review_note\: string\|null, reviewer\: string\|null, learner\: Illuminate\\Database\\Eloquent\\Model\|null, answers\: Illuminate\\Support\\Collection\<int, array\{id\: mixed, field_id\: mixed, label\: mixed, learner_attribute\: mixed, value\: mixed, is_file\: bool, is_image\: bool, download_url\: string\|null\}\>\}, Closure\(App\\Models\\FormResponse\)\: array\{id\: string, email\: string\|null, status\: ''enrolled''\|''rejected''\|''selected''\|''shortlisted''\|''submitted'', status_label\: string, status_color\: string, submitted_at\: mixed, reviewed_at\: mixed, review_note\: string\|null, reviewer\: string\|null, learner\: Illuminate\\Database\\Eloquent\\Model\|null, answers\: Illuminate\\Support\\Collection\<int, array\{id\: mixed, field_id\: mixed, label\: mixed, learner_attribute\: mixed, value\: mixed, is_file\: bool, is_image\: bool, download_url\: string\|null\}\>\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$help_text\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$is_required\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$label\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$learner_attribute\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$options\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$settings\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$type\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
 			message: '#^Instanceof between Illuminate\\Http\\UploadedFile and Illuminate\\Http\\UploadedFile will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
 			count: 1
 			path: app/Http/Controllers/Form/PublicFormController.php
 
@@ -599,18 +311,6 @@ parameters:
 			identifier: method.notFound
 			count: 1
 			path: app/Http/Controllers/LearnerController.php
-
-		-
-			message: '#^Comparison operation "\>" between 26843545600 and 0 is always true\.$#'
-			identifier: greater.alwaysTrue
-			count: 1
-			path: app/Http/Controllers/MediaController.php
-
-		-
-			message: '#^Expression on left side of \?\? is not nullable\.$#'
-			identifier: nullCoalesce.expr
-			count: 1
-			path: app/Http/Controllers/MediaController.php
 
 		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:unread\(\)\.$#'
@@ -647,24 +347,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 2
 			path: app/Http/Controllers/ProjectController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\CompetenceBlock\>\|Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/ReferentielController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Collection\<int, App\\Models\\CompetenceBlock\>\|Illuminate\\Database\\Eloquent\\Model\:\:competences\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Http/Controllers/ReferentielController.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:competences\(\)\.$#'
-			identifier: method.notFound
-			count: 2
-			path: app/Http/Controllers/ReferentielController.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$phase\.$#'
@@ -877,12 +559,6 @@ parameters:
 			path: app/Services/AiTools.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$competences\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AiTools.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
 			identifier: property.notFound
 			count: 1
@@ -921,7 +597,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
-			count: 3
+			count: 2
 			path: app/Services/AiTools.php
 
 		-
@@ -969,7 +645,7 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
-			count: 4
+			count: 3
 			path: app/Services/AiTools.php
 
 		-
