@@ -34,6 +34,9 @@ class Project extends Model
         ];
     }
 
+    /**
+     * @return HasMany<Formation, $this>
+     */
     public function formations(): HasMany
     {
         return $this->hasMany(Formation::class);

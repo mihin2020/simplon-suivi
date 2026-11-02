@@ -11,6 +11,7 @@ use App\Models\Formation;
 use App\Models\Partner;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\FormationLearnerCounts;
 use App\Services\ProgressCalculator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -80,16 +81,20 @@ class ProjectController extends Controller
             ->with('success', 'Projet créé avec succès.');
     }
 
-    public function show(Project $project, ProgressCalculator $calculator): Response
+    public function show(Project $project, ProgressCalculator $calculator, FormationLearnerCounts $counter): Response
     {
         $this->authorize('view', $project);
 
         $project->load([
-            'formations' => fn ($q) => $q
-                ->withCount(['learners', 'activeLearners'])
-                ->orderByDesc('started_at'),
+            'formations' => fn ($q) => $q->orderByDesc('started_at'),
             'partners:id,name,logo_path,category',
         ]);
+
+        $counts = $counter->for($project->formations->pluck('id')->all());
+        foreach ($project->formations as $formation) {
+            $formation->setAttribute('learners_count', $counts[$formation->id]['total']);
+            $formation->setAttribute('active_learners_count', $counts[$formation->id]['in_progress']);
+        }
 
         $calculator->hydrate($project);
 

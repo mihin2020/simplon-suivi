@@ -10,15 +10,19 @@ use App\Exports\ProjectStatisticsExport;
 use App\Models\Formation;
 use App\Models\Learner;
 use App\Models\Project;
+use App\Services\FormationLearnerCounts;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Facades\Excel;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class StatisticsController extends Controller
 {
-    public function index(): Response
+    public function index(FormationLearnerCounts $counter): Response
     {
         // ========== STATS GLOBALES APPRENANTS ==========
         $totalLearners = Learner::count();
@@ -35,56 +39,53 @@ class StatisticsController extends Controller
 
         $insertionByStatus = collect($latestInsertionMap)->countBy();
 
-        $employedCount   = $insertionByStatus->get(InsertionStatus::Employed->value, 0);
+        $employedCount = $insertionByStatus->get(InsertionStatus::Employed->value, 0);
         $internshipCount = $insertionByStatus->get(InsertionStatus::Internship->value, 0);
         $unemployedCount = $totalLearners - $employedCount - $internshipCount;
-        $insertionRate   = $totalLearners > 0
+        $insertionRate = $totalLearners > 0
             ? round((($employedCount + $internshipCount) / $totalLearners) * 100, 1)
             : 0;
 
         // ========== STATS PAR PROJET / FORMATION ==========
-        $projects = Project::with(['formations' => function ($q) {
-            $q->withCount([
-                'learners as total_learners',
-                'learners as male_count' => fn ($q) => $q->where('learners.gender', Gender::Male->value),
-                'learners as female_count' => fn ($q) => $q->where('learners.gender', Gender::Female->value),
-                'activeLearners as in_progress_count',
-                'withdrawnLearners as withdrawn_count',
-                'completedLearners as completed_count',
-                'movedLearners as moved_count',
-            ])
-            ->with(['learners:id']);
-        }])
-        ->orderBy('name')
-        ->get();
+        $projects = Project::with('formations')->orderBy('name')->get();
 
-        $projectStats = $projects->map(function ($project) use ($latestInsertionMap) {
-            $formationStats = $project->formations->map(function ($formation) use ($latestInsertionMap) {
-                $learnerIds = $formation->learners->pluck('id')->all();
+        // One grouped query for every count of every formation (not 7 sub-queries per formation).
+        $formationIds = $projects->flatMap(fn ($project) => $project->formations->pluck('id'))->all();
+        $learnerCounts = $counter->for($formationIds);
+        $learnerIdsByFormation = $counter->learnerIds($formationIds);
+
+        $projectStats = $projects->map(function ($project) use ($latestInsertionMap, $learnerCounts, $learnerIdsByFormation) {
+            $formationStats = $project->formations->map(function ($formation) use ($latestInsertionMap, $learnerCounts, $learnerIdsByFormation) {
+                $learnerIds = $learnerIdsByFormation[$formation->id] ?? [];
+                $counts = $learnerCounts[$formation->id];
 
                 $internshipCount = 0;
-                $employedCount   = 0;
+                $employedCount = 0;
 
                 foreach ($learnerIds as $lid) {
                     $status = $latestInsertionMap[$lid] ?? null;
-                    if ($status === InsertionStatus::Internship->value) $internshipCount++;
-                    if ($status === InsertionStatus::Employed->value)   $employedCount++;
+                    if ($status === InsertionStatus::Internship->value) {
+                        $internshipCount++;
+                    }
+                    if ($status === InsertionStatus::Employed->value) {
+                        $employedCount++;
+                    }
                 }
 
                 // "Sans emploi" = tout apprenant qui n'est ni en stage ni en emploi
-                $unemployedCount = $formation->total_learners - $internshipCount - $employedCount;
+                $unemployedCount = $counts['total'] - $internshipCount - $employedCount;
 
                 return [
                     'id' => $formation->id,
                     'name' => $formation->name,
                     'status' => $formation->status->value,
-                    'total_learners' => $formation->total_learners,
-                    'male_count' => $formation->male_count,
-                    'female_count' => $formation->female_count,
-                    'in_progress_count' => $formation->in_progress_count,
-                    'withdrawn_count' => $formation->withdrawn_count,
-                    'completed_count' => $formation->completed_count,
-                    'moved_count' => $formation->moved_count,
+                    'total_learners' => $counts['total'],
+                    'male_count' => $counts['male'],
+                    'female_count' => $counts['female'],
+                    'in_progress_count' => $counts['in_progress'],
+                    'withdrawn_count' => $counts['withdrawn'],
+                    'completed_count' => $counts['completed'],
+                    'moved_count' => $counts['moved'],
                     'internship_count' => $internshipCount,
                     'employed_count' => $employedCount,
                     'unemployed_count' => $unemployedCount,
@@ -137,7 +138,7 @@ class StatisticsController extends Controller
     /**
      * API: Retourne les apprenants d'une formation avec filtres optionnels.
      */
-    public function learners(\Illuminate\Http\Request $request, Formation $formation): \Illuminate\Http\JsonResponse
+    public function learners(Request $request, Formation $formation): JsonResponse
     {
         $query = $formation->learners();
 
@@ -201,9 +202,9 @@ class StatisticsController extends Controller
      * Exporte les statistiques d'un projet : un classeur xlsx avec une feuille
      * récapitulative + une feuille par formation.
      */
-    public function exportProject(Project $project): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    public function exportProject(Project $project): BinaryFileResponse
     {
-        $filename = 'statistiques-' . Str::slug($project->name) . '-' . now()->format('Y-m-d') . '.xlsx';
+        $filename = 'statistiques-'.Str::slug($project->name).'-'.now()->format('Y-m-d').'.xlsx';
 
         return Excel::download(new ProjectStatisticsExport($project), $filename);
     }
@@ -211,9 +212,9 @@ class StatisticsController extends Controller
     /**
      * Exporte les statistiques d'une seule formation (résumé + liste nominative).
      */
-    public function exportFormation(Formation $formation): \Symfony\Component\HttpFoundation\BinaryFileResponse
+    public function exportFormation(Formation $formation): BinaryFileResponse
     {
-        $filename = 'statistiques-' . Str::slug($formation->name) . '-' . now()->format('Y-m-d') . '.xlsx';
+        $filename = 'statistiques-'.Str::slug($formation->name).'-'.now()->format('Y-m-d').'.xlsx';
 
         return Excel::download(new FormationStatisticsSheet($formation), $filename);
     }
