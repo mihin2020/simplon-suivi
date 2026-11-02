@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\ActivationToken;
 use App\Rules\StrongPassword;
+use App\Support\UserSessions;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -49,6 +50,9 @@ class ResetPasswordController extends Controller
         ]);
 
         $reset->update(['used_at' => now()]);
+
+        // Whoever held a stolen session of this account must lose it with the old password.
+        UserSessions::revokeAll($reset->user);
 
         return redirect()->route('login')
             ->with('success', 'Votre mot de passe a été réinitialisé. Vous pouvez vous connecter.');

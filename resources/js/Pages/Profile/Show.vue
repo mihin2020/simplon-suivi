@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, useForm } from '@inertiajs/vue3'
+import { computed } from 'vue'
 import AdminLayout from '@/Layouts/AdminLayout.vue'
 
 defineOptions({ layout: AdminLayout })
@@ -16,10 +17,16 @@ const props = defineProps<{
 }>()
 
 const infoForm = useForm({
-    first_name: props.user.first_name,
-    last_name:  props.user.last_name,
-    email:      props.user.email,
+    first_name:       props.user.first_name,
+    last_name:        props.user.last_name,
+    email:            props.user.email,
+    current_password: '',
 })
+
+// Changer d'adresse email demande le mot de passe actuel (c'est là qu'arrivent les liens de réinitialisation).
+const emailChanged = computed(() =>
+    infoForm.email.trim().toLowerCase() !== props.user.email.toLowerCase()
+)
 
 const passwordForm = useForm({
     current_password:      '',
@@ -28,7 +35,9 @@ const passwordForm = useForm({
 })
 
 const submitInfo = () => {
-    infoForm.put('/profil/informations')
+    infoForm.put('/profil/informations', {
+        onSuccess: () => infoForm.reset('current_password'),
+    })
 }
 
 const submitPassword = () => {
@@ -86,6 +95,11 @@ const submitPassword = () => {
                     <label>Adresse email</label>
                     <input v-model="infoForm.email" type="email" :class="['input', { 'input-error': infoForm.errors.email }]" />
                     <span v-if="infoForm.errors.email" class="error-msg">{{ infoForm.errors.email }}</span>
+                </div>
+                <div v-if="emailChanged" class="field">
+                    <label>Mot de passe actuel (requis pour changer l'adresse email)</label>
+                    <input v-model="infoForm.current_password" type="password" autocomplete="current-password" :class="['input', { 'input-error': infoForm.errors.current_password }]" placeholder="••••••••" />
+                    <span v-if="infoForm.errors.current_password" class="error-msg">{{ infoForm.errors.current_password }}</span>
                 </div>
                 <div class="flex justify-end">
                     <button type="submit" class="btn-primary" :disabled="infoForm.processing">

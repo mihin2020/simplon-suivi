@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Backup;
+use App\Support\AppUrl;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -40,7 +41,7 @@ class BackupCompletedMail extends Mailable implements ShouldQueue
                 'backup' => $this->backup,
                 'sizeMb' => $sizeMb,
                 'remoteSynced' => $this->backup->remote_synced_at !== null,
-                'backupsUrl' => url('/configuration/backups'),
+                'backupsUrl' => AppUrl::to('/configuration/backups'),
             ],
         );
     }

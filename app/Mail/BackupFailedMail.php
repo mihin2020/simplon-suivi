@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\Backup;
+use App\Support\AppUrl;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -34,7 +35,7 @@ class BackupFailedMail extends Mailable implements ShouldQueue
             markdown: 'emails.backup-failed',
             with: [
                 'backup' => $this->backup,
-                'backupsUrl' => url('/configuration/backups'),
+                'backupsUrl' => AppUrl::to('/configuration/backups'),
             ],
         );
     }

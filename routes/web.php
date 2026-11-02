@@ -130,14 +130,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/profil', [ProfileController::class, 'show'])->name(
         'profile.show',
     );
+    // The current password is checked on both: capped so a stolen session cannot be used to guess it.
     Route::put('/profil/informations', [
         ProfileController::class,
         'updateInfo',
-    ])->name('profile.info');
+    ])->middleware('throttle:profile-credentials')->name('profile.info');
     Route::put('/profil/mot-de-passe', [
         ProfileController::class,
         'updatePassword',
-    ])->name('profile.password');
+    ])->middleware('throttle:profile-credentials')->name('profile.password');
 
     // Users (gestion des comptes - Super Admin)
     Route::resource('users', UserController::class)->except(['show']);

@@ -11,6 +11,10 @@ use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
+    private const IP_MAX_FAILURES = 30;
+
+    private const IP_DECAY_SECONDS = 600;
+
     public function authorize(): bool
     {
         return true;
@@ -39,6 +43,7 @@ class LoginRequest extends FormRequest
 
         if (! Auth::attempt($this->only('email', 'password'), $this->boolean('remember'))) {
             RateLimiter::hit($this->throttleKey());
+            RateLimiter::hit($this->ipThrottleKey(), self::IP_DECAY_SECONDS);
 
             throw ValidationException::withMessages([
                 'email' => 'Ces identifiants ne correspondent pas à nos enregistrements.',
@@ -58,13 +63,19 @@ class LoginRequest extends FormRequest
 
     public function ensureIsNotRateLimited(): void
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), 5)) {
+        $isTooManyForAccount = RateLimiter::tooManyAttempts($this->throttleKey(), 5);
+        $isTooManyForIp = RateLimiter::tooManyAttempts($this->ipThrottleKey(), self::IP_MAX_FAILURES);
+
+        if (! $isTooManyForAccount && ! $isTooManyForIp) {
             return;
         }
 
         event(new Lockout($this));
 
-        $seconds = RateLimiter::availableIn($this->throttleKey());
+        $seconds = max(
+            RateLimiter::availableIn($this->throttleKey()),
+            $isTooManyForIp ? RateLimiter::availableIn($this->ipThrottleKey()) : 0,
+        );
 
         throw ValidationException::withMessages([
             'email' => "Trop de tentatives de connexion. Réessayez dans {$seconds} secondes.",
@@ -74,5 +85,11 @@ class LoginRequest extends FormRequest
     public function throttleKey(): string
     {
         return Str::transliterate(Str::lower($this->string('email')).'|'.$this->ip());
+    }
+
+    /** All the failures of one address, whatever the account: stops one address from trying many accounts. */
+    private function ipThrottleKey(): string
+    {
+        return 'login-ip|'.$this->ip();
     }
 }

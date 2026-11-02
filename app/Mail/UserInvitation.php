@@ -3,6 +3,7 @@
 namespace App\Mail;
 
 use App\Models\User;
+use App\Support\AppUrl;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -37,8 +38,8 @@ class UserInvitation extends Mailable implements ShouldQueue
         return new Content(
             markdown: 'emails.user-invitation',
             with: [
-                'activationUrl' => url('/activation/' . $this->plainToken),
-                'expiresIn'     => '72 heures',
+                'activationUrl' => AppUrl::to('/activation/'.$this->plainToken),
+                'expiresIn' => '72 heures',
             ],
         );
     }

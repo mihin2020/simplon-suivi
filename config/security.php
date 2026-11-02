@@ -4,6 +4,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Trusted proxies
+    |--------------------------------------------------------------------------
+    |
+    | The app sits behind a reverse proxy (Railway, nginx...) that terminates TLS and sets X-Forwarded-*. Trusting
+    | every client ('*') lets anyone forge their IP and so dodge the login rate limit: by default only the private
+    | networks of the proxy are trusted. TRUSTED_PROXIES (comma-separated IPs/CIDRs, or '*' when the origin can only
+    | be reached through the proxy) overrides it, e.g. for a proxy with a public address.
+    |
+    */
+    'trusted_proxies' => env('TRUSTED_PROXIES')
+        ? array_map('trim', explode(',', (string) env('TRUSTED_PROXIES')))
+        : ['127.0.0.1', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '100.64.0.0/10', 'fd00::/8'],
+
+    /*
+    |--------------------------------------------------------------------------
     | Content Security Policy
     |--------------------------------------------------------------------------
     |

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureAccountIsActive;
 use App\Http\Middleware\EnsureCohortIsOpen;
 use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -18,11 +19,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // Railway (and other reverse proxies) terminate TLS; trust X-Forwarded-* headers.
-        $middleware->trustProxies(at: '*');
-
+        // Trusted proxies are set in AppServiceProvider from config('security.trusted_proxies').
         $middleware->web(append: [
             HandleInertiaRequests::class,
+            EnsureAccountIsActive::class,
             SecurityHeaders::class,
         ]);
 
