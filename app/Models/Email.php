@@ -10,6 +10,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property-read bool|null $attachments_exists Set by withExists('attachments')
+ */
 class Email extends Model
 {
     use HasFactory, HasUuids;
@@ -42,6 +45,9 @@ class Email extends Model
         'received_at' => 'datetime',
     ];
 
+    /**
+     * @return HasMany<EmailAttachment, $this>
+     */
     public function attachments(): HasMany
     {
         return $this->hasMany(EmailAttachment::class);
