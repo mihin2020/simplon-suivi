@@ -5,8 +5,8 @@ namespace App\Exports;
 use App\Enums\Gender;
 use App\Enums\InsertionStatus;
 use App\Models\Formation;
+use App\Services\Statistics\LatestInsertionStatuses;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithStyles;
@@ -62,29 +62,7 @@ class FormationStatisticsSheet implements FromArray, WithColumnWidths, WithStyle
      */
     public static function latestInsertionRecordsFor(array $learnerIds): array
     {
-        if (empty($learnerIds)) {
-            return [];
-        }
-
-        $sub = DB::table('insertion_records')
-            ->select('learner_id', DB::raw('MAX(status_changed_at) as max_date'))
-            ->whereIn('learner_id', $learnerIds)
-            ->groupBy('learner_id');
-
-        $rows = DB::table('insertion_records as ir')
-            ->select('ir.learner_id', 'ir.status')
-            ->joinSub($sub, 'latest', function ($join) {
-                $join->on('ir.learner_id', '=', 'latest.learner_id')
-                    ->on('ir.status_changed_at', '=', 'latest.max_date');
-            })
-            ->get();
-
-        $map = [];
-        foreach ($rows as $row) {
-            $map[$row->learner_id] = $row->status;
-        }
-
-        return $map;
+        return app(LatestInsertionStatuses::class)->byLearner($learnerIds);
     }
 
     public static function computeStats(Formation $formation, array $latestInsertionMap): array
