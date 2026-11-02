@@ -18,6 +18,7 @@ class Referentiel extends Model
         return $this->hasMany(Formation::class);
     }
 
+    /** @return HasMany<CompetenceBlock, $this> */
     public function blocks(): HasMany
     {
         return $this->hasMany(CompetenceBlock::class)->orderBy('order');

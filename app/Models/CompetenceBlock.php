@@ -18,6 +18,7 @@ class CompetenceBlock extends Model
         return $this->belongsTo(Referentiel::class);
     }
 
+    /** @return HasMany<Competence, $this> */
     public function competences(): HasMany
     {
         return $this->hasMany(Competence::class)->orderBy('order');
