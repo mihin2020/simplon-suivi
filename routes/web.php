@@ -5,7 +5,6 @@ use App\Http\Controllers\AgeRangeController;
 use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\AttendancePdfController;
-use App\Http\Controllers\FormationLearnersExportController;
 use App\Http\Controllers\Auth\ActivationController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
@@ -35,6 +34,7 @@ use App\Http\Controllers\Form\FormController;
 use App\Http\Controllers\Form\FormResponseController;
 use App\Http\Controllers\Form\PublicFormController;
 use App\Http\Controllers\FormationController;
+use App\Http\Controllers\FormationLearnersExportController;
 use App\Http\Controllers\FormationLinkController;
 use App\Http\Controllers\FormationTrainerController;
 use App\Http\Controllers\InsertionRecordController;
@@ -61,6 +61,7 @@ use App\Http\Controllers\TrainerController;
 use App\Http\Controllers\TrainerProfileController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\VulnerabilityController;
+use App\Http\Controllers\WhatsAppController;
 use Illuminate\Support\Facades\Route;
 
 // Auth routes (invités uniquement)
@@ -724,29 +725,29 @@ Route::middleware('auth')->group(function () {
 
         // ── WhatsApp - consultation ──
         Route::middleware('permission:whatsapp.view,whatsapp.send,whatsapp.manage')->group(function () {
-            Route::get('/whatsapp', [EmailController::class, 'whatsapp'])->name('whatsapp.index');
-            Route::get('/whatsapp/status', [EmailController::class, 'whatsappStatus'])->name('whatsapp.status');
-            Route::get('/whatsapp/messages', [EmailController::class, 'whatsappMessages'])->name('whatsapp.messages');
-            Route::get('/whatsapp/broadcasts', [EmailController::class, 'whatsappBroadcasts'])->name('whatsapp.broadcasts');
-            Route::get('/whatsapp/broadcasts/{broadcastId}/recipients', [EmailController::class, 'whatsappBroadcastRecipients'])->name('whatsapp.broadcast.recipients');
-            Route::get('/whatsapp/thread/{learnerId}', [EmailController::class, 'whatsappThread'])->name('whatsapp.thread');
-            Route::post('/whatsapp/thread/{learnerId}/read', [EmailController::class, 'markThreadRead'])->name('whatsapp.thread.read');
-            Route::get('/whatsapp/media/{filename}', [EmailController::class, 'serveWhatsAppMedia'])->name('whatsapp.media')->where('filename', '.+');
-            Route::get('/whatsapp/diag', [EmailController::class, 'whatsappDiag'])->name('whatsapp.diag');
+            Route::get('/whatsapp', [WhatsAppController::class, 'index'])->name('whatsapp.index');
+            Route::get('/whatsapp/status', [WhatsAppController::class, 'status'])->name('whatsapp.status');
+            Route::get('/whatsapp/messages', [WhatsAppController::class, 'messages'])->name('whatsapp.messages');
+            Route::get('/whatsapp/broadcasts', [WhatsAppController::class, 'broadcasts'])->name('whatsapp.broadcasts');
+            Route::get('/whatsapp/broadcasts/{broadcastId}/recipients', [WhatsAppController::class, 'broadcastRecipients'])->name('whatsapp.broadcast.recipients');
+            Route::get('/whatsapp/thread/{learnerId}', [WhatsAppController::class, 'thread'])->name('whatsapp.thread');
+            Route::post('/whatsapp/thread/{learnerId}/read', [WhatsAppController::class, 'markThreadRead'])->name('whatsapp.thread.read');
+            Route::get('/whatsapp/media/{filename}', [WhatsAppController::class, 'media'])->name('whatsapp.media')->where('filename', '.+');
+            Route::get('/whatsapp/diag', [WhatsAppController::class, 'diag'])->name('whatsapp.diag');
         });
 
         // ── WhatsApp - envoi ──
         Route::middleware('permission:whatsapp.send,whatsapp.manage')->group(function () {
-            Route::post('/whatsapp/send', [EmailController::class, 'sendWhatsAppBulk'])->name('whatsapp.send');
-            Route::post('/whatsapp/reply', [EmailController::class, 'replyWhatsApp'])->name('whatsapp.reply');
+            Route::post('/whatsapp/send', [WhatsAppController::class, 'send'])->name('whatsapp.send');
+            Route::post('/whatsapp/reply', [WhatsAppController::class, 'reply'])->name('whatsapp.reply');
         });
 
         // ── WhatsApp - gestion ──
         Route::middleware('permission:whatsapp.manage')->group(function () {
-            Route::post('/whatsapp/sync-replies', [EmailController::class, 'whatsappSyncReplies'])->name('whatsapp.sync');
-            Route::post('/whatsapp/logout', [EmailController::class, 'whatsappLogout'])->name('whatsapp.logout');
-            Route::delete('/whatsapp/broadcasts/{broadcastId}', [EmailController::class, 'deleteWhatsAppBroadcast'])->name('whatsapp.broadcast.delete');
-            Route::delete('/whatsapp/messages/{id}', [EmailController::class, 'deleteWhatsAppMessage'])->name('whatsapp.message.delete');
+            Route::post('/whatsapp/sync-replies', [WhatsAppController::class, 'syncReplies'])->name('whatsapp.sync');
+            Route::post('/whatsapp/logout', [WhatsAppController::class, 'logout'])->name('whatsapp.logout');
+            Route::delete('/whatsapp/broadcasts/{broadcastId}', [WhatsAppController::class, 'deleteBroadcast'])->name('whatsapp.broadcast.delete');
+            Route::delete('/whatsapp/messages/{id}', [WhatsAppController::class, 'deleteMessage'])->name('whatsapp.message.delete');
         });
     });
 

@@ -35,6 +35,9 @@ class WhatsAppMessage extends Model
         'read_at' => 'datetime',
     ];
 
+    /**
+     * @return BelongsTo<Learner, $this>
+     */
     public function learner(): BelongsTo
     {
         return $this->belongsTo(Learner::class);
