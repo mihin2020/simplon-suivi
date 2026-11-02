@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Actions\WhatsApp\QueueWhatsAppBroadcast;
+use App\Actions\WhatsApp\ReplyToLearner;
 use App\Enums\LearnerStatus;
+use App\Exceptions\WhatsAppReplyRefused;
+use App\Http\Requests\WhatsApp\ReplyToLearnerRequest;
 use App\Http\Requests\WhatsApp\SendWhatsAppRequest;
 use App\Models\Formation;
 use App\Models\Learner;
@@ -14,9 +17,7 @@ use App\Services\WhatsAppWWebService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -127,79 +128,22 @@ class WhatsAppController extends Controller
         return Storage::disk('local')->response($path);
     }
 
-    public function reply(Request $request, WhatsAppWWebService $service): JsonResponse
+    public function reply(ReplyToLearnerRequest $request, ReplyToLearner $action): JsonResponse
     {
+        // Sending a large attachment through the WhatsApp service can take a while.
         set_time_limit(60);
 
-        $validated = $request->validate([
-            'learner_id' => ['required', 'uuid', 'exists:learners,id'],
-            'message' => ['nullable', 'string', 'max:4096'],
-            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,gif,webp,pdf,mp4,mp3,ogg,doc,docx', 'max:16384'],
-        ]);
-
-        if (empty($validated['message']) && ! $request->hasFile('attachment')) {
-            return response()->json(['success' => false, 'error' => 'Message ou pièce jointe requis.'], 422);
+        try {
+            $result = $action->execute(
+                Learner::findOrFail($request->validated('learner_id')),
+                $request->validated('message'),
+                $request->file('attachment'),
+            );
+        } catch (WhatsAppReplyRefused $refusal) {
+            return response()->json(['success' => false, 'error' => $refusal->getMessage()], 422);
         }
 
-        $learner = Learner::findOrFail($validated['learner_id']);
-
-        if (! $learner->phone) {
-            return response()->json(['success' => false, 'error' => 'Cet apprenant n\'a pas de numéro de téléphone.'], 422);
-        }
-
-        $recipient = [
-            'phone' => $learner->phone,
-            'name' => "{$learner->first_name} {$learner->last_name}",
-            'learner_id' => $learner->id,
-        ];
-
-        $attachmentPayload = null;
-        $attachmentPath = null;
-        $attachmentMime = null;
-        $attachmentName = null;
-
-        if ($request->hasFile('attachment')) {
-            $file = $request->file('attachment');
-            $ext = $file->extension() ?: last(explode('/', $file->getMimeType() ?? 'application/bin'));
-            $storedName = Str::uuid().'.'.$ext;
-            $attachmentPath = 'whatsapp_media/'.$storedName;
-            $attachmentMime = $file->getMimeType();
-            $attachmentName = $file->getClientOriginalName();
-
-            Storage::disk('local')->putFileAs('whatsapp_media', $file, $storedName);
-
-            $attachmentPayload = [
-                'data' => base64_encode(file_get_contents($file->getRealPath())),
-                'mimetype' => $attachmentMime,
-                'filename' => $attachmentName,
-            ];
-        }
-
-        $message = $validated['message'] ?? '';
-        $results = $service->sendBulk([$recipient], $message, $attachmentPayload);
-        $failed = ($results['success'] ?? 0) === 0;
-        $errMsg = $failed ? ($results['errors'][0]['error'] ?? 'Échec envoi') : null;
-
-        $normalizedPhone = preg_replace('/\D/', '', $learner->phone ?? '');
-        $waId = $results['sentIds'][$normalizedPhone] ?? null;
-
-        WhatsAppMessage::create([
-            'phone' => $learner->phone,
-            'recipient_name' => "{$learner->first_name} {$learner->last_name}",
-            'message' => $message ?: ($attachmentPath ? '' : ''),
-            'direction' => 'sent',
-            'provider' => 'wwebjs',
-            'status' => $failed ? 'failed' : 'sent',
-            'error' => $errMsg,
-            'learner_id' => $learner->id,
-            'broadcast_id' => null,
-            'attachment_path' => $attachmentPath,
-            'attachment_mimetype' => $attachmentMime,
-            'attachment_filename' => $attachmentName,
-            'external_id' => $waId,
-        ]);
-
-        return response()->json(['success' => ! $failed, 'error' => $errMsg]);
+        return response()->json($result);
     }
 
     public function markThreadRead(string $learnerId): JsonResponse
