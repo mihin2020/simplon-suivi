@@ -39,11 +39,17 @@ class Trainer extends Model
         return $this->belongsTo(User::class);
     }
 
+    /**
+     * @return BelongsToMany<TrainerProfile, $this>
+     */
     public function profiles(): BelongsToMany
     {
         return $this->belongsToMany(TrainerProfile::class);
     }
 
+    /**
+     * @return BelongsToMany<Formation, $this>
+     */
     public function formations(): BelongsToMany
     {
         return $this->belongsToMany(Formation::class)

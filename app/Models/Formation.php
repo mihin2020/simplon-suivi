@@ -13,6 +13,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property-read int|null $active_learners_count Set by withCount() on pages that list formations
+ * @property-read int|null $attendances_today_count Set by withCount() on the trainer dashboard
+ */
 class Formation extends Model
 {
     use HasFactory, HasUuids, SoftDeletes;

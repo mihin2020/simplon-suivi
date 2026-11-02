@@ -51,8 +51,8 @@ class Learner extends Model
     protected function casts(): array
     {
         return [
-            'birth_date'     => 'date',
-            'gender'         => Gender::class,
+            'birth_date' => 'date',
+            'gender' => Gender::class,
             'children_count' => 'integer',
         ];
     }
@@ -68,6 +68,9 @@ class Learner extends Model
         return mb_strtoupper($this->last_name).' '.$this->first_name;
     }
 
+    /**
+     * @return BelongsTo<EducationLevel, $this>
+     */
     public function educationLevel(): BelongsTo
     {
         return $this->belongsTo(EducationLevel::class);
@@ -118,8 +121,8 @@ class Learner extends Model
     {
         return $query->where(function (Builder $q) use ($term) {
             $q->where('first_name', 'like', "%{$term}%")
-              ->orWhere('last_name', 'like', "%{$term}%")
-              ->orWhere('email', 'like', "%{$term}%");
+                ->orWhere('last_name', 'like', "%{$term}%")
+                ->orWhere('email', 'like', "%{$term}%");
         });
     }
 }
