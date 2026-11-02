@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivationToken;
+use App\Rules\StrongPassword;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -30,10 +31,9 @@ class ResetPasswordController extends Controller
     public function store(Request $request, string $token): RedirectResponse
     {
         $request->validate([
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', 'confirmed', new StrongPassword],
         ], [
-            'password.required'  => 'Le mot de passe est obligatoire.',
-            'password.min'       => 'Le mot de passe doit contenir au moins 8 caractères.',
+            'password.required' => 'Le mot de passe est obligatoire.',
             'password.confirmed' => 'Les mots de passe ne correspondent pas.',
         ]);
 

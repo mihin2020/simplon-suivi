@@ -76,7 +76,7 @@ Route::get('/activation/{token}', [ActivationController::class, 'show'])->name(
 Route::post('/activation/{token}', [
     ActivationController::class,
     'store',
-])->name('activation.store');
+])->middleware('throttle:password-set')->name('activation.store');
 
 // Mot de passe oublié
 Route::get('/mot-de-passe-oublie', [
@@ -86,7 +86,7 @@ Route::get('/mot-de-passe-oublie', [
 Route::post('/mot-de-passe-oublie', [
     ForgotPasswordController::class,
     'store',
-])->name('password.email');
+])->middleware('throttle:password-reset')->name('password.email');
 
 // Réinitialisation du mot de passe
 Route::get('/reinitialisation/{token}', [
@@ -96,7 +96,7 @@ Route::get('/reinitialisation/{token}', [
 Route::post('/reinitialisation/{token}', [
     ResetPasswordController::class,
     'store',
-])->name('password.update');
+])->middleware('throttle:password-set')->name('password.update');
 
 Route::post('/deconnexion', [LoginController::class, 'destroy'])
     ->name('logout')
@@ -323,18 +323,20 @@ Route::middleware('auth')->group(function () {
 
     // Import Excel - must be declared BEFORE Route::resource('learners') to avoid
     // the {learner} wildcard swallowing /learners/import and /learners/import/template
-    Route::get('learners/import', [
-        ImportLearnerController::class,
-        'create',
-    ])->name('learners.import');
-    Route::post('learners/import', [
-        ImportLearnerController::class,
-        'store',
-    ])->name('learners.import.store');
-    Route::get('learners/import/template', [
-        ImportLearnerController::class,
-        'template',
-    ])->name('learners.import.template');
+    Route::middleware('permission:learners.create')->group(function () {
+        Route::get('learners/import', [
+            ImportLearnerController::class,
+            'create',
+        ])->name('learners.import');
+        Route::post('learners/import', [
+            ImportLearnerController::class,
+            'store',
+        ])->name('learners.import.store');
+        Route::get('learners/import/template', [
+            ImportLearnerController::class,
+            'template',
+        ])->name('learners.import.template');
+    });
 
     // Learners
     Route::resource('learners', LearnerController::class);
@@ -533,7 +535,7 @@ Route::middleware('auth')->group(function () {
     Route::get('api/learners/search', [
         LearnerController::class,
         'search',
-    ])->name('api.learners.search');
+    ])->middleware('permission:communication.send,communication.manage')->name('api.learners.search');
 
     // ───────────────────────────────────────────
     // MÉDIATHÈQUE (Cloudinary)
@@ -598,7 +600,7 @@ Route::middleware('auth')->group(function () {
     Route::get('api/cloudinary/stats', [
         MediaController::class,
         'cloudinaryStats',
-    ])->name('api.cloudinary.stats');
+    ])->middleware('permission:formations.view')->name('api.cloudinary.stats');
 
     // Formateurs d'une formation (assignation/désassignation)
     Route::post('formations/{formation}/trainers', [
@@ -771,7 +773,7 @@ Route::middleware('auth')->group(function () {
     ])->name('notifications.mark-all-read');
 
     // Assistant IA
-    Route::middleware('throttle:chatbot')->group(function () {
+    Route::middleware(['permission:configuration.view,configuration.manage', 'throttle:chatbot'])->group(function () {
         Route::post('/chatbot/message', [AiChatController::class, 'message'])->name('chatbot.message');
         Route::get('/chatbot/status', [AiChatController::class, 'status'])->name('chatbot.status');
     });

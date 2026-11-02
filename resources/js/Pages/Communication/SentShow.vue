@@ -10,7 +10,7 @@ const props = defineProps<{
         subject: string
         to: { email: string; name?: string }[]
         cc?: { email: string; name?: string }[] | null
-        body_html: string
+        safe_body_html: string
         sent_at: string | null
         from_name: string
         from_email: string
@@ -139,7 +139,7 @@ function decodeMimeFilename(name: string): string {
 
             <!-- Corps -->
             <div class="email-card-body">
-                <div class="email-body" v-html="email.body_html || '<em style=\'color:#9aaabb\'>(Corps vide)</em>'" />
+                <div class="email-body" v-html="email.safe_body_html ||'<em style=\'color:#9aaabb\'>(Corps vide)</em>'" />
             </div>
 
             <!-- Pièces jointes -->

@@ -193,10 +193,19 @@ const renderContent = (content: string): string => {
 const parseTableRow = (line: string): string[] =>
     line.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim())
 
-const renderInline = (text: string): string =>
+// The model's answer can echo content written by third parties (e-mails, WhatsApp): escape before formatting.
+const escapeHtml = (text: string): string =>
     text
-        .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, '<a href="$2" target="_blank" class="ai-link">$1</a>')
-        .replace(/\[([^\]]+)\]\((\/?[^)]+)\)/g, '<a href="$2" class="ai-link">$1</a>')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+
+const renderInline = (text: string): string =>
+    escapeHtml(text)
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" class="ai-link">$1</a>')
+        .replace(/\[([^\]]+)\]\((\/(?!\/)[^)\s]*)\)/g, '<a href="$2" class="ai-link">$1</a>')
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
         .replace(/\*([^*]+)\*/g, '<em>$1</em>')
 
@@ -306,7 +315,7 @@ onMounted(async () => {
                             :class="msg.role === 'user'
                                 ? 'bg-primary text-white rounded-tr-sm'
                                 : (msg.error ? 'bg-rose-50 text-rose-700 rounded-tl-sm' : 'bg-surface-container text-on-surface rounded-tl-sm')"
-                            v-html="msg.role === 'assistant' ? renderContent(msg.content) : msg.content"
+                            v-html="msg.role === 'assistant' ? renderContent(msg.content) : escapeHtml(msg.content)"
                         ></div>
                     </div>
 

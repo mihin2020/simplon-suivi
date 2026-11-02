@@ -6,9 +6,10 @@ use App\Models\User;
 
 class UserPolicy
 {
-    public function before(User $user): ?bool
+    public function before(User $user, string $ability): ?bool
     {
-        if ($user->isSuperAdmin()) {
+        // 'update' is decided in update() so a Super Admin account can never be rewritten through the user form.
+        if ($user->isSuperAdmin() && $ability !== 'update') {
             return true;
         }
 
@@ -32,8 +33,10 @@ class UserPolicy
 
     public function update(User $user, User $target): bool
     {
-        if ($user->id === $target->id) {
-            return true;
+        // The user form can only produce admin/trainer accounts: it never rewrites a Super Admin, and nobody
+        // edits their own role or permissions (their own profile has its dedicated page).
+        if ($target->isSuperAdmin() || $user->id === $target->id) {
+            return false;
         }
 
         return $user->hasPermission('users.update');

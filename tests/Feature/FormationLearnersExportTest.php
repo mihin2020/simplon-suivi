@@ -7,6 +7,8 @@ use App\Exports\FormationLearnersExport;
 use App\Models\Formation;
 use App\Models\Learner;
 use Maatwebsite\Excel\Facades\Excel;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Tests\TestCase;
 
 class FormationLearnersExportTest extends TestCase
@@ -52,5 +54,17 @@ class FormationLearnersExportTest extends TestCase
             ->assertOk();
 
         Excel::assertDownloaded(sprintf('apprenants_%s_%s.xlsx', str($formation->name)->slug(), now()->format('Y-m-d')));
+    }
+
+    public function test_text_starting_with_equals_is_stored_as_string_not_formula(): void
+    {
+        $export = new FormationLearnersExport(Formation::factory()->create());
+        $cell = (new Spreadsheet)->getActiveSheet()->getCell('A1');
+
+        $export->bindValue($cell, '=HYPERLINK("http://evil","x")');
+        $this->assertSame(DataType::TYPE_STRING, $cell->getDataType());
+
+        $export->bindValue($cell, '+22670123456');
+        $this->assertSame('+22670123456', $cell->getValue());
     }
 }

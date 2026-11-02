@@ -336,10 +336,12 @@ const filteredInactiveLearners = computed(() => {
                     </Link>
                 </Can>
                 <Can permission="formations.view">
-                    <a :href="`/formations/${formation.id}/learners/export`" class="btn-navy" title="Télécharger la liste des apprenants inscrits (Excel)">
-                        <span class="material-symbols-outlined" style="font-size:18px">download</span>
-                        Exporter Excel
-                    </a>
+                    <Can permission="learners.view">
+                        <a :href="`/formations/${formation.id}/learners/export`" class="btn-navy" title="Télécharger la liste des apprenants inscrits (Excel)">
+                            <span class="material-symbols-outlined" style="font-size:18px">download</span>
+                            Exporter Excel
+                        </a>
+                    </Can>
                     <Link :href="`/formations/${formation.id}/medias`" class="btn-navy">
                         <span class="material-symbols-outlined" style="font-size:18px">photo_library</span>
                         Médiathèque

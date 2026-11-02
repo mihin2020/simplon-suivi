@@ -197,11 +197,12 @@ class EmailController extends Controller
 
     public function show(string $threadId)
     {
-        $emails = Email::with("attachments", "sender")
-            ->where("thread_id", $threadId)
-            ->orderBy("received_at")
-            ->orderBy("created_at")
-            ->get();
+        $emails = Email::with('attachments', 'sender')
+            ->where('thread_id', $threadId)
+            ->orderBy('received_at')
+            ->orderBy('created_at')
+            ->get()
+            ->each->append('safe_body_html');
 
         // Mark all received emails in thread as read
         Email::where("thread_id", $threadId)
@@ -956,9 +957,10 @@ class EmailController extends Controller
 
     public function showSent(Email $email)
     {
-        $email->load("attachments");
-        return Inertia::render("Communication/SentShow", [
-            "email" => $email,
+        $email->load('attachments')->append('safe_body_html');
+
+        return Inertia::render('Communication/SentShow', [
+            'email' => $email,
         ]);
     }
 

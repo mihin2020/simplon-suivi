@@ -5,15 +5,15 @@ namespace App\Http\Controllers;
 use App\Models\Formation;
 use App\Models\FormationLink;
 use App\Models\Media;
+use App\Rules\CloudinaryUrl;
 use App\Services\CloudinaryService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use ZipStream\ZipStream;
 
 class MediaController extends Controller
 {
@@ -69,7 +69,7 @@ class MediaController extends Controller
         $storageLimit = 25 * 1024 * 1024 * 1024; // 25 GB en bytes
 
         $percentUsed = $storageLimit > 0 ? min(100, round(($totalBytes / $storageLimit) * 100, 2)) : 0;
-        
+
         // Si le pourcentage est très petit mais non nul, afficher au moins 0.01%
         if ($percentUsed == 0 && $totalBytes > 0) {
             $percentUsed = 0.01;
@@ -106,7 +106,7 @@ class MediaController extends Controller
         $pow = min($pow, count($units) - 1);
         $bytes /= 1024 ** $pow;
 
-        return round($bytes, $precision) . ' ' . $units[$pow];
+        return round($bytes, $precision).' '.$units[$pow];
     }
 
     // Déterminer le niveau d'alerte
@@ -117,6 +117,7 @@ class MediaController extends Controller
         } elseif ($percent >= 80) {
             return 'warning';
         }
+
         return 'normal';
     }
 
@@ -127,8 +128,8 @@ class MediaController extends Controller
 
         $validated = $request->validate([
             'cloudinary_public_id' => 'required|string',
-            'url' => 'required|url',
-            'thumbnail_url' => 'nullable|url',
+            'url' => ['required', 'string', new CloudinaryUrl],
+            'thumbnail_url' => ['nullable', 'string', new CloudinaryUrl],
             'type' => 'required|in:photo,video',
             'title' => 'nullable|string|max:255',
             'album' => 'nullable|string|max:255',
@@ -203,7 +204,7 @@ class MediaController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => count($validated['media_ids']) . ' média(s) ajouté(s) à l\'album "' . $validated['album'] . '"',
+            'message' => count($validated['media_ids']).' média(s) ajouté(s) à l\'album "'.$validated['album'].'"',
         ]);
     }
 
@@ -220,7 +221,7 @@ class MediaController extends Controller
         $resourceType = $media->type === 'video' ? 'video' : 'image';
         $deleted = $this->cloudinaryService->delete($media->cloudinary_public_id, $resourceType);
 
-        if (!$deleted) {
+        if (! $deleted) {
             \Log::warning("Failed to delete from Cloudinary: {$media->cloudinary_public_id}");
         }
 
@@ -242,15 +243,16 @@ class MediaController extends Controller
             abort(403);
         }
 
-        $filename = $media->title 
-            ? $media->title . '.' . $media->format 
-            : basename($media->cloudinary_public_id) . '.' . $media->format;
+        $filename = $media->title
+            ? $media->title.'.'.$media->format
+            : basename($media->cloudinary_public_id).'.'.$media->format;
+
+        abort_unless(CloudinaryUrl::isValid($media->url), 422, 'Adresse de média non autorisée.');
 
         return response()->streamDownload(function () use ($media) {
-            $content = file_get_contents($media->url);
-            echo $content;
+            echo file_get_contents($media->url);
         }, $filename, [
-            'Content-Type' => $media->type === 'video' ? 'video/mp4' : 'image/' . ($media->format ?? 'jpeg'),
+            'Content-Type' => $media->type === 'video' ? 'video/mp4' : 'image/'.($media->format ?? 'jpeg'),
         ]);
     }
 
@@ -270,7 +272,7 @@ class MediaController extends Controller
         $album = $request->input('album');
 
         $query = Media::where('formation_id', $formation->id);
-        
+
         if ($album && $album !== 'all') {
             $query->where('album', $album);
         }
@@ -281,22 +283,25 @@ class MediaController extends Controller
             abort(404, 'Aucun média trouvé');
         }
 
-        $zipName = $album 
-            ? "{$formation->name} - {$album}.zip" 
+        $zipName = $album
+            ? "{$formation->name} - {$album}.zip"
             : "{$formation->name} - Tous les médias.zip";
 
         $zipName = str_replace(['/', '\\'], '_', $zipName);
 
         return response()->streamDownload(function () use ($medias) {
-            $zip = new \ZipStream\ZipStream(outputName: 'download.zip');
+            $zip = new ZipStream(outputName: 'download.zip');
 
             foreach ($medias as $media) {
-                $filename = $media->title 
-                    ? $media->title . '.' . $media->format 
-                    : basename($media->cloudinary_public_id) . '.' . $media->format;
+                $filename = $media->title
+                    ? $media->title.'.'.$media->format
+                    : basename($media->cloudinary_public_id).'.'.$media->format;
 
-                $content = file_get_contents($media->url);
-                $zip->addFile($filename, $content);
+                if (! CloudinaryUrl::isValid($media->url)) {
+                    continue;
+                }
+
+                $zip->addFile($filename, file_get_contents($media->url));
             }
 
             $zip->finish();

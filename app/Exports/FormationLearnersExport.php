@@ -8,15 +8,19 @@ use App\Models\Learner;
 use Illuminate\Support\Carbon;
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
+use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use PhpOffice\PhpSpreadsheet\Cell\Cell;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Cell\DefaultValueBinder;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 /**
  * Every learner enrolled in a formation, with their personal information (no files, no photos).
  */
-class FormationLearnersExport implements FromArray, ShouldAutoSize, WithHeadings, WithStyles
+class FormationLearnersExport extends DefaultValueBinder implements FromArray, ShouldAutoSize, WithCustomValueBinder, WithHeadings, WithStyles
 {
     private const MARITAL_STATUSES = [
         'single' => 'Célibataire',
@@ -74,6 +78,21 @@ class FormationLearnersExport implements FromArray, ShouldAutoSize, WithHeadings
             LearnerStatus::tryFrom($learner->pivot->status)?->label(),
             $learner->pivot->enrolled_at ? Carbon::parse($learner->pivot->enrolled_at)->format('d/m/Y') : null,
         ])->all();
+    }
+
+    /**
+     * Keep every text as a string: the default binder would turn "=..." into a live formula
+     * (executing attacker-controlled content) and "+226..." phone numbers into numbers.
+     */
+    public function bindValue(Cell $cell, mixed $value): bool
+    {
+        if (is_string($value)) {
+            $cell->setValueExplicit($value, DataType::TYPE_STRING);
+
+            return true;
+        }
+
+        return parent::bindValue($cell, $value);
     }
 
     public function styles(Worksheet $sheet): array

@@ -234,7 +234,7 @@ function archive(email: any) {
 
                 <!-- Bulle -->
                 <div class="msg-bubble" :class="e.direction === 'sent' ? 'bubble-sent' : 'bubble-recv'">
-                    <div class="msg-body" v-html="e.body_html || e.body_text || '<em>(corps vide)</em>'" />
+                    <div class="msg-body" v-html="e.safe_body_html || '<em>(corps vide)</em>'" />
 
                     <!-- Pièces jointes -->
                     <div v-if="e.attachments?.length" class="msg-attachments">

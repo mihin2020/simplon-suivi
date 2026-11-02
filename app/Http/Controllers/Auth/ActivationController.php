@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivationToken;
+use App\Rules\StrongPassword;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,9 +25,9 @@ class ActivationController extends Controller
 
         return Inertia::render('Auth/Activate', [
             'token' => $token,
-            'user'  => [
+            'user' => [
                 'full_name' => $activation->user->full_name,
-                'email'     => $activation->user->email,
+                'email' => $activation->user->email,
             ],
         ]);
     }
@@ -34,7 +35,7 @@ class ActivationController extends Controller
     public function store(Request $request, string $token): RedirectResponse
     {
         $request->validate([
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', 'confirmed', new StrongPassword],
         ]);
 
         $activation = $this->findValid($token);
@@ -47,7 +48,7 @@ class ActivationController extends Controller
         $user = $activation->user;
 
         $user->update([
-            'password'  => Hash::make($request->password),
+            'password' => Hash::make($request->password),
             'is_active' => true,
         ]);
 

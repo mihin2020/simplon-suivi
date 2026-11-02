@@ -64,6 +64,15 @@ class AppServiceProvider extends ServiceProvider
             $model::observe(AiCacheObserver::class);
         }
 
+        // CLAUDE.md §8: password reset requests are limited to 3 per 10 minutes.
+        RateLimiter::for('password-reset', fn (Request $request) => [
+            Limit::perMinutes(10, 3)->by('reset-email|'.strtolower((string) $request->input('email')).'|'.$request->ip()),
+            Limit::perMinutes(10, 20)->by('reset-ip|'.$request->ip()),
+        ]);
+
+        // Setting a password with a token: tokens are 64 random characters, this only stops floods.
+        RateLimiter::for('password-set', fn (Request $request) => Limit::perMinutes(10, 10)->by('set-ip|'.$request->ip()));
+
         RateLimiter::for('chatbot', fn (Request $request) => Limit::perMinute(10)->by($request->user()?->id ?? $request->ip())
         );
 

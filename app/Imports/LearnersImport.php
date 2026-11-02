@@ -7,28 +7,36 @@ use App\Models\EducationLevel;
 use App\Models\LastDiploma;
 use App\Models\Learner;
 use App\Models\Vulnerability;
-use Illuminate\Support\Facades\Http;
+use App\Services\RemoteImageFetcher;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Maatwebsite\Excel\Concerns\ToModel;
-use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Maatwebsite\Excel\Concerns\SkipsOnError;
 use Maatwebsite\Excel\Concerns\SkipsErrors;
+use Maatwebsite\Excel\Concerns\SkipsOnError;
+use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithBatchInserts;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
 
-class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatchInserts, WithChunkReading
+class LearnersImport implements SkipsOnError, ToModel, WithBatchInserts, WithChunkReading, WithHeadingRow
 {
     use SkipsErrors;
 
     private ?string $formationId;
+
     private array $educationLevelMap = [];
+
     /** @var array<int, AgeRange> */
     private array $ageRanges = [];
+
     private array $ageRangeMap = [];
+
     private array $vulnerabilityMap = [];
+
     private array $lastDiplomaMap = [];
+
     private int $importedCount = 0;
+
     private int $skippedCount = 0;
 
     public function __construct(?string $formationId = null)
@@ -80,46 +88,48 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
         ];
 
         foreach ($aliases as $from => $to) {
-            if (array_key_exists($from, $row) && !array_key_exists($to, $row)) {
+            if (array_key_exists($from, $row) && ! array_key_exists($to, $row)) {
                 $row[$to] = $row[$from];
             }
         }
 
         if (empty($row['prenom']) || empty($row['nom'])) {
             $this->skippedCount++;
+
             return null;
         }
 
-        if (!empty($row['email']) && Learner::where('email', $row['email'])->exists()) {
+        if (! empty($row['email']) && Learner::where('email', $row['email'])->exists()) {
             $this->skippedCount++;
+
             return null;
         }
 
         $educationLevelId = null;
-        if (!empty($row['niveau_etudes'])) {
+        if (! empty($row['niveau_etudes'])) {
             $educationLevelId = $this->educationLevelMap[$row['niveau_etudes']] ?? null;
         }
 
         // Tranche d'âge : par nom dans le fichier ou auto-calculé depuis date_naissance
         $ageRangeId = null;
-        if (!empty($row['tranche_age'])) {
+        if (! empty($row['tranche_age'])) {
             $ageRangeId = $this->ageRangeMap[trim((string) $row['tranche_age'])] ?? null;
         }
 
         $gender = null;
-        if (!empty($row['genre'])) {
+        if (! empty($row['genre'])) {
             $g = strtolower(trim((string) $row['genre']));
             $gender = match (true) {
-                in_array($g, ['m', 'masculin', 'homme', 'male'])                  => 'male',
-                in_array($g, ['f', 'feminin', 'féminin', 'femme', 'female'])      => 'female',
-                default                                                            => null,
+                in_array($g, ['m', 'masculin', 'homme', 'male']) => 'male',
+                in_array($g, ['f', 'feminin', 'féminin', 'femme', 'female']) => 'female',
+                default => null,
             };
         }
 
         $birthDate = null;
-        if (!empty($row['date_naissance'])) {
+        if (! empty($row['date_naissance'])) {
             try {
-                $birthDate = \Carbon\Carbon::parse($row['date_naissance'])->toDateString();
+                $birthDate = Carbon::parse($row['date_naissance'])->toDateString();
             } catch (\Exception) {
                 $birthDate = null;
             }
@@ -127,7 +137,7 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
 
         // Auto-calcul de la tranche d'âge si non fournie et que la date de naissance est connue
         if ($ageRangeId === null && $birthDate !== null) {
-            $age = \Carbon\Carbon::parse($birthDate)->age;
+            $age = Carbon::parse($birthDate)->age;
             foreach ($this->ageRanges as $range) {
                 if ($age >= $range->age_min && $age <= $range->age_max) {
                     $ageRangeId = $range->id;
@@ -137,29 +147,29 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
         }
 
         $learner = new Learner([
-            'first_name'                  => trim((string) $row['prenom']),
-            'last_name'                   => trim((string) $row['nom']),
-            'email'                       => !empty($row['email']) ? trim((string) $row['email']) : null,
-            'phone'                       => !empty($row['telephone']) ? trim((string) $row['telephone']) : null,
-            'birth_date'                  => $birthDate,
-            'birth_place'                 => !empty($row['lieu_naissance']) ? trim((string) $row['lieu_naissance']) : null,
-            'gender'                      => $gender,
-            'education_level_id'          => $educationLevelId,
-            'talent'                      => !empty($row['talent']) ? trim((string) $row['talent']) : null,
-            'emergency_contact_name'      => !empty($row['contact_urgence_nom']) ? trim((string) $row['contact_urgence_nom']) : null,
-            'emergency_contact_firstname' => !empty($row['contact_urgence_prenom']) ? trim((string) $row['contact_urgence_prenom']) : null,
-            'emergency_contact_phone'     => !empty($row['contact_urgence_telephone']) ? trim((string) $row['contact_urgence_telephone']) : null,
-            'address'                     => !empty($row['adresse']) ? trim((string) $row['adresse']) : null,
-            'location'                    => !empty($row['localisation']) ? trim((string) $row['localisation']) : null,
-            'profile'                     => !empty($row['profil']) ? trim((string) $row['profil']) : null,
-            'organization'                => !empty($row['organisation']) ? trim((string) $row['organisation']) : null,
-            'age_range_id'                => $ageRangeId,
-            'study_field'                 => !empty($row['domaine_etudes']) ? trim((string) $row['domaine_etudes']) : null,
-            'cnib_number'                 => !empty($row['cnib_number']) ? trim((string) $row['cnib_number']) : null,
-            'marital_status'              => $this->parseMaritalStatus($row['situation_matrimoniale'] ?? null),
-            'children_count'              => !empty($row['nombre_enfants']) ? (int) $row['nombre_enfants'] : 0,
-            'vulnerability_id'            => !empty($row['vulnerabilite']) ? ($this->vulnerabilityMap[trim((string) $row['vulnerabilite'])] ?? null) : null,
-            'last_diploma_id'             => !empty($row['dernier_diplome']) ? ($this->lastDiplomaMap[trim((string) $row['dernier_diplome'])] ?? null) : null,
+            'first_name' => trim((string) $row['prenom']),
+            'last_name' => trim((string) $row['nom']),
+            'email' => ! empty($row['email']) ? trim((string) $row['email']) : null,
+            'phone' => ! empty($row['telephone']) ? trim((string) $row['telephone']) : null,
+            'birth_date' => $birthDate,
+            'birth_place' => ! empty($row['lieu_naissance']) ? trim((string) $row['lieu_naissance']) : null,
+            'gender' => $gender,
+            'education_level_id' => $educationLevelId,
+            'talent' => ! empty($row['talent']) ? trim((string) $row['talent']) : null,
+            'emergency_contact_name' => ! empty($row['contact_urgence_nom']) ? trim((string) $row['contact_urgence_nom']) : null,
+            'emergency_contact_firstname' => ! empty($row['contact_urgence_prenom']) ? trim((string) $row['contact_urgence_prenom']) : null,
+            'emergency_contact_phone' => ! empty($row['contact_urgence_telephone']) ? trim((string) $row['contact_urgence_telephone']) : null,
+            'address' => ! empty($row['adresse']) ? trim((string) $row['adresse']) : null,
+            'location' => ! empty($row['localisation']) ? trim((string) $row['localisation']) : null,
+            'profile' => ! empty($row['profil']) ? trim((string) $row['profil']) : null,
+            'organization' => ! empty($row['organisation']) ? trim((string) $row['organisation']) : null,
+            'age_range_id' => $ageRangeId,
+            'study_field' => ! empty($row['domaine_etudes']) ? trim((string) $row['domaine_etudes']) : null,
+            'cnib_number' => ! empty($row['cnib_number']) ? trim((string) $row['cnib_number']) : null,
+            'marital_status' => $this->parseMaritalStatus($row['situation_matrimoniale'] ?? null),
+            'children_count' => ! empty($row['nombre_enfants']) ? (int) $row['nombre_enfants'] : 0,
+            'vulnerability_id' => ! empty($row['vulnerabilite']) ? ($this->vulnerabilityMap[trim((string) $row['vulnerabilite'])] ?? null) : null,
+            'last_diploma_id' => ! empty($row['dernier_diplome']) ? ($this->lastDiplomaMap[trim((string) $row['dernier_diplome'])] ?? null) : null,
         ]);
 
         if (! empty($row['photo'])) {
@@ -174,19 +184,23 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
 
         if ($this->formationId) {
             $learner->formations()->attach($this->formationId, [
-                'status'      => 'in_progress',
+                'status' => 'in_progress',
                 'enrolled_at' => now(),
             ]);
         }
 
         $this->importedCount++;
+
         return null;
     }
 
     private function parseMaritalStatus(?string $value): ?string
     {
-        if (empty($value)) return null;
+        if (empty($value)) {
+            return null;
+        }
         $v = strtolower(trim($value));
+
         return match (true) {
             in_array($v, ['celibataire', 'célibataire', 'single']) => 'single',
             in_array($v, ['marie', 'marié', 'mariee', 'mariée', 'married']) => 'married',
@@ -206,39 +220,22 @@ class LearnersImport implements ToModel, WithHeadingRow, SkipsOnError, WithBatch
         }
 
         try {
-            $response = Http::timeout(20)->withOptions(['allow_redirects' => true])->get($value);
-            if (! $response->successful() || $response->body() === '') {
-                return null;
-            }
-
-            $pathInfo = pathinfo(parse_url($value, PHP_URL_PATH) ?? '');
-            $disposition = (string) $response->header('Content-Disposition');
-            $originalName = $pathInfo['basename'] ?? null;
-            if (preg_match('/filename="?([^";]+)"?/i', $disposition, $matches)) {
-                $originalName = $matches[1];
-            }
-
-            $ext = strtolower(pathinfo((string) $originalName, PATHINFO_EXTENSION) ?: ($pathInfo['extension'] ?? 'jpg'));
-            if (! in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
-                $mime = strtolower((string) $response->header('Content-Type'));
-                $ext = match (true) {
-                    str_contains($mime, 'png') => 'png',
-                    str_contains($mime, 'webp') => 'webp',
-                    str_contains($mime, 'gif') => 'gif',
-                    default => 'jpg',
-                };
-            }
-
-            $target = 'learners/'.Str::uuid().'.'.$ext;
-            Storage::disk('public')->put($target, $response->body());
-
-            return [
-                'path' => $target,
-                'original_name' => $originalName ?: ('photo.'.$ext),
-            ];
+            $image = app(RemoteImageFetcher::class)->fetch($value);
         } catch (\Throwable) {
             return null;
         }
+
+        if ($image === null) {
+            return null;
+        }
+
+        $target = 'learners/'.Str::uuid().'.'.$image['extension'];
+        Storage::disk('public')->put($target, $image['body']);
+
+        return [
+            'path' => $target,
+            'original_name' => 'photo.'.$image['extension'],
+        ];
     }
 
     public function batchSize(): int

@@ -147,7 +147,7 @@ const onProjectChange = async () => {
                 .map(f => f.id)
         }
     } catch (error) {
-        console.error('Erreur lors du chargement des formations:', error)
+        // The formation list is optional here: leave the selection empty.
     } finally {
         loadingFormations.value = false
     }
@@ -415,7 +415,7 @@ watch(() => props.users, () => {
 
                         <div class="drawer-footer">
                             <Can permission="users.update">
-                                <Link :href="`/users/${drawerUser.id}/edit`" class="drawer-action-btn">
+                                <Link v-if="drawerUser.role !== 'super_admin'" :href="`/users/${drawerUser.id}/edit`" class="drawer-action-btn">
                                     <span class="material-symbols-outlined" style="font-size:16px">edit</span>
                                     Modifier
                                 </Link>

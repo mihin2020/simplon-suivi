@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Support\HtmlSanitizer;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -78,5 +80,22 @@ class Email extends Model
     public function scopeThread($query, $threadId)
     {
         return $query->where('thread_id', $threadId);
+    }
+
+    /**
+     * Body safe to render with v-html. Received e-mails are written by third parties: never trust body_html.
+     * Not serialized by default; controllers that display a message call append('safe_body_html').
+     *
+     * @return Attribute<string, never>
+     */
+    protected function safeBodyHtml(): Attribute
+    {
+        return Attribute::get(function (): string {
+            if (filled($this->body_html)) {
+                return HtmlSanitizer::clean($this->body_html);
+            }
+
+            return filled($this->body_text) ? nl2br(e($this->body_text)) : '';
+        });
     }
 }

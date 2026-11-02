@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\HtmlSanitizer;
 use App\Support\InterviewCustomFields;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -54,6 +55,24 @@ class LearnerInterview extends Model
         return Attribute::get(
             fn (): array => InterviewCustomFields::fromMeta($this->meta),
         );
+    }
+
+    /**
+     * Rich text rendered with v-html: always served sanitized, whatever was stored.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function notes(): Attribute
+    {
+        return Attribute::get(fn (?string $value) => $value === null ? null : HtmlSanitizer::clean($value, allowImages: true));
+    }
+
+    /**
+     * @return Attribute<string|null, never>
+     */
+    protected function recommendation(): Attribute
+    {
+        return Attribute::get(fn (?string $value) => $value === null ? null : HtmlSanitizer::clean($value, allowImages: true));
     }
 
     public function learner(): BelongsTo

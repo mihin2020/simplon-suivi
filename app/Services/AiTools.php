@@ -32,10 +32,50 @@ class AiTools
 
     private const MAX_LIMIT = 100;
 
+    /** Permission an authenticated user needs for each tool: the assistant never widens access. */
+    private const TOOL_PERMISSIONS = [
+        'search_learners' => 'learners.view',
+        'get_learner_detail' => 'learners.view',
+        'list_insertions' => 'learners.view',
+        'list_projects' => 'projects.view',
+        'list_formations' => 'formations.view',
+        'get_formation_detail' => 'formations.view',
+        'list_formation_links' => 'formations.view',
+        'list_media' => 'formations.view',
+        'list_trainers' => 'trainers.view',
+        'get_attendance_stats' => 'attendances.view',
+        'get_attendance_detail' => 'attendances.view',
+        'list_partners' => 'partners.view',
+        'list_referentiels' => 'referentiels.view',
+        'list_users' => 'users.view',
+        'list_campus_formations' => 'campus.formations.view',
+        'list_cohorts' => 'campus.cohorts.view',
+        'get_cohort_finance_detail' => 'campus.finance.view',
+        'list_expenses' => 'expenses.view',
+        'list_emails' => 'communication.view',
+        'list_whatsapp_messages' => 'whatsapp.view',
+        'list_reference_data' => 'configuration.view',
+    ];
+
     /**
      * Schémas JSON (communs aux providers) décrivant les outils disponibles.
      */
     public static function definitions(): array
+    {
+        return array_values(array_filter(
+            self::allDefinitions(),
+            fn (array $tool) => self::isAllowed($tool['name']),
+        ));
+    }
+
+    private static function isAllowed(string $tool): bool
+    {
+        $permission = self::TOOL_PERMISSIONS[$tool] ?? null;
+
+        return $permission !== null && (auth()->user()?->hasPermission($permission) ?? false);
+    }
+
+    private static function allDefinitions(): array
     {
         return [
             [
@@ -247,6 +287,10 @@ class AiTools
 
     public static function execute(string $name, array $args): array
     {
+        if (! self::isAllowed($name)) {
+            return ['error' => "Accès refusé à l'outil {$name} : permission manquante."];
+        }
+
         try {
             return match ($name) {
                 'search_learners' => self::searchLearners($args),

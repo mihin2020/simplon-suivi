@@ -35,6 +35,12 @@ return [
         ],
     ],
 
+    // Photo URLs read from Excel imports are fetched by the server. Private/local addresses are refused
+    // (SSRF protection); set to true on a developer machine only, never in production.
+    'remote_images' => [
+        'allow_private_hosts' => (bool) env('REMOTE_IMAGES_ALLOW_PRIVATE_HOSTS', false),
+    ],
+
     'wwebjs' => [
         'url' => env('WWEBJS_URL', 'http://127.0.0.1:3001'),
     ],
