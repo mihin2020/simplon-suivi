@@ -22,7 +22,6 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -226,7 +225,6 @@ class ContractController extends Controller
             'email_status' => $contract->email_status?->value,
             'fill_fields' => array_column($contract->fill_fields ?? [], 'label'),
             'fill_fields_ready' => $contract->fill_fields_status === FillFieldsStatus::Ready,
-            'pdf_url' => $contract->pdf_path ? Storage::disk('public')->url($contract->pdf_path) : null,
             'created_by' => $contract->creator?->full_name,
         ]);
     }

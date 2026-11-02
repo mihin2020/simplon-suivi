@@ -52,6 +52,7 @@ use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\PhaseController;
 use App\Http\Controllers\PresenceRedirectController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ProtectedFileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ReferentielController;
 use App\Http\Controllers\ReorderController;
@@ -342,6 +343,15 @@ Route::middleware('auth')->group(function () {
 
     // Learners
     Route::resource('learners', LearnerController::class);
+
+    // Identity documents, CVs, contract scans and receipts are private: they are served only after a policy check.
+    Route::get('learners/{learner}/documents/{document}', [ProtectedFileController::class, 'learnerDocument'])
+        ->name('learners.documents.show');
+    Route::get('learners/{learner}/insertion/{record}/contracts/{kind}', [ProtectedFileController::class, 'insertionContract'])
+        ->name('learners.insertion.contract');
+    Route::get('trainers/{trainer}/cv', [ProtectedFileController::class, 'trainerCv'])->name('trainers.cv');
+    Route::get('expense-attachments/{attachment}', [ProtectedFileController::class, 'expenseAttachment'])
+        ->name('expenses.attachments.show');
 
     // Insertion records (Stage et Emploi)
     Route::get('learners/{learner}/insertion', [

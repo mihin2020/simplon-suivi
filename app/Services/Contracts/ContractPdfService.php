@@ -58,12 +58,12 @@ class ContractPdfService
     }
 
     /**
-     * Render and persist the PDF on the public disk; returns the stored path.
+     * Render and persist the PDF on the private disk; returns the stored path.
      */
     public function store(Contract $contract): string
     {
         $path = 'contracts/'.$contract->id.'/v'.$contract->version.'.pdf';
-        Storage::disk('public')->put($path, $this->output($contract));
+        Storage::disk('local')->put($path, $this->output($contract));
 
         return $path;
     }

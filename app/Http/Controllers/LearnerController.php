@@ -85,11 +85,11 @@ class LearnerController extends Controller
             $data['photo_original_name'] = $request->file('photo')->getClientOriginalName();
         }
         if ($request->hasFile('cnib')) {
-            $data['cnib_path'] = $request->file('cnib')->store('learners/cnib', 'public');
+            $data['cnib_path'] = $request->file('cnib')->store('learners/cnib', 'local');
             $data['cnib_original_name'] = $request->file('cnib')->getClientOriginalName();
         }
         if ($request->hasFile('cv')) {
-            $data['cv_path'] = $request->file('cv')->store('learners/cv', 'public');
+            $data['cv_path'] = $request->file('cv')->store('learners/cv', 'local');
             $data['cv_original_name'] = $request->file('cv')->getClientOriginalName();
         }
         unset($data['photo'], $data['cnib'], $data['cv']);
@@ -195,13 +195,13 @@ class LearnerController extends Controller
 
         if ($request->hasFile('cnib')) {
             if ($learner->cnib_path) {
-                Storage::disk('public')->delete($learner->cnib_path);
+                Storage::disk('local')->delete($learner->cnib_path);
             }
-            $data['cnib_path'] = $request->file('cnib')->store('learners/cnib', 'public');
+            $data['cnib_path'] = $request->file('cnib')->store('learners/cnib', 'local');
             $data['cnib_original_name'] = $request->file('cnib')->getClientOriginalName();
         } elseif ($request->boolean('remove_cnib')) {
             if ($learner->cnib_path) {
-                Storage::disk('public')->delete($learner->cnib_path);
+                Storage::disk('local')->delete($learner->cnib_path);
             }
             $data['cnib_path'] = null;
             $data['cnib_original_name'] = null;
@@ -209,13 +209,13 @@ class LearnerController extends Controller
 
         if ($request->hasFile('cv')) {
             if ($learner->cv_path) {
-                Storage::disk('public')->delete($learner->cv_path);
+                Storage::disk('local')->delete($learner->cv_path);
             }
-            $data['cv_path'] = $request->file('cv')->store('learners/cv', 'public');
+            $data['cv_path'] = $request->file('cv')->store('learners/cv', 'local');
             $data['cv_original_name'] = $request->file('cv')->getClientOriginalName();
         } elseif ($request->boolean('remove_cv')) {
             if ($learner->cv_path) {
-                Storage::disk('public')->delete($learner->cv_path);
+                Storage::disk('local')->delete($learner->cv_path);
             }
             $data['cv_path'] = null;
             $data['cv_original_name'] = null;

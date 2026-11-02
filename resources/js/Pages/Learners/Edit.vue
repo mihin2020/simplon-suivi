@@ -110,8 +110,8 @@ const cnibName = ref<string | null>(
 const cvName = ref<string | null>(
     props.learner.cv_original_name ?? (props.learner.cv_path ? props.learner.cv_path.split('/').pop() ?? null : null)
 )
-const existingCnibUrl = ref(props.learner.cnib_path ? `/storage/${props.learner.cnib_path}` : null)
-const existingCvUrl = ref(props.learner.cv_path ? `/storage/${props.learner.cv_path}` : null)
+const existingCnibUrl = ref(props.learner.cnib_path ? `/learners/${props.learner.id}/documents/cnib` : null)
+const existingCvUrl = ref(props.learner.cv_path ? `/learners/${props.learner.id}/documents/cv` : null)
 const hasExistingPhoto = ref(!!props.learner.photo_path)
 
 const clearFileInput = (id: string) => {

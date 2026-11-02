@@ -29,7 +29,6 @@ interface Contract {
     subject_id: string | null
     fill_fields: string[]
     fill_fields_ready: boolean
-    pdf_url: string | null
     created_by: string | null
     created_at: string | null
 }

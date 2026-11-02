@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 /** Stores the internship and employment contract scans attached to an entry of the insertion history. */
 class InsertionContractFiles
 {
-    private const DISK = 'public';
+    private const DISK = 'local';
 
     /**
      * Replaces the contract of the given kind. The record is only modified in memory: the caller saves it.

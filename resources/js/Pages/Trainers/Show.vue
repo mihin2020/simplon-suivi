@@ -135,7 +135,7 @@ const statusLabels: Record<string, string> = {
                         <p class="cv-label">Curriculum Vitæ</p>
                         <p class="cv-hint">Document joint au profil</p>
                     </div>
-                    <a :href="`/storage/${trainer.cv_path}`" target="_blank" class="cv-btn">
+                    <a :href="`/trainers/${trainer.id}/cv`" target="_blank" class="cv-btn">
                         <span class="material-symbols-outlined" style="font-size:16px">open_in_new</span>
                         Ouvrir
                     </a>

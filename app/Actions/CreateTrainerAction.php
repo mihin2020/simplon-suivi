@@ -32,7 +32,7 @@ class CreateTrainerAction
             role:      UserRole::Trainer,
         );
 
-        $cvPath = $cv?->store('trainers/cvs', 'public');
+        $cvPath = $cv?->store('trainers/cvs', 'local');
 
         $trainer = Trainer::create([
             'user_id'     => $user->id,

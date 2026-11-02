@@ -26,11 +26,11 @@ class UpdateTrainerAction
 
         if ($cv) {
             if ($cvPath) {
-                Storage::disk('public')->delete($cvPath);
+                Storage::disk('local')->delete($cvPath);
             }
-            $cvPath = $cv->store('trainers/cvs', 'public');
+            $cvPath = $cv->store('trainers/cvs', 'local');
         } elseif ($removeCv && $cvPath) {
-            Storage::disk('public')->delete($cvPath);
+            Storage::disk('local')->delete($cvPath);
             $cvPath = null;
         }
 

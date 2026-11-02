@@ -80,14 +80,14 @@ class ContractWorkflowTest extends TestCase
     public function test_a_finalized_contract_stays_editable_and_its_archive_follows(): void
     {
         Queue::fake();
-        Storage::fake('public');
+        Storage::fake('local');
         $contract = $this->contract();
         $user = $this->createSuperAdmin();
 
         $this->actingAs($user)->post("/contracts/{$contract->id}/finalize")->assertRedirect();
         $contract->refresh();
         $this->assertSame(ContractStatus::Finalized, $contract->status);
-        Storage::disk('public')->assertExists($contract->pdf_path);
+        Storage::disk('local')->assertExists($contract->pdf_path);
 
         $this->actingAs($user)->get("/contracts/{$contract->id}/edit")->assertOk();
         $this->actingAs($user)

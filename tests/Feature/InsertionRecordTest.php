@@ -23,7 +23,7 @@ class InsertionRecordTest extends TestCase
         parent::setUp();
 
         Carbon::setTestNow('2026-11-02 10:00:00');
-        Storage::fake('public');
+        Storage::fake('local');
 
         ContractType::create(['name' => 'Stage académique', 'context' => ContractTypeContext::Internship, 'order' => 1]);
         ContractType::create(['name' => 'CDI', 'context' => ContractTypeContext::Employment, 'order' => 1]);
@@ -125,7 +125,7 @@ class InsertionRecordTest extends TestCase
 
         $this->assertSame('convention.pdf', $internship->internship_contract_original_name);
         $this->assertStringStartsWith('insertion-records/internship/', $internship->internship_contract_path);
-        Storage::disk('public')->assertExists($internship->internship_contract_path);
+        Storage::disk('local')->assertExists($internship->internship_contract_path);
         $this->assertSame('contrat.pdf', $employment->employment_contract_original_name);
         $this->assertStringStartsWith('insertion-records/employment/', $employment->employment_contract_path);
     }
@@ -186,15 +186,15 @@ class InsertionRecordTest extends TestCase
         $this->update($record, $this->internship(['internship_contract_file' => UploadedFile::fake()->create('v2.pdf', 10, 'application/pdf')]));
         $record->refresh();
         $this->assertSame('v2.pdf', $record->internship_contract_original_name);
-        Storage::disk('public')->assertMissing($first);
-        Storage::disk('public')->assertExists($record->internship_contract_path);
+        Storage::disk('local')->assertMissing($first);
+        Storage::disk('local')->assertExists($record->internship_contract_path);
 
         $second = $record->internship_contract_path;
         $this->update($record, $this->internship(['remove_internship_contract' => true]));
         $record->refresh();
         $this->assertNull($record->internship_contract_path);
         $this->assertNull($record->internship_contract_original_name);
-        Storage::disk('public')->assertMissing($second);
+        Storage::disk('local')->assertMissing($second);
     }
 
     public function test_deleting_an_entry_deletes_its_files(): void
@@ -207,7 +207,7 @@ class InsertionRecordTest extends TestCase
             ->assertRedirect(route('learners.show', $this->learner))->assertSessionHas('success', "L'entrée a été supprimée.");
 
         $this->assertNull(InsertionRecord::find($record->id));
-        Storage::disk('public')->assertMissing($path);
+        Storage::disk('local')->assertMissing($path);
     }
 
     public function test_an_entry_of_another_learner_is_not_reachable(): void

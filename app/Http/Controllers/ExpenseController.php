@@ -110,7 +110,7 @@ class ExpenseController extends Controller
     {
         $this->authorize('delete', $attachment->expense);
 
-        Storage::disk('public')->delete($attachment->file_path);
+        Storage::disk('local')->delete($attachment->file_path);
         $attachment->delete();
 
         return back()->with('success', 'Pièce justificative supprimée.');
@@ -124,7 +124,7 @@ class ExpenseController extends Controller
         $formationId = $formation?->id ?? $expense->formation_id;
 
         foreach ($files as $file) {
-            $path = $file->store("expenses/{$formationId}", 'public');
+            $path = $file->store("expenses/{$formationId}", 'local');
 
             ExpenseAttachment::create([
                 'expense_id'    => $expense->id,

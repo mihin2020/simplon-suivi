@@ -735,7 +735,7 @@ const closeDetail = ()           => { showDetailModal.value = false; detailExpen
                                     <a
                                         v-for="att in detailExpense.attachments"
                                         :key="att.id"
-                                        :href="`/storage/${att.file_path}`"
+                                        :href="`/expense-attachments/${att.id}`"
                                         target="_blank"
                                         rel="noopener"
                                         class="attachment-card"

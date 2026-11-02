@@ -261,7 +261,7 @@ const submit = () => {
                     <div v-if="existingCv && !cvFileName" class="cv-selected">
                         <span class="material-symbols-outlined cv-icon">description</span>
                         <span class="cv-name">CV existant</span>
-                        <a :href="`/storage/${existingCv}`" target="_blank" class="cv-view" title="Voir">
+                        <a :href="`/trainers/${trainerData?.id}/cv`" target="_blank" class="cv-view" title="Voir">
                             <span class="material-symbols-outlined" style="font-size:16px">visibility</span>
                         </a>
                         <button type="button" class="cv-remove" @click="removeExistingCv" title="Supprimer">

@@ -185,7 +185,11 @@ const resetFileInputs = () => {
     form.remove_employment_contract = false
 }
 
-const contractUrl = (path: string | null) => path ? `/storage/${path}` : null
+// Les scans de contrat sont privés : ils passent par une route protégée, jamais par /storage.
+const contractUrl = (record: InsertionRecord | null | undefined, kind: 'internship' | 'employment') =>
+    record && record[`${kind}_contract_path`]
+        ? `/learners/${props.learner.id}/insertion/${record.id}/contracts/${kind}`
+        : null
 
 const showExistingInternshipContract = computed(() =>
     editingRecord.value?.internship_contract_path
@@ -430,7 +434,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                 <div class="card" v-if="learner.cnib_path || learner.cv_path">
                     <h2 class="section-title">Documents</h2>
                     <div class="docs-grid">
-                        <a v-if="learner.cnib_path" :href="`/storage/${learner.cnib_path}`" target="_blank" rel="noopener" class="doc-card">
+                        <a v-if="learner.cnib_path" :href="`/learners/${learner.id}/documents/cnib`" target="_blank" rel="noopener" class="doc-card">
                             <div class="doc-icon doc-id">
                                 <span class="material-symbols-outlined">badge</span>
                             </div>
@@ -440,7 +444,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                             </div>
                             <span class="material-symbols-outlined doc-arrow">open_in_new</span>
                         </a>
-                        <a v-if="learner.cv_path" :href="`/storage/${learner.cv_path}`" target="_blank" rel="noopener" class="doc-card">
+                        <a v-if="learner.cv_path" :href="`/learners/${learner.id}/documents/cv`" target="_blank" rel="noopener" class="doc-card">
                             <div class="doc-icon doc-cv">
                                 <span class="material-symbols-outlined">description</span>
                             </div>
@@ -553,7 +557,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                         <div v-if="latestStage.status_notes" class="stage-active-notes">{{ latestStage.status_notes }}</div>
                         <a
                             v-if="latestStage.internship_contract_path"
-                            :href="contractUrl(latestStage.internship_contract_path)!"
+                            :href="contractUrl(latestStage, 'internship')!"
                             target="_blank"
                             class="contract-link"
                         >
@@ -585,7 +589,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                     :contract-types="internshipContractTypes"
                     :work-modes="workModes"
                     :can-manage-contract-types="canManageContractTypes"
-                    :existing-contract-url="contractUrl(editingRecord?.internship_contract_path ?? null)"
+                    :existing-contract-url="contractUrl(editingRecord, 'internship')"
                     :existing-contract-name="editingRecord?.internship_contract_original_name"
                     :show-existing-contract="showExistingInternshipContract"
                     @submit="submitStageForm"
@@ -620,7 +624,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                                     <span v-if="record.internship_work_mode" class="history-chip chip-mode-sm">{{ workModeLabel(record.internship_work_mode) }}</span>
                                     <a
                                         v-if="record.internship_contract_path"
-                                        :href="contractUrl(record.internship_contract_path)!"
+                                        :href="contractUrl(record, 'internship')!"
                                         target="_blank"
                                         class="history-chip chip-file-sm"
                                     >
@@ -708,7 +712,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                         <div v-if="latestEmployment.status_notes" class="stage-active-notes">{{ latestEmployment.status_notes }}</div>
                         <a
                             v-if="latestEmployment.employment_contract_path"
-                            :href="contractUrl(latestEmployment.employment_contract_path)!"
+                            :href="contractUrl(latestEmployment, 'employment')!"
                             target="_blank"
                             class="contract-link"
                         >
@@ -740,7 +744,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                     :contract-types="employmentContractTypes"
                     :work-modes="workModes"
                     :can-manage-contract-types="canManageContractTypes"
-                    :existing-contract-url="contractUrl(editingRecord?.employment_contract_path ?? null)"
+                    :existing-contract-url="contractUrl(editingRecord, 'employment')"
                     :existing-contract-name="editingRecord?.employment_contract_original_name"
                     :show-existing-contract="showExistingEmploymentContract"
                     @submit="submitEmploymentForm"
@@ -776,7 +780,7 @@ const latestEmployment = computed(() => employmentRecords.value[0] ?? null)
                                     <span v-if="record.employment_work_mode" class="history-chip chip-mode-sm">{{ workModeLabel(record.employment_work_mode) }}</span>
                                     <a
                                         v-if="record.employment_contract_path"
-                                        :href="contractUrl(record.employment_contract_path)!"
+                                        :href="contractUrl(record, 'employment')!"
                                         target="_blank"
                                         class="history-chip chip-file-sm"
                                     >

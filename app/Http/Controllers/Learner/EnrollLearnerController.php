@@ -82,11 +82,11 @@ class EnrollLearnerController extends Controller
             $data['photo_original_name'] = $request->file('photo')->getClientOriginalName();
         }
         if ($request->hasFile('cnib')) {
-            $data['cnib_path'] = $request->file('cnib')->store('learners/cnib', 'public');
+            $data['cnib_path'] = $request->file('cnib')->store('learners/cnib', 'local');
             $data['cnib_original_name'] = $request->file('cnib')->getClientOriginalName();
         }
         if ($request->hasFile('cv')) {
-            $data['cv_path'] = $request->file('cv')->store('learners/cv', 'public');
+            $data['cv_path'] = $request->file('cv')->store('learners/cv', 'local');
             $data['cv_original_name'] = $request->file('cv')->getClientOriginalName();
         }
         unset($data['photo'], $data['cnib'], $data['cv']);
