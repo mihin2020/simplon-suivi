@@ -9,6 +9,7 @@ use App\Enums\RecapView;
 use App\Models\Formation;
 use App\Models\Learner;
 use App\Support\AttendancePeriod;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -19,9 +20,9 @@ class AttendanceService
     /**
      * Active learners, sorted by family name then first name.
      *
-     * @return Collection<int, Learner>
+     * @return EloquentCollection<int, Learner>
      */
-    public function orderedLearners(Formation $formation): Collection
+    public function orderedLearners(Formation $formation): EloquentCollection
     {
         return $formation->activeLearners()
             ->orderBy('learners.last_name')
@@ -39,14 +40,13 @@ class AttendanceService
     {
         $calendar = collect();
 
-        if ($formation->started_at) {
-            $today = now()->startOfDay();
-            $end = $formation->ended_at && $formation->ended_at->lt($today) ? $formation->ended_at : $today;
+        // started_at is mandatory for a formation (NOT NULL in the database).
+        $today = now()->startOfDay();
+        $end = $formation->ended_at && $formation->ended_at->lt($today) ? $formation->ended_at : $today;
 
-            if ($formation->started_at->lte($end)) {
-                $calendar = collect($this->workingDays->getWorkingDays($formation->started_at, $end))
-                    ->map(fn (Carbon $day) => $day->toDateString());
-            }
+        if ($formation->started_at->lte($end)) {
+            $calendar = collect($this->workingDays->getWorkingDays($formation->started_at, $end))
+                ->map(fn (Carbon $day) => $day->toDateString());
         }
 
         $recorded = $formation->attendances()
@@ -70,7 +70,7 @@ class AttendanceService
     /** Weekends stay allowed (exceptional class); only dates outside the formation period are refused. */
     public function isWithinFormation(Formation $formation, Carbon $date): bool
     {
-        return ! (($formation->started_at && $date->lt($formation->started_at))
+        return ! ($date->lt($formation->started_at)
             || ($formation->ended_at && $date->gt($formation->ended_at)));
     }
 
@@ -101,9 +101,9 @@ class AttendanceService
      * Learners of the recap: those in progress plus those who left but have days recorded in the
      * period, so the attendance history stays visible.
      *
-     * @return Collection<int, Learner>
+     * @return EloquentCollection<int, Learner>
      */
-    private function recapLearners(Formation $formation, Carbon $from, Carbon $to): Collection
+    private function recapLearners(Formation $formation, Carbon $from, Carbon $to): EloquentCollection
     {
         return $formation->learners()
             ->where(function ($query) use ($formation, $from, $to) {
@@ -278,11 +278,11 @@ class AttendanceService
      * Group course days by ISO week, numbered from the first week of the formation.
      *
      * @param  Collection<int, string>  $days
-     * @return array<int, array{number: int|null, start: string, end: string, days: array<int, string>}>
+     * @return array<int, array{number: int, start: string, end: string, days: array<int, string>}>
      */
     private function weeks(Formation $formation, Collection $days): array
     {
-        $firstWeek = $formation->started_at?->copy()->startOfWeek(Carbon::MONDAY);
+        $firstWeek = $formation->started_at->copy()->startOfWeek(Carbon::MONDAY);
 
         return $days
             ->groupBy(fn (string $day) => Carbon::parse($day)->startOfWeek(Carbon::MONDAY)->toDateString())
@@ -290,7 +290,7 @@ class AttendanceService
                 $start = Carbon::parse($monday);
 
                 return [
-                    'number' => $firstWeek ? (int) $firstWeek->diffInWeeks($start, false) + 1 : null,
+                    'number' => (int) $firstWeek->diffInWeeks($start, false) + 1,
                     'start' => $start->toDateString(),
                     'end' => $start->copy()->addDays(4)->toDateString(),
                     'days' => $weekDays->values()->all(),

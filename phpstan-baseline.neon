@@ -13,30 +13,6 @@ parameters:
 			path: app/Actions/Contracts/DeleteContractProject.php
 
 		-
-			message: '#^Parameter \#2 \$array of function array_map expects array, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/Contracts/DuplicateContract.php
-
-		-
-			message: '#^Parameter \#2 \$target of method App\\Services\\Contracts\\ContractPersonalizer\:\:adapt\(\) expects App\\Enums\\ContractTarget, string given\.$#'
-			identifier: argument.type
-			count: 2
-			path: app/Actions/Contracts/DuplicateContract.php
-
-		-
-			message: '#^Empty array passed to foreach\.$#'
-			identifier: foreach.emptyArray
-			count: 1
-			path: app/Actions/Contracts/GenerateContractsFromRows.php
-
-		-
-			message: '#^Parameter \#2 \$array of function array_map expects array, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Actions/Contracts/GenerateContractsFromRows.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
 			count: 1
@@ -133,12 +109,6 @@ parameters:
 			path: app/Actions/DeletePhase.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Actions/EnrollLearner.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$help_text\.$#'
 			identifier: property.notFound
 			count: 1
@@ -211,98 +181,8 @@ parameters:
 			path: app/Actions/Forms/EnrollSelectedCandidates.php
 
 		-
-			message: '#^Cannot call method isAnswerable\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Left side of && is always true\.$#'
-			identifier: booleanAnd.leftAlwaysTrue
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Enums\\FormFieldType\:\:Date is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Enums\\FormFieldType\:\:Dropdown is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Enums\\FormFieldType\:\:Email is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Enums\\FormFieldType\:\:LinearScale is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Enums\\FormFieldType\:\:MultipleChoice is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Enums\\FormFieldType\:\:Number is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Enums\\FormFieldType\:\:SingleChoice is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Offset ''max'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Offset ''max_size_kb'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Offset ''min'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Offset ''one_per_email'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
 			message: '#^Parameter \#1 \$fields of method App\\Actions\\Forms\\SubmitPublicResponse\:\:extractEmail\(\) expects Illuminate\\Support\\Collection\<string, App\\Models\\FormField\>, Illuminate\\Database\\Eloquent\\Collection\<\(int\|string\), Illuminate\\Database\\Eloquent\\Model\> given\.$#'
 			identifier: argument.type
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\FormFieldType\:\:Email will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Actions/Forms/SubmitPublicResponse.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\FormFieldType\:\:File will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Actions/Forms/SubmitPublicResponse.php
 
@@ -313,28 +193,10 @@ parameters:
 			path: app/Actions/Forms/SyncFormFields.php
 
 		-
-			message: '#^Cannot call method allowsStructureEdit\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Actions/Forms/SyncFormFields.php
-
-		-
 			message: '#^Parameter \#1 \$array \(list\<array\<string, mixed\>\>\) of array_values is already a list, call has no effect\.$#'
 			identifier: arrayValues.list
 			count: 1
 			path: app/Actions/Forms/SyncFormFields.php
-
-		-
-			message: '#^Cannot call method allowsStructureEdit\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Actions/Forms/UpdateForm.php
-
-		-
-			message: '#^Property App\\Models\\Form\:\:\$settings \(string\|null\) does not accept array\<mixed, mixed\>\.$#'
-			identifier: assign.propertyType
-			count: 1
-			path: app/Actions/Forms/UpdateForm.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$project_id\.$#'
@@ -403,12 +265,6 @@ parameters:
 			path: app/Exports/FormResponsesLearnerExport.php
 
 		-
-			message: '#^Call to function is_array\(\) with string\|null will always evaluate to false\.$#'
-			identifier: function.impossibleType
-			count: 1
-			path: app/Exports/FormResponsesLearnerExport.php
-
-		-
 			message: '#^Parameter \#2 \$answer of method App\\Exports\\FormResponsesLearnerExport\:\:formatAnswer\(\) expects App\\Models\\FormAnswer, Illuminate\\Database\\Eloquent\\Model given\.$#'
 			identifier: argument.type
 			count: 1
@@ -427,85 +283,25 @@ parameters:
 			path: app/Exports/FormationLearnersExport.php
 
 		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Exports/FormationLearnersExport.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Exports/FormationLearnersExport.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Learner\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Exports/FormationLearnersExport.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{int, string, string, mixed, mixed, string\|null, string\|null, string\|null, string\|null, string\|null, mixed, mixed, string\|null, mixed, ''Célibataire''\|''Divorcé\(e\)''\|''Marié\(e\)''\|''Veuf / Veuve''\|null, int\<0, max\>, mixed, string\|null, string\|null, string\|null, string\|null, string\|null, string\|null, string\|null, string\|null, non\-falsy\-string\|null\}, Closure\(App\\Models\\Learner, int\)\: array\{int, string, string, mixed, mixed, string\|null, string\|null, string\|null, string\|null, string\|null, mixed, mixed, string\|null, mixed, ''Célibataire''\|''Divorcé\(e\)''\|''Marié\(e\)''\|''Veuf / Veuve''\|null, int\<0, max\>, mixed, string\|null, string\|null, string\|null, string\|null, string\|null, string\|null, string\|null, string\|null, non\-falsy\-string\|null\} given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Exports/FormationLearnersExport.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Exports/FormationStatisticsSheet.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$first_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Exports/FormationStatisticsSheet.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$gender\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Exports/FormationStatisticsSheet.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Exports/FormationStatisticsSheet.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$last_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Exports/FormationStatisticsSheet.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Exports/FormationStatisticsSheet.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
+			message: '#^Access to an undefined property App\\Models\\Learner\:\:\$pivot\.$#'
 			identifier: property.notFound
 			count: 6
 			path: app/Exports/FormationStatisticsSheet.php
 
 		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
 			count: 1
 			path: app/Exports/FormationStatisticsSheet.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Exports/FormationStatisticsSheet.php
-
-		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe method call on non\-nullable type App\\Enums\\FormationStatus\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Exports/FormationStatisticsSheet.php
@@ -517,19 +313,13 @@ parameters:
 			path: app/Exports/FormationStatisticsSheet.php
 
 		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
 			count: 1
 			path: app/Exports/ProjectSummarySheet.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Formation\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Exports/ProjectSummarySheet.php
-
-		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe method call on non\-nullable type App\\Enums\\FormationStatus\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Exports/ProjectSummarySheet.php
@@ -637,44 +427,8 @@ parameters:
 			path: app/Http/Controllers/ContractController.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 7
-			path: app/Http/Controllers/ContractController.php
-
-		-
-			message: '#^Cannot call method color\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/ContractController.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Controllers/ContractController.php
-
-		-
-			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Controllers/ContractController.php
-
-		-
 			message: '#^PHPDoc tag @return with type array\<string, mixed\> is incompatible with native type Inertia\\Response\.$#'
 			identifier: return.phpDocType
-			count: 1
-			path: app/Http/Controllers/ContractController.php
-
-		-
-			message: '#^Parameter \#1 \$target of method App\\Services\\Contracts\\ContractSubjectDirectory\:\:options\(\) expects App\\Enums\\ContractTarget, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/ContractController.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string\|null and App\\Enums\\FillFieldsStatus\:\:Ready will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
 			count: 1
 			path: app/Http/Controllers/ContractController.php
 
@@ -685,74 +439,14 @@ parameters:
 			path: app/Http/Controllers/ContractFillModelController.php
 
 		-
-			message: '#^Parameter \#1 \$array of function array_column expects array, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/ContractFillModelController.php
-
-		-
-			message: '#^Parameter \#1 \$fields of class App\\Exports\\ContractFillModelExport constructor expects list\<array\{key\: string, label\: string, value\: string\}\>, non\-falsy\-string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/ContractFillModelController.php
-
-		-
 			message: '#^Parameter \#1 \$import of static method Maatwebsite\\Excel\\Facades\\Excel\:\:toArray\(\) expects object, null given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Http/Controllers/ContractFillModelController.php
 
 		-
-			message: '#^Strict comparison using \!\=\= between array\{\} and array\{\} will always evaluate to false\.$#'
-			identifier: notIdentical.alwaysFalse
-			count: 1
-			path: app/Http/Controllers/ContractFillModelController.php
-
-		-
-			message: '#^Strict comparison using \!\=\= between string\|null and App\\Enums\\FillFieldsStatus\:\:Ready will always evaluate to true\.$#'
-			identifier: notIdentical.alwaysTrue
-			count: 1
-			path: app/Http/Controllers/ContractFillModelController.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Http/Controllers/ContractProjectController.php
-
-		-
-			message: '#^Cannot call method color\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/ContractProjectController.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 3
-			path: app/Http/Controllers/ContractProjectController.php
-
-		-
-			message: '#^Cannot call method toIso8601String\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/ContractProjectController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/ContractProjectController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: string, reference\: string, title\: string, subject_id\: string\|null, subject_name\: non\-falsy\-string, recipient_email\: string\|null, is_nominative\: bool, emailed_at\: mixed, emailed_to\: string\|null, email_count\: int\<0, max\>, email_status\: mixed, status_label\: mixed, status_color\: mixed, fill_fields\: array\{\}, fill_fields_ready\: false\}, Closure\(App\\Models\\Contract\)\: array\{id\: string, reference\: string, title\: string, subject_id\: string\|null, subject_name\: non\-falsy\-string, recipient_email\: string\|null, is_nominative\: bool, emailed_at\: mixed, emailed_to\: string\|null, email_count\: int\<0, max\>, email_status\: mixed, status_label\: mixed, status_color\: mixed, fill_fields\: array\{\}, fill_fields_ready\: false\} given\.$#'
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: string, reference\: string, title\: string, subject_id\: string\|null, subject_name\: non\-falsy\-string, recipient_email\: string\|null, is_nominative\: bool, emailed_at\: string\|null, emailed_to\: string\|null, email_count\: int\<0, max\>, email_status\: ''failed''\|''queued''\|''sent''\|null, status_label\: string, status_color\: string, fill_fields\: list, fill_fields_ready\: bool\}, Closure\(App\\Models\\Contract\)\: array\{id\: string, reference\: string, title\: string, subject_id\: string\|null, subject_name\: non\-falsy\-string, recipient_email\: string\|null, is_nominative\: bool, emailed_at\: string\|null, emailed_to\: string\|null, email_count\: int\<0, max\>, email_status\: ''failed''\|''queued''\|''sent''\|null, status_label\: string, status_color\: string, fill_fields\: list, fill_fields_ready\: bool\} given\.$#'
 			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/ContractProjectController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,App\\Models\\ContractProject\>\:\:through\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
 			count: 1
 			path: app/Http/Controllers/ContractProjectController.php
 
@@ -761,48 +455,6 @@ parameters:
 			identifier: argument.type
 			count: 1
 			path: app/Http/Controllers/ContractProjectController.php
-
-		-
-			message: '#^Parameter \#1 \$target of method App\\Services\\Contracts\\ContractSubjectDirectory\:\:options\(\) expects App\\Enums\\ContractTarget, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/ContractProjectController.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string\|null and App\\Enums\\FillFieldsStatus\:\:Ready will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Http/Controllers/ContractProjectController.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/ContractTypeController.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Enums\\ContractTypeContext\:\:Employment is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Http/Controllers/ContractTypeController.php
-
-		-
-			message: '#^Match arm comparison between string and App\\Enums\\ContractTypeContext\:\:Internship is always false\.$#'
-			identifier: match.alwaysFalse
-			count: 1
-			path: app/Http/Controllers/ContractTypeController.php
-
-		-
-			message: '#^Match expression does not handle remaining value\: string$#'
-			identifier: match.unhandled
-			count: 1
-			path: app/Http/Controllers/ContractTypeController.php
-
-		-
-			message: '#^Parameter \#1 \$context of method App\\Http\\Controllers\\ContractTypeController\:\:syncUsageName\(\) expects App\\Enums\\ContractTypeContext, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/ContractTypeController.php
 
 		-
 			message: '#^Access to an undefined property App\\Models\\Trainer\:\:\$speciality\.$#'
@@ -837,7 +489,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 1
 			path: app/Http/Controllers/DashboardController.php
 
 		-
@@ -865,34 +517,16 @@ parameters:
 			path: app/Http/Controllers/DashboardController.php
 
 		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Http/Controllers/DashboardController.php
-
-		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Http/Controllers/DashboardController.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,App\\Models\\Formation\>\:\:through\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/DashboardController.php
-
-		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/DashboardController.php
-
-		-
-			message: '#^Parameter \#1 \$target of method App\\Services\\Contracts\\ContractSubjectDirectory\:\:findMany\(\) expects App\\Enums\\ContractTarget, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Controllers/DuplicateContractController.php
 
 		-
 			message: '#^Parameter \#3 \$formation of method App\\Http\\Controllers\\ExpenseController\:\:storeAttachments\(\) expects App\\Models\\Formation\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
@@ -905,42 +539,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/ExpenseController.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/Form/FormController.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/Form/FormController.php
-
-		-
-			message: '#^Result of \|\| is always false\.$#'
-			identifier: booleanOr.alwaysFalse
-			count: 4
-			path: app/Http/Controllers/Form/FormController.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\FormStatus\:\:Closed will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 2
-			path: app/Http/Controllers/Form/FormController.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\FormStatus\:\:Locked will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 2
-			path: app/Http/Controllers/Form/FormController.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\FormStatus\:\:Published will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 2
-			path: app/Http/Controllers/Form/FormController.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$field\.$#'
@@ -991,24 +589,6 @@ parameters:
 			path: app/Http/Controllers/Form/FormResponseController.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 2
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Cannot call method color\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/Form/FormResponseController.php
-
-		-
 			message: '#^Method App\\Http\\Controllers\\Form\\FormResponseController\:\:streamAnswerFile\(\) never returns Symfony\\Component\\HttpFoundation\\BinaryFileResponse so it can be removed from the return type\.$#'
 			identifier: return.unusedType
 			count: 1
@@ -1033,7 +613,7 @@ parameters:
 			path: app/Http/Controllers/Form/FormResponseController.php
 
 		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:through\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: string, email\: string\|null, status\: mixed, status_label\: mixed, status_color\: mixed, submitted_at\: mixed, reviewed_at\: mixed, review_note\: string\|null, reviewer\: string\|null, learner\: Illuminate\\Database\\Eloquent\\Model\|null, answers\: Illuminate\\Support\\Collection\<int, array\{id\: mixed, field_id\: mixed, label\: mixed, learner_attribute\: mixed, value\: mixed, is_file\: bool, is_image\: bool, download_url\: string\|null\}\>\}, Closure\(App\\Models\\FormResponse\)\: array\{id\: string, email\: string\|null, status\: mixed, status_label\: mixed, status_color\: mixed, submitted_at\: mixed, reviewed_at\: mixed, review_note\: string\|null, reviewer\: string\|null, learner\: Illuminate\\Database\\Eloquent\\Model\|null, answers\: Illuminate\\Support\\Collection\<int, array\{id\: mixed, field_id\: mixed, label\: mixed, learner_attribute\: mixed, value\: mixed, is_file\: bool, is_image\: bool, download_url\: string\|null\}\>\} given\.$#'
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Pagination\\AbstractPaginator\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:through\(\) expects callable\(Illuminate\\Database\\Eloquent\\Model, int\)\: array\{id\: string, email\: string\|null, status\: ''enrolled''\|''rejected''\|''selected''\|''shortlisted''\|''submitted'', status_label\: string, status_color\: string, submitted_at\: mixed, reviewed_at\: mixed, review_note\: string\|null, reviewer\: string\|null, learner\: Illuminate\\Database\\Eloquent\\Model\|null, answers\: Illuminate\\Support\\Collection\<int, array\{id\: mixed, field_id\: mixed, label\: mixed, learner_attribute\: mixed, value\: mixed, is_file\: bool, is_image\: bool, download_url\: string\|null\}\>\}, Closure\(App\\Models\\FormResponse\)\: array\{id\: string, email\: string\|null, status\: ''enrolled''\|''rejected''\|''selected''\|''shortlisted''\|''submitted'', status_label\: string, status_color\: string, submitted_at\: mixed, reviewed_at\: mixed, review_note\: string\|null, reviewer\: string\|null, learner\: Illuminate\\Database\\Eloquent\\Model\|null, answers\: Illuminate\\Support\\Collection\<int, array\{id\: mixed, field_id\: mixed, label\: mixed, learner_attribute\: mixed, value\: mixed, is_file\: bool, is_image\: bool, download_url\: string\|null\}\>\} given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Http/Controllers/Form/FormResponseController.php
@@ -1093,32 +673,8 @@ parameters:
 			path: app/Http/Controllers/Form/PublicFormController.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
 			message: '#^Instanceof between Illuminate\\Http\\UploadedFile and Illuminate\\Http\\UploadedFile will always evaluate to true\.$#'
 			identifier: instanceof.alwaysTrue
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Offset ''confirmation_message'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 2
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Offset ''show_progress'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Http/Controllers/Form/PublicFormController.php
 
@@ -1127,30 +683,6 @@ parameters:
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Result of \|\| is always false\.$#'
-			identifier: booleanOr.alwaysFalse
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\FormStatus\:\:Archived will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\FormStatus\:\:Draft will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Http/Controllers/Form/PublicFormController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/Learner/EnrollLearnerController.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$status\.$#'
@@ -1189,33 +721,9 @@ parameters:
 			path: app/Http/Controllers/PresenceRedirectController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/PresenceRedirectController.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Model\:\:formations\(\)\.$#'
 			identifier: method.notFound
 			count: 1
-			path: app/Http/Controllers/PresenceRedirectController.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/PresenceRedirectController.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Http/Controllers/PresenceRedirectController.php
-
-		-
-			message: '#^Cannot call method toDateString\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
 			path: app/Http/Controllers/PresenceRedirectController.php
 
 		-
@@ -1225,19 +733,13 @@ parameters:
 			path: app/Http/Controllers/PresenceRedirectController.php
 
 		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Http/Controllers/PresenceRedirectController.php
 
 		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 4
-			path: app/Http/Controllers/ProjectController.php
-
-		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 2
 			path: app/Http/Controllers/ProjectController.php
@@ -1273,67 +775,19 @@ parameters:
 			path: app/Http/Controllers/ReorderController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$educationLevel\.$#'
+			message: '#^Access to an undefined property App\\Models\\Learner\:\:\$pivot\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/StatisticsController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/StatisticsController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$first_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/StatisticsController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$gender\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/StatisticsController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/StatisticsController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$last_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/StatisticsController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/StatisticsController.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Http/Controllers/StatisticsController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Formation\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/StatisticsController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Project\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/StatisticsController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Learner\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Http/Controllers/StatisticsController.php
@@ -1381,48 +835,6 @@ parameters:
 			path: app/Http/Controllers/UserController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$first_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/WhatsAppController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 2
-			path: app/Http/Controllers/WhatsAppController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$last_name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/WhatsAppController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/WhatsAppController.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$phone\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/WhatsAppController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Formation\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/WhatsAppController.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Http/Controllers/WhatsAppController.php
-
-		-
 			message: '#^Call to an undefined method Illuminate\\Database\\Eloquent\\Relations\\HasMany\:\:unread\(\)\.$#'
 			identifier: method.notFound
 			count: 1
@@ -1435,44 +847,8 @@ parameters:
 			path: app/Http/Requests/Campus/RefundPaymentRequest.php
 
 		-
-			message: '#^Parameter \#4 \$parentStart of method App\\Support\\PlanningDateBounds\:\:within\(\) expects Carbon\\CarbonInterface\|null, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Requests/Planning/StoreActivityRequest.php
-
-		-
-			message: '#^Parameter \#5 \$parentEnd of method App\\Support\\PlanningDateBounds\:\:within\(\) expects Carbon\\CarbonInterface\|null, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Requests/Planning/StoreActivityRequest.php
-
-		-
-			message: '#^Parameter \#4 \$parentStart of method App\\Support\\PlanningDateBounds\:\:within\(\) expects Carbon\\CarbonInterface\|null, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Requests/Planning/StorePhaseRequest.php
-
-		-
-			message: '#^Parameter \#5 \$parentEnd of method App\\Support\\PlanningDateBounds\:\:within\(\) expects Carbon\\CarbonInterface\|null, string\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Requests/Planning/StorePhaseRequest.php
-
-		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$project\.$#'
 			identifier: property.notFound
-			count: 1
-			path: app/Http/Requests/Planning/StoreTaskRequest.php
-
-		-
-			message: '#^Parameter \#4 \$parentStart of method App\\Support\\PlanningDateBounds\:\:within\(\) expects Carbon\\CarbonInterface\|null, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Http/Requests/Planning/StoreTaskRequest.php
-
-		-
-			message: '#^Parameter \#5 \$parentEnd of method App\\Support\\PlanningDateBounds\:\:within\(\) expects Carbon\\CarbonInterface\|null, string given\.$#'
-			identifier: argument.type
 			count: 1
 			path: app/Http/Requests/Planning/StoreTaskRequest.php
 
@@ -1537,82 +913,10 @@ parameters:
 			path: app/Jobs/SendWhatsAppBroadcast.php
 
 		-
-			message: '#^Cannot call method isPast\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Models/ActivationToken.php
-
-		-
 			message: '#^Using nullsafe property access "\?\-\>total_cost" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Models/Cohort.php
-
-		-
-			message: '#^Cannot call method acceptsResponses\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Models/Form.php
-
-		-
-			message: '#^Offset ''accept_responses'' on array\{\}\|string on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Models/Form.php
-
-		-
-			message: '#^Offset ''closes_at'' on string\|null on left side of \?\? does not exist\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Models/Form.php
-
-		-
-			message: '#^Offset ''max_responses'' does not exist on array\{\}\|string\.$#'
-			identifier: offsetAccess.notFound
-			count: 1
-			path: app/Models/Form.php
-
-		-
-			message: '#^Offset ''max_responses'' on array\{\}\|string in empty\(\) does not exist\.$#'
-			identifier: empty.offset
-			count: 1
-			path: app/Models/Form.php
-
-		-
-			message: '#^Result of \|\| is always false\.$#'
-			identifier: booleanOr.alwaysFalse
-			count: 1
-			path: app/Models/Form.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\FormStatus\:\:Archived will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Models/Form.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string and App\\Enums\\FormStatus\:\:Draft will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Models/Form.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between true and false will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Models/Form.php
-
-		-
-			message: '#^Unreachable statement \- code above always terminates\.$#'
-			identifier: deadCode.unreachable
-			count: 1
-			path: app/Models/Form.php
-
-		-
-			message: '#^Variable \$closesAt in empty\(\) always exists and is always falsy\.$#'
-			identifier: empty.variable
-			count: 1
-			path: app/Models/Form.php
 
 		-
 			message: '#^Method App\\Models\\Learner\:\:latestInsertionRecord\(\) should return App\\Models\\InsertionRecord\|null but returns Illuminate\\Database\\Eloquent\\Model\|null\.$#'
@@ -1621,19 +925,13 @@ parameters:
 			path: app/Models/Learner.php
 
 		-
-			message: '#^Parameter \#1 \$meta of static method App\\Support\\InterviewCustomFields\:\:fromMeta\(\) expects array\<string, mixed\>\|null, string\|null given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Models/LearnerInterview.php
-
-		-
-			message: '#^Cannot call method isCompleted\(\) on string\.$#'
-			identifier: method.nonObject
+			message: '#^Expression on left side of \?\? is not nullable\.$#'
+			identifier: nullCoalesce.expr
 			count: 1
 			path: app/Models/Task.php
 
 		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe method call on non\-nullable type App\\Enums\\TaskStatus\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Models/Task.php
@@ -1687,6 +985,12 @@ parameters:
 			path: app/Services/AiTools.php
 
 		-
+			message: '#^Access to an undefined property App\\Models\\Learner\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Services/AiTools.php
+
+		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$competences\.$#'
 			identifier: property.notFound
 			count: 1
@@ -1695,7 +999,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 1
 			path: app/Services/AiTools.php
 
 		-
@@ -1707,7 +1011,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$first_name\.$#'
 			identifier: property.notFound
-			count: 3
+			count: 2
 			path: app/Services/AiTools.php
 
 		-
@@ -1719,25 +1023,25 @@ parameters:
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
 			identifier: property.notFound
-			count: 3
+			count: 2
 			path: app/Services/AiTools.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$last_name\.$#'
 			identifier: property.notFound
-			count: 3
+			count: 2
 			path: app/Services/AiTools.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$name\.$#'
 			identifier: property.notFound
-			count: 5
+			count: 3
 			path: app/Services/AiTools.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
 			identifier: property.notFound
-			count: 3
+			count: 2
 			path: app/Services/AiTools.php
 
 		-
@@ -1765,55 +1069,7 @@ parameters:
 			path: app/Services/AiTools.php
 
 		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 5
-			path: app/Services/AiTools.php
-
-		-
-			message: '#^Cannot call method format\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 9
-			path: app/Services/AiTools.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 2
-			path: app/Services/AiTools.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Attendance\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/AiTools.php
-
-		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Expense\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/AiTools.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Formation\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/AiTools.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\InsertionRecord\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/AiTools.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Learner\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/AiTools.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\Project\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
 			count: 1
 			path: app/Services/AiTools.php
@@ -1827,7 +1083,7 @@ parameters:
 		-
 			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,Illuminate\\Database\\Eloquent\\Model\>\:\:map\(\) contains unresolvable type\.$#'
 			identifier: argument.unresolvableType
-			count: 5
+			count: 4
 			path: app/Services/AiTools.php
 
 		-
@@ -1857,13 +1113,13 @@ parameters:
 		-
 			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
-			count: 2
+			count: 6
 			path: app/Services/AiTools.php
 
 		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
+			message: '#^Using nullsafe property access on non\-nullable type App\\Enums\\FormationStatus\. Use \-\> instead\.$#'
 			identifier: nullsafe.neverNull
-			count: 4
+			count: 2
 			path: app/Services/AiTools.php
 
 		-
@@ -1885,92 +1141,20 @@ parameters:
 			path: app/Services/AiTools.php
 
 		-
-			message: '#^Using nullsafe property access on non\-nullable type string\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
-			count: 2
-			path: app/Services/AiTools.php
-
-		-
 			message: '#^Access to an undefined property App\\Models\\Learner\:\:\$pivot\.$#'
 			identifier: property.notFound
 			count: 3
 			path: app/Services/AttendanceService.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$code\.$#'
-			identifier: property.notFound
-			count: 5
-			path: app/Services/AttendanceService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$comment\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AttendanceService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$date\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Services/AttendanceService.php
-
-		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
-			identifier: property.notFound
-			count: 3
-			path: app/Services/AttendanceService.php
-
-		-
-			message: '#^Call to an undefined method Illuminate\\Support\\Collection\<int, App\\Models\\Learner\>\:\:modelKeys\(\)\.$#'
-			identifier: method.notFound
-			count: 1
-			path: app/Services/AttendanceService.php
-
-		-
-			message: '#^Cannot call method copy\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/AttendanceService.php
-
-		-
-			message: '#^Cannot call method lt\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/AttendanceService.php
-
-		-
-			message: '#^Cannot call method lte\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/AttendanceService.php
-
-		-
-			message: '#^Method App\\Services\\AttendanceService\:\:orderedLearners\(\) should return Illuminate\\Support\\Collection\<int, App\\Models\\Learner\> but returns Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/AttendanceService.php
-
-		-
-			message: '#^Method App\\Services\\AttendanceService\:\:recapLearners\(\) should return Illuminate\\Support\\Collection\<int, App\\Models\\Learner\> but returns Illuminate\\Database\\Eloquent\\Collection\<int, Illuminate\\Database\\Eloquent\\Model\>\.$#'
-			identifier: return.type
-			count: 1
-			path: app/Services/AttendanceService.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<int,App\\Models\\Learner\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/AttendanceService.php
-
-		-
-			message: '#^Parameter \#1 \$start of method App\\Services\\WorkingDaysService\:\:getWorkingDays\(\) expects Illuminate\\Support\\Carbon, string given\.$#'
+			message: '#^Parameter \#1 \$start of method App\\Services\\WorkingDaysService\:\:getWorkingDays\(\) expects Illuminate\\Support\\Carbon, Carbon\\Carbon given\.$#'
 			identifier: argument.type
 			count: 1
 			path: app/Services/AttendanceService.php
 
 		-
-			message: '#^Using nullsafe method call on non\-nullable type string\. Use \-\> instead\.$#'
-			identifier: nullsafe.neverNull
+			message: '#^Parameter \#2 \$end of method App\\Services\\WorkingDaysService\:\:getWorkingDays\(\) expects Illuminate\\Support\\Carbon, Carbon\\Carbon given\.$#'
+			identifier: argument.type
 			count: 1
 			path: app/Services/AttendanceService.php
 
@@ -1993,28 +1177,10 @@ parameters:
 			path: app/Services/CloudinaryService.php
 
 		-
-			message: '#^Parameter \#1 \$target of method App\\Services\\Contracts\\ContractVariableResolver\:\:catalog\(\) expects App\\Enums\\ContractTarget, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Contracts/ContractFieldExtractor.php
-
-		-
-			message: '#^Parameter \#1 \$target of method App\\Services\\Contracts\\ContractVariableResolver\:\:resolve\(\) expects App\\Enums\\ContractTarget, string given\.$#'
-			identifier: argument.type
-			count: 1
-			path: app/Services/Contracts/ContractFieldExtractor.php
-
-		-
 			message: '#^Offset 1 on array\{list\<string\>, list\<non\-empty\-string\>\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Services/Contracts/ContractMergeService.php
-
-		-
-			message: '#^Strict comparison using \=\=\= between string\|null and App\\Enums\\LetterheadScope\:\:FirstPage will always evaluate to false\.$#'
-			identifier: identical.alwaysFalse
-			count: 1
-			path: app/Services/Contracts/ContractPdfService.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$email\.$#'
@@ -2101,12 +1267,6 @@ parameters:
 			path: app/Services/Contracts/ContractVariableResolver.php
 
 		-
-			message: '#^Cannot call method locale\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/Contracts/ContractVariableResolver.php
-
-		-
 			message: '#^Parameter \#1 \$partner of method App\\Services\\Contracts\\ContractVariableResolver\:\:resolvePartner\(\) expects App\\Models\\Partner, Illuminate\\Database\\Eloquent\\Model given\.$#'
 			identifier: argument.type
 			count: 1
@@ -2135,30 +1295,6 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Services/EmailService.php
-
-		-
-			message: '#^Cannot access property \$value on string\.$#'
-			identifier: property.nonObject
-			count: 1
-			path: app/Services/Forms/FormStatsService.php
-
-		-
-			message: '#^Cannot call method color\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/Forms/FormStatsService.php
-
-		-
-			message: '#^Cannot call method label\(\) on string\.$#'
-			identifier: method.nonObject
-			count: 1
-			path: app/Services/Forms/FormStatsService.php
-
-		-
-			message: '#^Parameter \#1 \$callback of method Illuminate\\Database\\Eloquent\\Collection\<int,App\\Models\\FormResponse\>\:\:map\(\) contains unresolvable type\.$#'
-			identifier: argument.unresolvableType
-			count: 1
-			path: app/Services/Forms/FormStatsService.php
 
 		-
 			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$activities\.$#'

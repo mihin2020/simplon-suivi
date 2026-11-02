@@ -40,37 +40,58 @@ class Formation extends Model
         ];
     }
 
+    /**
+     * @return BelongsTo<Project, $this>
+     */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
     }
 
+    /**
+     * @return BelongsToMany<Learner, $this>
+     */
     public function learners(): BelongsToMany
     {
         return $this->belongsToMany(Learner::class)
             ->withPivot(['status', 'enrolled_at', 'withdrawn_at', 'completed_at', 'notes']);
     }
 
+    /**
+     * @return BelongsToMany<Learner, $this>
+     */
     public function activeLearners(): BelongsToMany
     {
         return $this->learners()->wherePivot('status', LearnerStatus::InProgress->value);
     }
 
+    /**
+     * @return BelongsToMany<Learner, $this>
+     */
     public function withdrawnLearners(): BelongsToMany
     {
         return $this->learners()->wherePivot('status', LearnerStatus::Withdrawn->value);
     }
 
+    /**
+     * @return BelongsToMany<Learner, $this>
+     */
     public function completedLearners(): BelongsToMany
     {
         return $this->learners()->wherePivot('status', LearnerStatus::Completed->value);
     }
 
+    /**
+     * @return BelongsToMany<Learner, $this>
+     */
     public function movedLearners(): BelongsToMany
     {
         return $this->learners()->wherePivot('status', LearnerStatus::Moved->value);
     }
 
+    /**
+     * @return BelongsToMany<Learner, $this>
+     */
     public function inactiveLearners(): BelongsToMany
     {
         return $this->learners()
@@ -91,6 +112,9 @@ class Formation extends Model
         return $this->belongsTo(Referentiel::class);
     }
 
+    /**
+     * @return HasMany<Attendance, $this>
+     */
     public function attendances(): HasMany
     {
         return $this->hasMany(Attendance::class);

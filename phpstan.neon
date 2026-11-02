@@ -7,3 +7,6 @@ parameters:
     paths:
         - app
     tmpDir: storage/framework/phpstan
+    # Models declare their casts in the Laravel 11+ casts() method: without this Larastan sees every date as a
+    # string and every enum as a string.
+    parseModelCastsMethod: true
