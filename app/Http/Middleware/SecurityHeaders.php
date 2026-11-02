@@ -107,7 +107,13 @@ class SecurityHeaders
         }
 
         $port = isset($parts['port']) ? ':'.$parts['port'] : '';
-        $hosts = array_unique([$parts['host'], 'localhost', '127.0.0.1', '[::1]']);
+
+        $hosts = ['localhost', '127.0.0.1'];
+
+        // A CSP source cannot hold an IPv6 literal such as [::1]: browsers drop it, which blanks the page when Vite
+        // listens on IPv6. The wildcard host is used instead, on the dev server port only.
+        $hosts[] = str_starts_with($parts['host'], '[') ? '*' : $parts['host'];
+        $hosts = array_values(array_unique($hosts));
 
         return [
             'http' => array_map(fn (string $host) => "http://{$host}{$port}", $hosts),

@@ -250,6 +250,9 @@ class SecurityHardeningTest extends TestCase
 
     public function test_vite_dev_server_is_allowed_only_while_it_runs(): void
     {
+        // The real hot file exists whenever `npm run dev` is running on the machine.
+        Vite::useHotFile(sys_get_temp_dir().'/no-vite-dev-server-'.uniqid());
+
         $this->assertNotContains('http://localhost:5173', $this->policy()['script-src']);
 
         $hot = tempnam(sys_get_temp_dir(), 'hot');
@@ -262,6 +265,25 @@ class SecurityHardeningTest extends TestCase
         $this->assertContains('http://localhost:5173', $csp['script-src']);
         $this->assertContains('http://localhost:5173', $csp['style-src']);
         $this->assertContains('ws://localhost:5173', $csp['connect-src']);
+    }
+
+    /** Vite listens on [::1] on many machines; a CSP source cannot hold an IPv6 literal, which blanked the login page. */
+    public function test_vite_dev_server_on_ipv6_is_allowed_without_an_invalid_source(): void
+    {
+        $hot = tempnam(sys_get_temp_dir(), 'hot');
+        file_put_contents($hot, 'http://[::1]:5173');
+        Vite::useHotFile($hot);
+
+        $csp = $this->policy();
+        unlink($hot);
+
+        foreach (['script-src', 'style-src', 'font-src'] as $directive) {
+            $this->assertContains('http://*:5173', $csp[$directive]);
+            $this->assertNotContains('http://[::1]:5173', $csp[$directive]);
+        }
+
+        $this->assertContains('ws://*:5173', $csp['connect-src']);
+        $this->assertNotContains('ws://[::1]:5173', $csp['connect-src']);
     }
 
     public function test_camera_is_delegated_to_the_cloudinary_widget_only(): void
