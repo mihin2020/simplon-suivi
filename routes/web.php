@@ -571,17 +571,17 @@ Route::middleware('auth')->group(function () {
         'destroy',
     ])->name('formations.medias.destroy');
 
+    // Téléchargement ZIP d'un album (avant la route {media}, sinon "album" serait pris pour un média)
+    Route::get('formations/{formation}/medias/album/download', [
+        MediaController::class,
+        'downloadAlbum',
+    ])->name('formations.medias.album.download');
+
     // Téléchargement d'un média
     Route::get('formations/{formation}/medias/{media}/download', [
         MediaController::class,
         'download',
     ])->name('formations.medias.download');
-
-    // Téléchargement ZIP d'un album
-    Route::get('formations/{formation}/medias/album/download', [
-        MediaController::class,
-        'downloadAlbum',
-    ])->name('formations.medias.album.download');
 
     // Liens externes de la médiathèque
     Route::post('formations/{formation}/links', [

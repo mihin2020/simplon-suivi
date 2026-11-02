@@ -47,12 +47,24 @@ class Media extends Model
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
+    public function isVideo(): bool
+    {
+        return $this->type === 'video';
+    }
+
+    /** File name proposed on download: the title if any, else the last part of the Cloudinary id, plus the extension. */
+    public function downloadName(): string
+    {
+        return ($this->title ?: basename($this->cloudinary_public_id)).'.'.$this->format;
+    }
+
     // Scope pour filtrer par album
     public function scopeInAlbum($query, ?string $album)
     {
         if ($album === null || $album === 'all') {
             return $query;
         }
+
         return $query->where('album', $album);
     }
 
@@ -69,20 +81,20 @@ class Media extends Model
     public function getFormattedSizeAttribute(): string
     {
         $size = $this->file_size;
-        
+
         if ($size >= 1048576) {
-            return round($size / 1048576, 2) . ' GB';
+            return round($size / 1048576, 2).' GB';
         } elseif ($size >= 1024) {
-            return round($size / 1024, 2) . ' MB';
+            return round($size / 1024, 2).' MB';
         }
-        
-        return $size . ' KB';
+
+        return $size.' KB';
     }
 
     // Durée formatée pour vidéos
     public function getFormattedDurationAttribute(): ?string
     {
-        if (!$this->duration) {
+        if (! $this->duration) {
             return null;
         }
 

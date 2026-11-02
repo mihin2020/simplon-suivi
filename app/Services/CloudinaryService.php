@@ -2,12 +2,16 @@
 
 namespace App\Services;
 
-use Cloudinary\Cloudinary;
+use App\Support\StorageSize;
 use Cloudinary\Api\Admin\AdminApi;
+use Cloudinary\Asset\CropMode;
+use Cloudinary\Cloudinary;
+use Cloudinary\Transformation;
 
 class CloudinaryService
 {
     private Cloudinary $cloudinary;
+
     private AdminApi $adminApi;
 
     public function __construct()
@@ -29,9 +33,11 @@ class CloudinaryService
             $result = $this->adminApi->deleteAssets([$publicId], [
                 'resource_type' => $resourceType,
             ]);
+
             return $result['deleted'][$publicId] === 'deleted';
         } catch (\Exception $e) {
-            \Log::error('Cloudinary delete error: ' . $e->getMessage());
+            \Log::error('Cloudinary delete error: '.$e->getMessage());
+
             return false;
         }
     }
@@ -51,18 +57,19 @@ class CloudinaryService
             return [
                 'storage_used' => $storageUsed,
                 'storage_limit' => $storageLimit,
-                'storage_used_formatted' => $this->formatBytes($storageUsed),
-                'storage_limit_formatted' => $this->formatBytes($storageLimit),
+                'storage_used_formatted' => StorageSize::format($storageUsed),
+                'storage_limit_formatted' => StorageSize::format($storageLimit),
                 'storage_remaining' => $storageLimit - $storageUsed,
-                'storage_remaining_formatted' => $this->formatBytes($storageLimit - $storageUsed),
+                'storage_remaining_formatted' => StorageSize::format($storageLimit - $storageUsed),
                 'percent_used' => min(100, round(($storageUsed / $storageLimit) * 100, 1)),
                 'bandwidth_used' => $bandwidthUsed,
-                'bandwidth_formatted' => $this->formatBytes($bandwidthUsed),
+                'bandwidth_formatted' => StorageSize::format($bandwidthUsed),
                 'requests' => $requests,
-                'alert_level' => $this->getAlertLevel(($storageUsed / $storageLimit) * 100),
+                'alert_level' => StorageSize::alertLevel(($storageUsed / $storageLimit) * 100),
             ];
         } catch (\Exception $e) {
-            \Log::error('Cloudinary usage error: ' . $e->getMessage());
+            \Log::error('Cloudinary usage error: '.$e->getMessage());
+
             return [
                 'storage_used' => 0,
                 'storage_limit' => 25 * 1024 * 1024 * 1024,
@@ -91,30 +98,7 @@ class CloudinaryService
     public function getThumbnailUrl(string $publicId, int $width = 300, int $height = 200): string
     {
         return $this->cloudinary->image($publicId)
-            ->resize(\Cloudinary\Transformation::thumbnail()->width($width)->height($height)->crop(\Cloudinary\Asset\CropMode::fill()))
+            ->resize(Transformation::thumbnail()->width($width)->height($height)->crop(CropMode::fill()))
             ->toUrl();
-    }
-
-    // Formatter les bytes en format lisible
-    private function formatBytes(int $bytes, int $precision = 2): string
-    {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $bytes = max($bytes, 0);
-        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
-        $pow = min($pow, count($units) - 1);
-        $bytes /= 1024 ** $pow;
-
-        return round($bytes, $precision) . ' ' . $units[$pow];
-    }
-
-    // Déterminer le niveau d'alerte
-    private function getAlertLevel(float $percent): string
-    {
-        if ($percent >= 95) {
-            return 'critical';
-        } elseif ($percent >= 80) {
-            return 'warning';
-        }
-        return 'normal';
     }
 }

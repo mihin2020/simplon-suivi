@@ -2,311 +2,153 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\Media\BatchUpdateMediaRequest;
+use App\Http\Requests\Media\StoreMediaRequest;
+use App\Http\Requests\Media\UpdateMediaRequest;
 use App\Models\Formation;
 use App\Models\FormationLink;
 use App\Models\Media;
-use App\Rules\CloudinaryUrl;
 use App\Services\CloudinaryService;
+use App\Services\Media\MediaFiles;
+use App\Services\Media\MediaStorageUsage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use ZipStream\ZipStream;
 
 class MediaController extends Controller
 {
-    private CloudinaryService $cloudinaryService;
+    public function __construct(private readonly CloudinaryService $cloudinary) {}
 
-    public function __construct(CloudinaryService $cloudinaryService)
-    {
-        $this->cloudinaryService = $cloudinaryService;
-    }
-
-    // Afficher la médiathèque d'une formation (Inertia)
-    public function index(Formation $formation): Response
+    /** La médiathèque d'une formation. */
+    public function index(Formation $formation, MediaStorageUsage $usage): Response
     {
         $this->authorize('view', $formation);
 
-        $medias = Media::where('formation_id', $formation->id)
-            ->with('uploader:id,first_name,last_name')
-            ->orderBy('album')
-            ->orderByDesc('created_at')
-            ->get();
-
-        $albums = Media::where('formation_id', $formation->id)
-            ->select('album')
-            ->distinct()
-            ->whereNotNull('album')
-            ->orderBy('album')
-            ->pluck('album');
-
-        // Calculer l'utilisation depuis la BDD locale (plus fiable que l'API Cloudinary)
-        $usage = $this->getUsageFromDatabase();
-
-        $links = FormationLink::where('formation_id', $formation->id)
-            ->with('creator:id,first_name,last_name')
-            ->orderByDesc('created_at')
-            ->get();
-
         return Inertia::render('Formations/MediaLibrary', [
             'formation' => $formation->load('project:id,name'),
-            'medias' => $medias,
-            'albums' => $albums,
-            'links' => $links,
-            'cloudinaryUsage' => $usage,
+            'medias' => Media::where('formation_id', $formation->id)
+                ->with('uploader:id,first_name,last_name')
+                ->orderBy('album')
+                ->orderByDesc('created_at')
+                ->get(),
+            'albums' => Media::where('formation_id', $formation->id)
+                ->whereNotNull('album')
+                ->distinct()
+                ->orderBy('album')
+                ->pluck('album'),
+            'links' => FormationLink::where('formation_id', $formation->id)
+                ->with('creator:id,first_name,last_name')
+                ->orderByDesc('created_at')
+                ->get(),
+            'cloudinaryUsage' => $usage->fromDatabase(),
             'cloudName' => config('cloudinary.cloud_name'),
             'uploadPreset' => config('cloudinary.upload_preset', 'simplon_medias'),
         ]);
     }
 
-    // Calculer l'utilisation du stockage depuis la base de données
-    private function getUsageFromDatabase(): array
+    /** Enregistre un média déjà envoyé sur Cloudinary par le navigateur. */
+    public function store(StoreMediaRequest $request, Formation $formation): JsonResponse
     {
-        $totalKB = Media::sum('file_size') ?? 0;
-        $totalBytes = $totalKB * 1024; // file_size est en KB
-        $storageLimit = 25 * 1024 * 1024 * 1024; // 25 GB en bytes
-
-        $percentUsed = $storageLimit > 0 ? min(100, round(($totalBytes / $storageLimit) * 100, 2)) : 0;
-
-        // Si le pourcentage est très petit mais non nul, afficher au moins 0.01%
-        if ($percentUsed == 0 && $totalBytes > 0) {
-            $percentUsed = 0.01;
-        }
-
-        \Log::info('Stockage calculé', [
-            'total_kb' => $totalKB,
-            'total_bytes' => $totalBytes,
-            'count' => Media::count(),
-            'percent' => $percentUsed,
-        ]);
-
-        return [
-            'storage_used' => $totalBytes,
-            'storage_limit' => $storageLimit,
-            'storage_used_formatted' => $this->formatBytes($totalBytes),
-            'storage_limit_formatted' => '25 GB',
-            'storage_remaining' => max(0, $storageLimit - $totalBytes),
-            'storage_remaining_formatted' => $this->formatBytes(max(0, $storageLimit - $totalBytes)),
-            'percent_used' => $percentUsed,
-            'bandwidth_used' => 0,
-            'bandwidth_formatted' => '0 B',
-            'requests' => Media::count(),
-            'alert_level' => $this->getAlertLevel($percentUsed),
-        ];
-    }
-
-    // Formatter les bytes
-    private function formatBytes(int $bytes, int $precision = 2): string
-    {
-        $units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        $bytes = max($bytes, 0);
-        $pow = floor(($bytes ? log($bytes) : 0) / log(1024));
-        $pow = min($pow, count($units) - 1);
-        $bytes /= 1024 ** $pow;
-
-        return round($bytes, $precision).' '.$units[$pow];
-    }
-
-    // Déterminer le niveau d'alerte
-    private function getAlertLevel(float $percent): string
-    {
-        if ($percent >= 95) {
-            return 'critical';
-        } elseif ($percent >= 80) {
-            return 'warning';
-        }
-
-        return 'normal';
-    }
-
-    // Sauvegarder un médias uploadé sur Cloudinary
-    public function store(Request $request, Formation $formation): JsonResponse
-    {
-        $this->authorize('update', $formation);
-
-        $validated = $request->validate([
-            'cloudinary_public_id' => 'required|string',
-            'url' => ['required', 'string', new CloudinaryUrl],
-            'thumbnail_url' => ['nullable', 'string', new CloudinaryUrl],
-            'type' => 'required|in:photo,video',
-            'title' => 'nullable|string|max:255',
-            'album' => 'nullable|string|max:255',
-            'file_size' => 'nullable|integer', // en KB
-            'width' => 'nullable|integer',
-            'height' => 'nullable|integer',
-            'duration' => 'nullable|integer', // en secondes
-            'format' => 'nullable|string|max:20',
-        ]);
+        $data = $request->validated();
 
         $media = Media::create([
+            ...$data,
             'formation_id' => $formation->id,
-            'uploaded_by' => Auth::id(),
-            'cloudinary_public_id' => $validated['cloudinary_public_id'],
-            'url' => $validated['url'],
-            'thumbnail_url' => $validated['thumbnail_url'] ?? $validated['url'],
-            'type' => $validated['type'],
-            'title' => $validated['title'] ?? null,
-            'album' => $validated['album'] ?? null,
-            'file_size' => $validated['file_size'] ?? 0,
-            'width' => $validated['width'] ?? null,
-            'height' => $validated['height'] ?? null,
-            'duration' => $validated['duration'] ?? null,
-            'format' => $validated['format'] ?? null,
+            'uploaded_by' => $request->user()->id,
+            'thumbnail_url' => $data['thumbnail_url'] ?? $data['url'],
+            'file_size' => $data['file_size'] ?? 0,
         ]);
 
-        // Toujours retourner JSON - le frontend gérera le refresh
         return response()->json([
             'success' => true,
             'media' => $media->load('uploader:id,first_name,last_name'),
         ]);
     }
 
-    // Mettre à jour un média (titre, album, description)
-    public function update(Request $request, Formation $formation, Media $media): JsonResponse
+    /** Titre, description et album d'un média. */
+    public function update(UpdateMediaRequest $request, Formation $formation, Media $media): JsonResponse
     {
-        $this->authorize('update', $formation);
+        $this->ensureBelongsTo($formation, $media);
 
-        if ($media->formation_id !== $formation->id) {
-            abort(403);
-        }
+        $media->update($request->validated());
 
-        $validated = $request->validate([
-            'title' => 'nullable|string|max:255',
-            'description' => 'nullable|string',
-            'album' => 'nullable|string|max:255',
-        ]);
-
-        $media->update($validated);
-
-        return response()->json([
-            'success' => true,
-            'media' => $media,
-        ]);
+        return response()->json(['success' => true, 'media' => $media]);
     }
 
-    // Mettre à jour plusieurs médias en masse (pour les albums)
-    public function batchUpdate(Request $request, Formation $formation): JsonResponse
+    /** Range plusieurs médias de la formation dans un album. */
+    public function batchUpdate(BatchUpdateMediaRequest $request, Formation $formation): JsonResponse
     {
-        $this->authorize('update', $formation);
+        $data = $request->validated();
 
-        $validated = $request->validate([
-            'media_ids' => 'required|array',
-            'media_ids.*' => 'string|exists:medias,id',
-            'album' => 'required|string|max:255',
-        ]);
-
-        // Mettre à jour tous les médias sélectionnés
         Media::where('formation_id', $formation->id)
-            ->whereIn('id', $validated['media_ids'])
-            ->update(['album' => $validated['album']]);
+            ->whereIn('id', $data['media_ids'])
+            ->update(['album' => $data['album']]);
 
         return response()->json([
             'success' => true,
-            'message' => count($validated['media_ids']).' média(s) ajouté(s) à l\'album "'.$validated['album'].'"',
+            'message' => count($data['media_ids']).' média(s) ajouté(s) à l\'album "'.$data['album'].'"',
         ]);
     }
 
-    // Supprimer un média
     public function destroy(Formation $formation, Media $media): JsonResponse
     {
         $this->authorize('update', $formation);
+        $this->ensureBelongsTo($formation, $media);
 
-        if ($media->formation_id !== $formation->id) {
-            abort(403);
+        if (! $this->cloudinary->delete($media->cloudinary_public_id, $media->isVideo() ? 'video' : 'image')) {
+            Log::warning("Failed to delete from Cloudinary: {$media->cloudinary_public_id}");
         }
 
-        // Supprimer sur Cloudinary
-        $resourceType = $media->type === 'video' ? 'video' : 'image';
-        $deleted = $this->cloudinaryService->delete($media->cloudinary_public_id, $resourceType);
-
-        if (! $deleted) {
-            \Log::warning("Failed to delete from Cloudinary: {$media->cloudinary_public_id}");
-        }
-
-        // Supprimer en BDD
         $media->delete();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Média supprimé avec succès',
-        ]);
+        return response()->json(['success' => true, 'message' => 'Média supprimé avec succès']);
     }
 
-    // Télécharger un média
-    public function download(Formation $formation, Media $media): StreamedResponse
+    public function download(Formation $formation, Media $media, MediaFiles $files): StreamedResponse
     {
         $this->authorize('view', $formation);
+        $this->ensureBelongsTo($formation, $media);
 
-        if ($media->formation_id !== $formation->id) {
-            abort(403);
-        }
+        $content = $files->contents($media);
 
-        $filename = $media->title
-            ? $media->title.'.'.$media->format
-            : basename($media->cloudinary_public_id).'.'.$media->format;
-
-        abort_unless(CloudinaryUrl::isValid($media->url), 422, 'Adresse de média non autorisée.');
-
-        return response()->streamDownload(function () use ($media) {
-            echo file_get_contents($media->url);
-        }, $filename, [
-            'Content-Type' => $media->type === 'video' ? 'video/mp4' : 'image/'.($media->format ?? 'jpeg'),
+        return response()->streamDownload(function () use ($content) {
+            echo $content;
+        }, $media->downloadName(), [
+            'Content-Type' => $media->isVideo() ? 'video/mp4' : 'image/'.($media->format ?? 'jpeg'),
         ]);
     }
 
-    // Récupérer les stats Cloudinary (pour la jauge)
+    /** La jauge de stockage lue directement chez Cloudinary. */
     public function cloudinaryStats(): JsonResponse
     {
-        $usage = $this->cloudinaryService->getUsage();
-
-        return response()->json($usage);
+        return response()->json($this->cloudinary->getUsage());
     }
 
-    // Créer un ZIP d'un album complet
-    public function downloadAlbum(Request $request, Formation $formation): StreamedResponse
+    /** Un ZIP d'un album, ou de tous les médias de la formation. */
+    public function downloadAlbum(Request $request, Formation $formation, MediaFiles $files): StreamedResponse
     {
         $this->authorize('view', $formation);
 
         $album = $request->input('album');
+        $medias = Media::where('formation_id', $formation->id)->inAlbum($album)->get();
 
-        $query = Media::where('formation_id', $formation->id);
+        abort_if($medias->isEmpty(), 404, 'Aucun média trouvé');
 
-        if ($album && $album !== 'all') {
-            $query->where('album', $album);
-        }
-
-        $medias = $query->get();
-
-        if ($medias->isEmpty()) {
-            abort(404, 'Aucun média trouvé');
-        }
-
-        $zipName = $album
+        $zipName = str_replace(['/', '\\'], '_', $album
             ? "{$formation->name} - {$album}.zip"
-            : "{$formation->name} - Tous les médias.zip";
+            : "{$formation->name} - Tous les médias.zip");
 
-        $zipName = str_replace(['/', '\\'], '_', $zipName);
-
-        return response()->streamDownload(function () use ($medias) {
-            $zip = new ZipStream(outputName: 'download.zip');
-
-            foreach ($medias as $media) {
-                $filename = $media->title
-                    ? $media->title.'.'.$media->format
-                    : basename($media->cloudinary_public_id).'.'.$media->format;
-
-                if (! CloudinaryUrl::isValid($media->url)) {
-                    continue;
-                }
-
-                $zip->addFile($filename, file_get_contents($media->url));
-            }
-
-            $zip->finish();
-        }, $zipName, [
+        return response()->streamDownload(fn () => $files->streamZip($medias), $zipName, [
             'Content-Type' => 'application/zip',
         ]);
+    }
+
+    /** A media is reached through its own formation only. */
+    private function ensureBelongsTo(Formation $formation, Media $media): void
+    {
+        abort_if($media->formation_id !== $formation->id, 403);
     }
 }
