@@ -43,26 +43,31 @@ class Form extends Model
         ];
     }
 
+    /** @return BelongsTo<Project, $this> */
     public function project(): BelongsTo
     {
         return $this->belongsTo(Project::class);
     }
 
+    /** @return BelongsTo<Formation, $this> */
     public function formation(): BelongsTo
     {
         return $this->belongsTo(Formation::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /** @return HasMany<FormField, $this> */
     public function fields(): HasMany
     {
         return $this->hasMany(FormField::class)->orderBy('position');
     }
 
+    /** @return HasMany<FormResponse, $this> */
     public function responses(): HasMany
     {
         return $this->hasMany(FormResponse::class);
@@ -110,17 +115,17 @@ class Form extends Model
         return now()->greaterThan($closesAt);
     }
 
+    /** Whether the public page exists: an expired form still shows its page, but without the fields to fill. */
+    public function hasPublicPage(): bool
+    {
+        return $this->status !== FormStatus::Draft
+            && $this->status !== FormStatus::Archived
+            && ! $this->trashed();
+    }
+
     public function isPubliclyVisible(): bool
     {
-        if ($this->status === FormStatus::Draft || $this->status === FormStatus::Archived) {
-            return false;
-        }
-
-        if ($this->trashed()) {
-            return false;
-        }
-
-        return ! $this->hasExpired();
+        return $this->hasPublicPage() && ! $this->hasExpired();
     }
 
     public function publicUrl(): string

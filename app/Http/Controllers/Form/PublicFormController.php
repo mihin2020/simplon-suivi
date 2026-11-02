@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Form\SubmitPublicFormRequest;
 use App\Models\Form;
 use App\Services\Forms\FormSchemaService;
+use App\Services\Forms\PublicFormPresenter;
 use App\Support\PhoneCountries;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\UploadedFile;
@@ -15,53 +16,16 @@ use Inertia\Response;
 
 class PublicFormController extends Controller
 {
-    public function show(string $publicToken, FormSchemaService $schemaService): Response
+    public function show(string $publicToken, FormSchemaService $schemaService, PublicFormPresenter $presenter): Response
     {
-        $payload = $schemaService->resolvePublishedSchema($publicToken);
+        /** @var Form|null $form */
+        $form = $schemaService->resolvePublishedSchema($publicToken)['form'] ?? null;
 
-        if (! $payload) {
-            abort(404);
-        }
-
-        /** @var Form $form */
-        $form = $payload['form'];
-
-        if ($form->status === \App\Enums\FormStatus::Draft || $form->status === \App\Enums\FormStatus::Archived) {
-            abort(404);
-        }
-
-        if ($form->trashed()) {
-            abort(404);
-        }
-
-        $expired = $form->hasExpired();
+        abort_unless($form?->hasPublicPage(), 404);
 
         return Inertia::render('Public/Forms/Show', [
-            'form' => [
-                'id' => $form->id,
-                'title' => $form->title,
-                'description' => $form->description,
-                'header_image_url' => $form->headerImageUrl(),
-                'status' => $form->status->value,
-                'status_label' => $form->status->label(),
-                'accepts_responses' => ! $expired && $form->acceptsResponses(),
-                'is_expired' => $expired,
-                'project_name' => $form->project?->name,
-                'formation_name' => $form->formation?->name,
-                'confirmation_message' => $form->settings['confirmation_message'] ?? null,
-                'show_progress' => (bool) ($form->settings['show_progress'] ?? true),
-            ],
-            'fields' => $form->fields->values()->map(fn ($f) => [
-                'id' => $f->id,
-                'type' => $f->type->value,
-                'label' => $f->label,
-                'help_text' => $f->help_text,
-                'is_required' => $f->is_required,
-                'options' => $f->options,
-                'settings' => $f->settings,
-                'learner_attribute' => $f->learner_attribute,
-                'is_answerable' => $f->type->isAnswerable(),
-            ]),
+            'form' => $presenter->form($form),
+            'fields' => $presenter->fields($form),
             'publicToken' => $publicToken,
             'phoneCountries' => PhoneCountries::all(),
         ]);

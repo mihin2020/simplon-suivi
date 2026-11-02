@@ -35,21 +35,25 @@ class FormResponse extends Model
         ];
     }
 
+    /** @return BelongsTo<Form, $this> */
     public function form(): BelongsTo
     {
         return $this->belongsTo(Form::class);
     }
 
+    /** @return BelongsTo<Learner, $this> */
     public function learner(): BelongsTo
     {
         return $this->belongsTo(Learner::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function reviewer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reviewed_by');
     }
 
+    /** @return HasMany<FormAnswer, $this> */
     public function answers(): HasMany
     {
         return $this->hasMany(FormAnswer::class);

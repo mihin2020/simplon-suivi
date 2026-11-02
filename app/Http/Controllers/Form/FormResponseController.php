@@ -13,10 +13,12 @@ use App\Enums\FormResponseStatus;
 use App\Exports\FormResponsesExport;
 use App\Exports\FormResponsesLearnerExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Form\FormResponsesFilterRequest;
 use App\Http\Requests\Form\SelectFormResponsesRequest;
 use App\Models\Form;
 use App\Models\FormAnswer;
 use App\Models\FormResponse;
+use App\Services\Forms\FormResponseRow;
 use App\Services\PdfService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -30,10 +32,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class FormResponseController extends Controller
 {
-    public function index(Request $request, Form $form): Response
+    public function index(FormResponsesFilterRequest $request, Form $form, FormResponseRow $row): Response
     {
-        $this->authorize('viewResponses', $form);
-
         $form->load(['project:id,name', 'formation:id,name']);
 
         $responses = $form->responses()
@@ -42,46 +42,12 @@ class FormResponseController extends Controller
                 'learner:id,first_name,last_name,email',
                 'reviewer:id,first_name,last_name',
             ])
-            ->when($request->input('status'), fn ($q, $status) => $q->where('status', $status))
-            ->when($request->input('search'), function ($q, $search) {
-                $q->where('email', 'like', '%'.$search.'%');
-            })
+            ->when($request->input('status'), fn ($query, $status) => $query->where('status', $status))
+            ->when($request->input('search'), fn ($query, $search) => $query->where('email', 'like', '%'.$search.'%'))
             ->latest('submitted_at')
             ->paginate(20)
             ->withQueryString()
-            ->through(function (FormResponse $response) use ($form) {
-                return [
-                    'id' => $response->id,
-                    'email' => $response->email,
-                    'status' => $response->status->value,
-                    'status_label' => $response->status->label(),
-                    'status_color' => $response->status->color(),
-                    'submitted_at' => optional($response->submitted_at)->toIso8601String(),
-                    'reviewed_at' => optional($response->reviewed_at)->toIso8601String(),
-                    'review_note' => $response->review_note,
-                    'reviewer' => $response->reviewer
-                        ? trim($response->reviewer->first_name.' '.$response->reviewer->last_name)
-                        : null,
-                    'learner' => $response->learner,
-                    'answers' => $response->answers->map(fn ($a) => [
-                        'id' => $a->id,
-                        'field_id' => $a->form_field_id,
-                        'label' => $a->field?->label,
-                        'learner_attribute' => $a->field?->learner_attribute,
-                        'value' => $a->file_original_name
-                            ?? (is_array($a->value_json) ? implode(', ', $a->value_json) : $a->value_text),
-                        'is_file' => filled($a->file_path),
-                        'is_image' => filled($a->file_path) && $this->isImageAnswer($a),
-                        'download_url' => filled($a->file_path)
-                            ? route('forms.responses.answers.download', [
-                                'form' => $form->id,
-                                'response' => $response->id,
-                                'answer' => $a->id,
-                            ])
-                            : null,
-                    ]),
-                ];
-            });
+            ->through(fn (FormResponse $response) => $row->toArray($response, $form));
 
         return Inertia::render('Forms/Responses', [
             'form' => [
@@ -96,10 +62,10 @@ class FormResponseController extends Controller
                 'status' => $request->input('status'),
                 'search' => $request->input('search'),
             ],
-            'statuses' => collect(FormResponseStatus::cases())->map(fn (FormResponseStatus $s) => [
-                'value' => $s->value,
-                'label' => $s->label(),
-                'color' => $s->color(),
+            'statuses' => collect(FormResponseStatus::cases())->map(fn (FormResponseStatus $status) => [
+                'value' => $status->value,
+                'label' => $status->label(),
+                'color' => $status->color(),
             ]),
         ]);
     }
@@ -242,12 +208,5 @@ class FormResponseController extends Controller
             $answer->file_path,
             $answer->file_original_name ?: basename($answer->file_path),
         );
-    }
-
-    private function isImageAnswer(FormAnswer $answer): bool
-    {
-        $name = strtolower((string) ($answer->file_original_name ?: $answer->file_path));
-
-        return (bool) preg_match('/\.(jpe?g|png|gif|webp|bmp)$/', $name);
     }
 }
