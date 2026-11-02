@@ -204,9 +204,9 @@ Route::middleware('auth')->group(function () {
             ->group(function () {
                 Route::get('finance', [CampusFinanceController::class, 'index'])->name('finance.index');
                 Route::get('cohorts/{cohort}/payments', [PaymentController::class, 'index'])->name('payments.index');
-                Route::post('cohorts/{cohort}/payments/schedule', [PaymentController::class, 'generateSchedule'])->name('payments.schedule');
-                Route::post('cohorts/{cohort}/payments/schedule-global', [PaymentController::class, 'generateGlobalSchedule'])->name('payments.schedule-global');
-                Route::post('cohorts/{cohort}/payments', [PaymentController::class, 'store'])->name('payments.store');
+                Route::post('cohorts/{cohort}/payments/schedule', [PaymentController::class, 'generateSchedule'])->middleware('cohort.open:schedule')->name('payments.schedule');
+                Route::post('cohorts/{cohort}/payments/schedule-global', [PaymentController::class, 'generateGlobalSchedule'])->middleware('cohort.open:schedule')->name('payments.schedule-global');
+                Route::post('cohorts/{cohort}/payments', [PaymentController::class, 'store'])->middleware('cohort.open:payment')->name('payments.store');
                 Route::post('payments/{payment}/refund', [PaymentController::class, 'refund'])->name('payments.refund');
                 Route::patch('payments/{payment}/mark-paid', [PaymentController::class, 'markPaid'])->name('payments.mark-paid');
                 Route::patch('payments/{payment}', [PaymentController::class, 'update'])->name('payments.update');

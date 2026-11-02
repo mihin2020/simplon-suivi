@@ -24,8 +24,8 @@ class CampusFormation extends Model
     ];
 
     protected $casts = [
-        'mode'       => CampusFormationMode::class,
-        'is_active'  => 'boolean',
+        'mode' => CampusFormationMode::class,
+        'is_active' => 'boolean',
         'total_cost' => 'integer',
     ];
 
@@ -43,6 +43,9 @@ class CampusFormation extends Model
         return $this->hasMany(Cohort::class);
     }
 
+    /**
+     * @return HasMany<CampusFormationInstallment, $this>
+     */
     public function installments(): HasMany
     {
         return $this->hasMany(CampusFormationInstallment::class)->orderBy('position');

@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property PaymentStatus $status
+ * @property PaymentMethod|null $payment_method
+ */
 class Payment extends Model
 {
     use HasUuids;
@@ -30,20 +34,26 @@ class Payment extends Model
     ];
 
     protected $casts = [
-        'due_date'       => 'date',
-        'paid_at'        => 'date',
-        'refunded_at'    => 'datetime',
-        'status'         => PaymentStatus::class,
+        'due_date' => 'date',
+        'paid_at' => 'date',
+        'refunded_at' => 'datetime',
+        'status' => PaymentStatus::class,
         'payment_method' => PaymentMethod::class,
-        'amount'         => 'integer',
-        'refund_amount'  => 'integer',
+        'amount' => 'integer',
+        'refund_amount' => 'integer',
     ];
 
+    /**
+     * @return BelongsTo<Cohort, $this>
+     */
     public function cohort(): BelongsTo
     {
         return $this->belongsTo(Cohort::class);
     }
 
+    /**
+     * @return BelongsTo<Learner, $this>
+     */
     public function learner(): BelongsTo
     {
         return $this->belongsTo(Learner::class);

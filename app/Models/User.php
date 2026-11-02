@@ -13,6 +13,9 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
+/**
+ * @property UserRole $role
+ */
 class User extends Authenticatable
 {
     use HasFactory, HasUuids, Notifiable, SoftDeletes;

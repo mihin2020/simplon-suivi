@@ -37,12 +37,18 @@ class Cohort extends Model
         return $this->belongsTo(CampusFormation::class);
     }
 
+    /**
+     * @return BelongsToMany<Learner, $this>
+     */
     public function learners(): BelongsToMany
     {
         return $this->belongsToMany(Learner::class)
             ->withPivot(['enrolled_at', 'status']);
     }
 
+    /**
+     * @return BelongsToMany<Learner, $this>
+     */
     public function activeLearners(): BelongsToMany
     {
         return $this->learners()->wherePivot('status', 'actif');
