@@ -11,7 +11,7 @@ class BackupProcessLauncher
     /**
      * Start backup processing in a detached OS process so HTTP can poll progress.
      */
-    public static function start(string $backupId): void
+    public function start(string $backupId): void
     {
         $php = PHP_BINARY;
         $artisan = base_path('artisan');
