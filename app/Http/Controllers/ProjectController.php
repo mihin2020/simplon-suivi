@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Enums\FormationStatus;
-use App\Enums\LearnerStatus;
+use App\Actions\Projects\UpdateProject;
 use App\Enums\ProjectStatus;
 use App\Http\Requests\Project\StoreProjectRequest;
+use App\Http\Requests\Project\SyncProjectPartnersRequest;
 use App\Http\Requests\Project\UpdateProjectRequest;
-use App\Models\Formation;
 use App\Models\Partner;
 use App\Models\Project;
 use App\Models\User;
@@ -15,8 +14,6 @@ use App\Services\FormationLearnerCounts;
 use App\Services\ProgressCalculator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -132,123 +129,20 @@ class ProjectController extends Controller
         ]);
     }
 
-    public function syncPartners(Request $request, Project $project): RedirectResponse
+    public function syncPartners(SyncProjectPartnersRequest $request, Project $project): RedirectResponse
     {
-        $this->authorize('update', $project);
-
-        $request->validate([
-            'partner_ids' => ['nullable', 'array'],
-            'partner_ids.*' => ['uuid', 'exists:partners,id'],
-        ]);
-
-        $project->partners()->sync($request->input('partner_ids', []));
+        $project->partners()->sync($request->validated('partner_ids', []));
 
         return back()->with('success', 'Partenaires mis à jour.');
     }
 
-    public function update(UpdateProjectRequest $request, Project $project): RedirectResponse
+    public function update(UpdateProjectRequest $request, Project $project, UpdateProject $action, FormationLearnerCounts $counter): RedirectResponse
     {
-        $data = $request->validated();
-        $partnerIds = $data['partner_ids'] ?? [];
-        unset($data['partner_ids']);
-        $oldStatus = $project->status;
-
-        // Si le projet devient terminé
-        if (isset($data['status']) && $data['status'] === ProjectStatus::Completed->value && $oldStatus !== ProjectStatus::Completed->value) {
-            $data['ended_at'] = now();
-
-            DB::transaction(function () use ($project) {
-                // 1. Terminer automatiquement toutes les formations du projet
-                $project->formations()
-                    ->where('status', '!=', FormationStatus::Completed->value)
-                    ->update([
-                        'status' => FormationStatus::Completed->value,
-                        'ended_at' => now(),
-                    ]);
-
-                // 2. Archiver automatiquement les formations terminées
-                $project->formations()
-                    ->where('status', FormationStatus::Completed->value)
-                    ->update([
-                        'status' => FormationStatus::Archived->value,
-                    ]);
-
-                // 3. Marquer tous les apprenants "en cours" comme "formation terminée"
-                Formation::where('project_id', $project->id)
-                    ->each(function ($formation) {
-                        $formation->activeLearners()->updateExistingPivot(
-                            $formation->activeLearners()->pluck('learners.id'),
-                            [
-                                'status' => LearnerStatus::Completed->value,
-                                'completed_at' => now(),
-                            ]
-                        );
-                    });
-            });
-        }
-
-        // Si le projet devient archivé
-        if (isset($data['status']) && $data['status'] === ProjectStatus::Archived->value && $oldStatus !== ProjectStatus::Archived->value) {
-            $data['ended_at'] = now();
-
-            DB::transaction(function () use ($project) {
-                // 1. Terminer automatiquement toutes les formations du projet
-                $project->formations()
-                    ->where('status', '!=', FormationStatus::Completed->value)
-                    ->update([
-                        'status' => FormationStatus::Completed->value,
-                        'ended_at' => now(),
-                    ]);
-
-                // 2. Archiver automatiquement toutes les formations
-                $project->formations()
-                    ->where('status', FormationStatus::Completed->value)
-                    ->update([
-                        'status' => FormationStatus::Archived->value,
-                    ]);
-
-                // 3. Marquer tous les apprenants "en cours" comme "formation terminée"
-                Formation::where('project_id', $project->id)
-                    ->each(function ($formation) {
-                        $formation->activeLearners()->updateExistingPivot(
-                            $formation->activeLearners()->pluck('learners.id'),
-                            [
-                                'status' => LearnerStatus::Completed->value,
-                                'completed_at' => now(),
-                            ]
-                        );
-                    });
-            });
-        }
-
-        $project->update($data);
-        $project->partners()->sync($partnerIds);
-
-        // Générer un message avec le bilan si le projet vient d'être terminé
-        if (isset($data['status']) && $data['status'] === ProjectStatus::Completed->value && $oldStatus !== ProjectStatus::Completed->value) {
-            // Calculer les statistiques
-            $totalLearners = $project->formations()->withCount('learners')->get()->sum('learners_count');
-            $completedLearners = $project->formations()->with(['learners' => fn ($q) => $q->wherePivot('status', LearnerStatus::Completed->value)])->get()->sum(fn ($f) => $f->learners->count());
-
-            return redirect()
-                ->route('projects.show', $project)
-                ->with('success', "Projet terminé avec succès. Bilan : {$completedLearners}/{$totalLearners} apprenants ayant terminé la formation.");
-        }
-
-        // Générer un message avec le bilan si le projet vient d'être archivé
-        if (isset($data['status']) && $data['status'] === ProjectStatus::Archived->value && $oldStatus !== ProjectStatus::Archived->value) {
-            // Calculer les statistiques
-            $totalLearners = $project->formations()->withCount('learners')->get()->sum('learners_count');
-            $completedLearners = $project->formations()->with(['learners' => fn ($q) => $q->wherePivot('status', LearnerStatus::Completed->value)])->get()->sum(fn ($f) => $f->learners->count());
-
-            return redirect()
-                ->route('projects.show', $project)
-                ->with('success', "Projet archivé avec succès. Bilan : {$completedLearners}/{$totalLearners} apprenants ayant terminé la formation.");
-        }
+        $closing = $action->execute($project, $request->validated());
 
         return redirect()
             ->route('projects.show', $project)
-            ->with('success', 'Projet mis à jour avec succès.');
+            ->with('success', $closing ? $this->closingMessage($project, $closing, $counter) : 'Projet mis à jour avec succès.');
     }
 
     public function destroy(Project $project): RedirectResponse
@@ -280,5 +174,16 @@ class ProjectController extends Controller
             ]);
 
         return response()->json($formations);
+    }
+
+    /** Summary shown when a project has just been completed or archived: learners who finished out of all enrolled. */
+    private function closingMessage(Project $project, ProjectStatus $status, FormationLearnerCounts $counter): string
+    {
+        $counts = $counter->for($project->formations()->pluck('id')->all());
+        $total = array_sum(array_column($counts, 'total'));
+        $completed = array_sum(array_column($counts, 'completed'));
+        $verb = $status === ProjectStatus::Completed ? 'terminé' : 'archivé';
+
+        return "Projet {$verb} avec succès. Bilan : {$completed}/{$total} apprenants ayant terminé la formation.";
     }
 }
