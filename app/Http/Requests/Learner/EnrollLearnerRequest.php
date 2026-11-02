@@ -12,10 +12,14 @@ class EnrollLearnerRequest extends FormRequest
         return $this->user()->can('create', Learner::class);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function rules(): array
     {
         return [
-            'learner_id' => ['required', 'uuid', 'exists:learners,id'],
+            'learner_ids' => ['required', 'array', 'min:1', 'max:200'],
+            'learner_ids.*' => ['uuid', 'distinct', 'exists:learners,id'],
         ];
     }
 }

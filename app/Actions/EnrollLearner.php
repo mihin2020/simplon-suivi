@@ -49,19 +49,37 @@ class EnrollLearner
             ]);
         }
 
-        if ($formation->capacity !== null) {
-            $enrolled = $formation->activeLearners()->count();
-
-            if ($enrolled >= $formation->capacity) {
-                throw ValidationException::withMessages([
-                    'formation_id' => "La formation a atteint sa capacité maximale ({$formation->capacity} apprenants).",
-                ]);
-            }
-        }
+        $this->ensureHasRoomFor($formation, 1);
 
         $formation->learners()->attach($learner->id, [
             'status' => LearnerStatus::InProgress->value,
             'enrolled_at' => now(),
         ]);
+    }
+
+    /**
+     * Only the learners currently following the formation take a seat.
+     *
+     * @throws ValidationException
+     */
+    public function ensureHasRoomFor(Formation $formation, int $count): void
+    {
+        if ($formation->capacity === null) {
+            return;
+        }
+
+        $remaining = max(0, $formation->capacity - $formation->activeLearners()->count());
+
+        if ($remaining === 0) {
+            throw ValidationException::withMessages([
+                'formation_id' => "La formation a atteint sa capacité maximale ({$formation->capacity} apprenants).",
+            ]);
+        }
+
+        if ($count > $remaining) {
+            throw ValidationException::withMessages([
+                'learner_ids' => "Il ne reste que {$remaining} place(s) dans cette formation (capacité maximale : {$formation->capacity}) : {$count} apprenants sont sélectionnés.",
+            ]);
+        }
     }
 }

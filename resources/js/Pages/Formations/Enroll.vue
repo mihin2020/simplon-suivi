@@ -21,10 +21,11 @@ interface Formation {
 const props = defineProps<{
     formation: Formation
     learners: Learner[]
+    remainingSeats: number | null
 }>()
 
 const search = ref('')
-const form = useForm({ learner_id: '' })
+const form = useForm<{ learner_ids: string[] }>({ learner_ids: [] })
 
 const filtered = computed(() => {
     const q = search.value.toLowerCase().trim()
@@ -36,19 +37,48 @@ const filtered = computed(() => {
     )
 })
 
-const select = (learner: Learner) => {
-    form.learner_id = learner.id
+const isSelected = (learner: Learner) => form.learner_ids.includes(learner.id)
+
+const toggle = (learner: Learner) => {
+    form.learner_ids = isSelected(learner)
+        ? form.learner_ids.filter(id => id !== learner.id)
+        : [...form.learner_ids, learner.id]
 }
 
-const selectedLearner = computed(() =>
-    props.learners.find(l => l.id === form.learner_id) ?? null
+// « Tout sélectionner » ne porte que sur les résultats affichés (donc sur la recherche en cours).
+const allFilteredSelected = computed(() =>
+    filtered.value.length > 0 && filtered.value.every(isSelected)
 )
+
+const toggleAllFiltered = () => {
+    const shown = new Set(filtered.value.map(l => l.id))
+    form.learner_ids = allFilteredSelected.value
+        ? form.learner_ids.filter(id => !shown.has(id))
+        : [...new Set([...form.learner_ids, ...shown])]
+}
+
+const exceedsSeats = computed(() =>
+    props.remainingSeats !== null && form.learner_ids.length > props.remainingSeats
+)
+
+const submitLabel = computed(() => {
+    const count = form.learner_ids.length
+    if (count === 0) return 'Inscrire à la formation'
+    return count === 1 ? 'Inscrire 1 apprenant' : `Inscrire ${count} apprenants`
+})
+
+// Les erreurs peuvent porter sur la liste (learner_ids), sur un apprenant (learner_ids.N) ou sur la formation.
+const errors = computed(() => [...new Set(
+    Object.entries(form.errors)
+        .filter(([key]) => key === 'formation_id' || key.startsWith('learner_ids'))
+        .map(([, message]) => message)
+)])
 
 const submit = () => form.post(`/formations/${props.formation.id}/learners`)
 </script>
 
 <template>
-    <Head title="Inscrire un apprenant" />
+    <Head title="Inscrire des apprenants" />
     <div class="max-w-2xl mx-auto">
 
         <!-- En-tête -->
@@ -57,7 +87,7 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners`)
                 <span class="material-symbols-outlined">arrow_back</span>
             </Link>
             <div>
-                <h1 class="text-h1 font-bold text-on-surface">Inscrire un Apprenant</h1>
+                <h1 class="text-h1 font-bold text-on-surface">Inscrire des Apprenants</h1>
                 <p class="text-body-md text-secondary mt-xs">
                     Formation : <span class="font-semibold text-on-surface">{{ formation.name }}</span>
                 </p>
@@ -68,26 +98,8 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners`)
 
             <div class="card space-y-md">
 
-                <!-- Sélection -->
-                <div v-if="selectedLearner" class="selected-box">
-                    <div class="flex items-center gap-sm flex-1">
-                        <div class="avatar-sm">
-                            {{ selectedLearner.first_name.charAt(0) }}{{ selectedLearner.last_name.charAt(0) }}
-                        </div>
-                        <div>
-                            <p class="font-semibold text-on-surface text-body-sm">
-                                {{ selectedLearner.last_name }} {{ selectedLearner.first_name }}
-                            </p>
-                            <p class="text-body-sm text-secondary">{{ selectedLearner.email ?? '' }}</p>
-                        </div>
-                    </div>
-                    <button type="button" class="icon-btn" @click="form.learner_id = ''">
-                        <span class="material-symbols-outlined" style="font-size:18px">close</span>
-                    </button>
-                </div>
-
                 <!-- Recherche -->
-                <div v-if="!selectedLearner">
+                <div>
                     <label class="label mb-xs block">Rechercher un apprenant</label>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-sm top-1/2 -translate-y-1/2 text-on-surface-variant" style="font-size:18px">search</span>
@@ -101,21 +113,44 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners`)
                     </div>
                 </div>
 
+                <!-- Résumé de la sélection -->
+                <div v-if="learners.length > 0" class="flex items-center justify-between gap-md flex-wrap">
+                    <label class="flex items-center gap-sm text-body-sm text-on-surface cursor-pointer">
+                        <input
+                            type="checkbox"
+                            class="check"
+                            :checked="allFilteredSelected"
+                            :disabled="filtered.length === 0"
+                            @change="toggleAllFiltered"
+                        />
+                        {{ search.trim() ? 'Tout sélectionner (résultats affichés)' : 'Tout sélectionner' }}
+                    </label>
+                    <p class="text-body-sm text-secondary">
+                        <span class="font-semibold text-on-surface">{{ form.learner_ids.length }}</span> sélectionné(s)
+                        <template v-if="remainingSeats !== null"> · {{ remainingSeats }} place(s) restante(s)</template>
+                    </p>
+                </div>
+
                 <!-- Liste -->
-                <div v-if="!selectedLearner" class="learner-list">
+                <div class="learner-list">
                     <div v-if="learners.length === 0" class="py-xl text-center text-secondary text-body-sm">
                         Tous les apprenants sont déjà inscrits à cette formation.
                     </div>
                     <div v-else-if="filtered.length === 0" class="py-md text-center text-secondary text-body-sm">
                         Aucun résultat pour « {{ search }} »
                     </div>
-                    <button
+                    <label
                         v-for="learner in filtered"
                         :key="learner.id"
-                        type="button"
                         class="learner-row"
-                        @click="select(learner)"
+                        :class="{ 'learner-row-selected': isSelected(learner) }"
                     >
+                        <input
+                            type="checkbox"
+                            class="check"
+                            :checked="isSelected(learner)"
+                            @change="toggle(learner)"
+                        />
                         <div class="avatar-sm">
                             {{ learner.first_name.charAt(0) }}{{ learner.last_name.charAt(0) }}
                         </div>
@@ -125,11 +160,13 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners`)
                             </p>
                             <p class="text-body-sm text-secondary">{{ learner.email ?? '' }}</p>
                         </div>
-                        <span class="material-symbols-outlined ml-auto text-secondary" style="font-size:18px">add_circle</span>
-                    </button>
+                    </label>
                 </div>
 
-                <p v-if="form.errors.learner_id" class="error-msg">{{ form.errors.learner_id }}</p>
+                <p v-if="exceedsSeats" class="warning-msg">
+                    Vous avez sélectionné plus d'apprenants que de places restantes ({{ remainingSeats }}).
+                </p>
+                <p v-for="message in errors" :key="message" class="error-msg">{{ message }}</p>
             </div>
 
             <!-- Actions -->
@@ -138,11 +175,11 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners`)
                 <button
                     type="submit"
                     class="btn-primary"
-                    :disabled="!form.learner_id || form.processing"
+                    :disabled="form.learner_ids.length === 0 || form.processing"
                 >
                     <span v-if="form.processing" class="spinner" />
                     <span class="material-symbols-outlined" style="font-size:16px">how_to_reg</span>
-                    Inscrire à la formation
+                    {{ submitLabel }}
                 </button>
             </div>
 
@@ -176,20 +213,10 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners`)
 }
 .input:focus { border-color: #E5004C; box-shadow: 0 0 0 3px rgba(229,0,76,0.08); }
 
-.selected-box {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    border-radius: 8px;
-}
-
 .learner-list {
     border: 1px solid #e0e3e5;
     border-radius: 8px;
-    max-height: 320px;
+    max-height: 360px;
     overflow-y: auto;
 }
 
@@ -203,13 +230,12 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners`)
     transition: background 0.15s;
     cursor: pointer;
     background: transparent;
-    border-left: none;
-    border-right: none;
-    border-top: none;
 }
 .learner-row:last-child { border-bottom: none; }
 .learner-row:hover { background: #f9fafb; }
-.learner-row:hover .material-symbols-outlined { color: #E5004C; }
+.learner-row-selected { background: #fff5f8; }
+
+.check { width: 16px; height: 16px; accent-color: #E5004C; flex-shrink: 0; cursor: pointer; }
 
 .avatar-sm {
     width: 32px;
@@ -226,19 +252,8 @@ const submit = () => form.post(`/formations/${props.formation.id}/learners`)
     text-transform: uppercase;
 }
 
-.icon-btn {
-    padding: 4px;
-    color: #515f74;
-    border-radius: 4px;
-    transition: color 0.15s;
-    display: inline-flex;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-}
-.icon-btn:hover { color: #ba1a1a; }
-
 .error-msg { font-size: 12px; color: #ba1a1a; }
+.warning-msg { font-size: 12px; color: #b45309; }
 
 .btn-primary {
     display: inline-flex;

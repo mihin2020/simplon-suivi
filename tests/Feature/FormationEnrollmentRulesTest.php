@@ -58,7 +58,7 @@ class FormationEnrollmentRulesTest extends TestCase
         $formation = $this->formation();
         $learner = Learner::factory()->create();
 
-        $this->post(route('formations.learners.enroll', $formation), ['learner_id' => $learner->id])
+        $this->post(route('formations.learners.enroll', $formation), ['learner_ids' => [$learner->id]])
             ->assertRedirect(route('formations.show', $formation))
             ->assertSessionHas('success');
 
@@ -72,7 +72,7 @@ class FormationEnrollmentRulesTest extends TestCase
             $formation = $this->formation($status);
             $learner = Learner::factory()->create();
 
-            $this->post(route('formations.learners.enroll', $formation), ['learner_id' => $learner->id])
+            $this->post(route('formations.learners.enroll', $formation), ['learner_ids' => [$learner->id]])
                 ->assertSessionHasErrors(['formation_id' => self::PROJECT_CLOSED]);
 
             $this->assertFalse($this->enrolled($formation, $learner), $status->value);
@@ -84,7 +84,7 @@ class FormationEnrollmentRulesTest extends TestCase
         $formation = $this->formation(ProjectStatus::Active, FormationStatus::Archived);
         $learner = Learner::factory()->create();
 
-        $this->post(route('formations.learners.enroll', $formation), ['learner_id' => $learner->id])
+        $this->post(route('formations.learners.enroll', $formation), ['learner_ids' => [$learner->id]])
             ->assertSessionHasErrors(['formation_id' => self::FORMATION_ARCHIVED]);
 
         $this->assertFalse($this->enrolled($formation, $learner));
@@ -96,11 +96,107 @@ class FormationEnrollmentRulesTest extends TestCase
         $first = Learner::factory()->create();
         $second = Learner::factory()->create();
 
-        $this->post(route('formations.learners.enroll', $formation), ['learner_id' => $first->id])->assertSessionHas('success');
-        $this->post(route('formations.learners.enroll', $formation), ['learner_id' => $first->id])
-            ->assertSessionHasErrors(['learner_id' => 'Cet apprenant est déjà inscrit à cette formation.']);
-        $this->post(route('formations.learners.enroll', $formation), ['learner_id' => $second->id])
+        $this->post(route('formations.learners.enroll', $formation), ['learner_ids' => [$first->id]])->assertSessionHas('success');
+        $this->post(route('formations.learners.enroll', $formation), ['learner_ids' => [$first->id]])
+            ->assertSessionHasErrors(['learner_ids' => 'Un des apprenants sélectionnés est déjà inscrit à cette formation.']);
+        $this->post(route('formations.learners.enroll', $formation), ['learner_ids' => [$second->id]])
             ->assertSessionHasErrors(['formation_id' => 'La formation a atteint sa capacité maximale (1 apprenants).']);
+    }
+
+    // ── Enrolling several existing learners at once ────────────────────────
+
+    public function test_several_learners_are_enrolled_at_once(): void
+    {
+        $formation = $this->formation();
+        $learners = Learner::factory()->count(3)->create();
+
+        $this->post(route('formations.learners.enroll', $formation), ['learner_ids' => $learners->pluck('id')->all()])
+            ->assertRedirect(route('formations.show', $formation))
+            ->assertSessionHas('success', '3 apprenants ont été inscrits à la formation.');
+
+        foreach ($learners as $learner) {
+            $this->assertTrue($this->enrolled($formation, $learner));
+        }
+
+        $this->assertSame(3, DB::table('formation_learner')->where('status', LearnerStatus::InProgress->value)->count());
+        $this->assertSame(3, DB::table('formation_learner')->where('enrolled_at', '2026-11-02 10:00:00')->count());
+    }
+
+    public function test_one_selected_learner_gets_the_singular_message(): void
+    {
+        $this->post(route('formations.learners.enroll', $this->formation()), ['learner_ids' => [Learner::factory()->create()->id]])
+            ->assertSessionHas('success', '1 apprenant a été inscrit(e) à la formation.');
+    }
+
+    public function test_a_selection_over_the_remaining_seats_enrolls_nobody(): void
+    {
+        $formation = $this->formation(capacity: 3);
+        $formation->learners()->attach(Learner::factory()->create()->id, ['status' => LearnerStatus::InProgress->value, 'enrolled_at' => now()]);
+        $learners = Learner::factory()->count(3)->create();
+
+        $this->post(route('formations.learners.enroll', $formation), ['learner_ids' => $learners->pluck('id')->all()])
+            ->assertSessionHasErrors(['learner_ids' => 'Il ne reste que 2 place(s) dans cette formation (capacité maximale : 3) : 3 apprenants sont sélectionnés.']);
+
+        foreach ($learners as $learner) {
+            $this->assertFalse($this->enrolled($formation, $learner), 'all or nothing');
+        }
+
+        $this->post(route('formations.learners.enroll', $formation), ['learner_ids' => $learners->take(2)->pluck('id')->all()])
+            ->assertSessionHas('success');
+    }
+
+    public function test_withdrawn_learners_do_not_take_a_seat(): void
+    {
+        $formation = $this->formation(capacity: 1);
+        $formation->learners()->attach(Learner::factory()->create()->id, ['status' => LearnerStatus::Withdrawn->value, 'enrolled_at' => now()]);
+
+        $this->post(route('formations.learners.enroll', $formation), ['learner_ids' => [Learner::factory()->create()->id]])
+            ->assertSessionHas('success');
+    }
+
+    public function test_a_selection_containing_an_enrolled_learner_enrolls_nobody(): void
+    {
+        $formation = $this->formation();
+        $enrolled = Learner::factory()->create();
+        $newcomer = Learner::factory()->create();
+        $formation->learners()->attach($enrolled->id, ['status' => LearnerStatus::InProgress->value, 'enrolled_at' => now()]);
+
+        $this->post(route('formations.learners.enroll', $formation), ['learner_ids' => [$enrolled->id, $newcomer->id]])
+            ->assertSessionHasErrors(['learner_ids' => 'Un des apprenants sélectionnés est déjà inscrit à cette formation.']);
+
+        $this->assertFalse($this->enrolled($formation, $newcomer));
+    }
+
+    public function test_the_selection_is_validated(): void
+    {
+        $formation = $this->formation();
+        $learner = Learner::factory()->create();
+        $route = route('formations.learners.enroll', $formation);
+
+        $this->post($route, [])->assertSessionHasErrors('learner_ids');
+        $this->post($route, ['learner_ids' => []])->assertSessionHasErrors('learner_ids');
+        $this->post($route, ['learner_ids' => ['not-a-uuid']])->assertSessionHasErrors('learner_ids.0');
+        $this->post($route, ['learner_ids' => [fake()->uuid()]])->assertSessionHasErrors('learner_ids.0');
+        $this->post($route, ['learner_ids' => [$learner->id, $learner->id]])->assertSessionHasErrors('learner_ids.0');
+        $this->post($route, ['learner_id' => $learner->id])->assertSessionHasErrors('learner_ids');
+
+        $this->assertFalse($this->enrolled($formation, $learner));
+    }
+
+    public function test_the_page_lists_the_learners_who_can_still_join_and_the_remaining_seats(): void
+    {
+        $formation = $this->formation(capacity: 5);
+        $enrolled = Learner::factory()->create();
+        $available = Learner::factory()->create(['last_name' => 'Zongo']);
+        $formation->learners()->attach($enrolled->id, ['status' => LearnerStatus::InProgress->value, 'enrolled_at' => now()]);
+
+        $props = $this->get(route('formations.learners.enroll.create', $formation))->assertOk()->viewData('page')['props'];
+
+        $this->assertSame([$available->id], array_column($props['learners'], 'id'));
+        $this->assertSame(4, $props['remainingSeats']);
+
+        $unlimited = $this->formation(capacity: null);
+        $this->assertNull($this->get(route('formations.learners.enroll.create', $unlimited))->viewData('page')['props']['remainingSeats']);
     }
 
     // ── Creating a learner and enrolling them ──────────────────────────────

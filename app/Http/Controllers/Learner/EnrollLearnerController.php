@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Learner;
 
 use App\Actions\EnrollLearner;
+use App\Actions\EnrollLearners;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Learner\EnrollLearnerRequest;
 use App\Http\Requests\Learner\StoreLearnerRequest;
@@ -19,35 +20,37 @@ use Inertia\Response;
 
 class EnrollLearnerController extends Controller
 {
-    /** Page : sélectionner un apprenant existant */
+    /** Page : sélectionner un ou plusieurs apprenants existants */
     public function create(Formation $formation): Response
     {
         $this->authorize('update', $formation);
 
         $formation->load('project');
 
-        $enrolledIds = $formation->learners()->pluck('learners.id');
-
-        $learners = Learner::whereNotIn('id', $enrolledIds)
+        $learners = Learner::whereDoesntHave('formations', fn ($query) => $query->whereKey($formation->id))
             ->orderBy('last_name')
+            ->orderBy('first_name')
             ->get(['id', 'first_name', 'last_name', 'email']);
 
         return Inertia::render('Formations/Enroll', [
             'formation' => $formation,
             'learners' => $learners,
+            'remainingSeats' => $formation->capacity === null
+                ? null
+                : max(0, $formation->capacity - $formation->activeLearners()->count()),
         ]);
     }
 
-    /** Action : inscrire un apprenant existant */
-    public function store(EnrollLearnerRequest $request, Formation $formation, EnrollLearner $action): RedirectResponse
+    /** Action : inscrire un ou plusieurs apprenants existants */
+    public function store(EnrollLearnerRequest $request, Formation $formation, EnrollLearners $action): RedirectResponse
     {
-        $learner = Learner::findOrFail($request->validated('learner_id'));
-
-        $action->execute($formation, $learner);
+        $count = $action->execute($formation, $request->validated('learner_ids'));
 
         return redirect()
             ->route('formations.show', $formation)
-            ->with('success', "{$learner->full_name} a été inscrit(e) à la formation.");
+            ->with('success', $count === 1
+                ? '1 apprenant a été inscrit(e) à la formation.'
+                : "{$count} apprenants ont été inscrits à la formation.");
     }
 
     /** Page : créer un nouvel apprenant et l'inscrire directement */
