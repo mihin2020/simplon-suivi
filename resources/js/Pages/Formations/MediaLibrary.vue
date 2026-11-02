@@ -388,7 +388,6 @@ const addToAlbum = async () => {
       alert('Erreur lors de l\'ajout à l\'album')
     }
   } catch (error) {
-    console.error('Error:', error)
     alert('Erreur lors de l\'ajout à l\'album')
   } finally {
     isBatchUpdating.value = false
@@ -422,7 +421,6 @@ const openUploadWidget = () => {
     },
     (error: any, result: any) => {
       if (error) {
-        console.error('Upload error:', error)
         return
       }
       if (result.event === 'success') {
@@ -436,11 +434,9 @@ const openUploadWidget = () => {
 
 // Sauvegarder dans la BDD
 const saveMediaToDatabase = async (info: any) => {
-  console.log('saveMediaToDatabase appelé avec:', info)
   isUploading.value = true
   try {
     const resourceType = info.resource_type
-    console.log('resource_type:', resourceType)
     
     const payload = {
       cloudinary_public_id: info.public_id,
@@ -457,7 +453,6 @@ const saveMediaToDatabase = async (info: any) => {
       duration: info.duration || null,
       format: info.format || null,
     }
-    console.log('Payload:', payload)
     
     const response = await fetch(`/formations/${props.formation.id}/medias`, {
       method: 'POST',
@@ -469,8 +464,6 @@ const saveMediaToDatabase = async (info: any) => {
       body: JSON.stringify(payload),
     })
     
-    console.log('Response status:', response.status)
-    console.log('Response OK:', response.ok)
     
     if (response.ok) {
       // Toast discret au lieu d'alert
@@ -478,11 +471,9 @@ const saveMediaToDatabase = async (info: any) => {
       router.reload({ only: ['medias', 'albums', 'cloudinaryUsage'] })
     } else {
       const errorText = await response.text()
-      console.error('Erreur sauvegarde média:', errorText)
       showToast('❌ Erreur lors de la sauvegarde', 'error')
     }
   } catch (error) {
-    console.error('Error:', error)
     alert('Erreur: ' + (error as Error).message)
   } finally {
     isUploading.value = false
@@ -515,7 +506,6 @@ const deleteMedia = async () => {
       alert('Erreur lors de la suppression')
     }
   } catch (error) {
-    console.error('Error:', error)
     alert('Erreur lors de la suppression')
   }
 }
@@ -557,7 +547,6 @@ const updateMedia = async () => {
       alert('Erreur lors de la modification')
     }
   } catch (error) {
-    console.error('Error:', error)
     alert('Erreur lors de la modification')
   }
 }

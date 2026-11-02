@@ -98,6 +98,7 @@ const filteredExpenses = computed(() => {
         case 'date_asc':   return list.sort((a, b) => a.expense_date.localeCompare(b.expense_date))
         case 'amount_desc':return list.sort((a, b) => b.amount - a.amount)
         case 'amount_asc': return list.sort((a, b) => a.amount - b.amount)
+        default:           return list
     }
 })
 

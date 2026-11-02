@@ -56,7 +56,6 @@ function submit() {
             files.value = []
         },
         onError: (errors) => {
-            console.error('Erreurs validation:', errors)
             alert('Erreur d\'envoi : ' + Object.values(errors).join(', '))
         },
         onFinish: () => {

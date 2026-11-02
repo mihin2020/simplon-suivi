@@ -280,7 +280,7 @@ const downloadQr = async () => {
         const objectUrl = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = objectUrl
-        a.download = `qr-${(metaForm.title || props.form.title || 'formulaire').toString().replace(/[^\w\-]+/g, '_').slice(0, 40)}.png`
+        a.download = `qr-${(metaForm.title || props.form.title || 'formulaire').toString().replace(/[^\w-]+/g, '_').slice(0, 40)}.png`
         document.body.appendChild(a)
         a.click()
         a.remove()

@@ -130,7 +130,7 @@ const openLearnersModal = async (
         const data = await response.json()
         modalLearners.value = data.learners || []
     } catch (error) {
-        console.error('Erreur lors du chargement des apprenants:', error)
+        // Keep the modal usable: the list simply stays empty.
     } finally {
         modalLoading.value = false
     }

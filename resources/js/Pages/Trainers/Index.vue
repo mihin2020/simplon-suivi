@@ -119,7 +119,7 @@ const onProjectChange = async () => {
                 .map(f => f.id)
         }
     } catch (error) {
-        console.error('Erreur lors du chargement des formations:', error)
+        // The formation list is optional here: leave the selection empty.
     } finally {
         loadingFormations.value = false
     }

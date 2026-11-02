@@ -366,7 +366,7 @@ function playNotifSound() {
         const osc2 = ctx.createOscillator()
         osc2.connect(gain); osc2.type = 'sine'; osc2.frequency.value = 1046
         osc2.start(ctx.currentTime + 0.12); osc2.stop(ctx.currentTime + 0.5)
-    } catch {}
+    } catch { /* audio unavailable: the notification stays silent */ }
 }
 
 function showDesktopNotif(count: number) {

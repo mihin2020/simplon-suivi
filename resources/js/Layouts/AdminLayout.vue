@@ -41,7 +41,7 @@ const sidebarWidth = computed(() => sidebarCollapsed.value ? '76px' : '260px')
 
 const toggleSidebar = () => {
     sidebarCollapsed.value = !sidebarCollapsed.value
-    try { localStorage.setItem('sidebar_collapsed', JSON.stringify(sidebarCollapsed.value)) } catch {}
+    try { localStorage.setItem('sidebar_collapsed', JSON.stringify(sidebarCollapsed.value)) } catch { /* storage unavailable: the preference is simply not kept */ }
 }
 
 // ─── Nav groups ────────────────────────────────────────────────────────────
@@ -136,7 +136,7 @@ watch(
 
 const toggleGroup = (id: string) => {
     openGroups.value[id] = !openGroups.value[id]
-    try { localStorage.setItem(`sidebar_group_${id}`, JSON.stringify(openGroups.value[id])) } catch {}
+    try { localStorage.setItem(`sidebar_group_${id}`, JSON.stringify(openGroups.value[id])) } catch { /* storage unavailable: the preference is simply not kept */ }
 }
 
 // ─── Filtered groups by role & permissions ─────────────────────────────────

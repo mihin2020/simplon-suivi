@@ -258,6 +258,8 @@ const confirmCopy = computed(() => {
                 danger: false,
                 withNote: false,
             }
+        default:
+            return { title: '', body: '', confirmLabel: '', danger: false, withNote: false }
     }
 })
 
