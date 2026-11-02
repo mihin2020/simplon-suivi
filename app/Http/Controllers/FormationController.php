@@ -130,7 +130,7 @@ class FormationController extends Controller
         $oldStatus = $formation->status;
 
         // Si la formation devient terminée
-        if (isset($data['status']) && $data['status'] === FormationStatus::Completed->value && $oldStatus !== FormationStatus::Completed->value) {
+        if (isset($data['status']) && $data['status'] === FormationStatus::Completed->value && $oldStatus !== FormationStatus::Completed) {
             // Mettre à jour la date de fin automatiquement
             $data['ended_at'] = now();
 

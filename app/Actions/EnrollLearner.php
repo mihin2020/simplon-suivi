@@ -11,30 +11,41 @@ use Illuminate\Validation\ValidationException;
 
 class EnrollLearner
 {
-    public function execute(Formation $formation, Learner $learner): void
+    /**
+     * Nobody joins a formation of a completed or archived project, nor an archived formation. Checked on its
+     * own so a caller can refuse before creating anything.
+     *
+     * @throws ValidationException
+     */
+    public function ensureEnrollable(Formation $formation): void
     {
-        // Charger le projet si nécessaire
-        if (!$formation->relationLoaded('project')) {
-            $formation->load('project');
-        }
+        $formation->loadMissing('project');
 
-        // Vérifier si le projet est terminé ou archivé
-        if ($formation->project && ($formation->project->status === ProjectStatus::Completed->value || $formation->project->status === ProjectStatus::Archived->value)) {
+        if (in_array($formation->project?->status, [ProjectStatus::Completed, ProjectStatus::Archived], true)) {
             throw ValidationException::withMessages([
                 'formation_id' => "Le projet de cette formation est terminé/archivé. Aucune inscription n'est possible.",
             ]);
         }
 
-        // Vérifier si la formation est archivée
-        if ($formation->status === FormationStatus::Archived->value) {
+        if ($formation->status === FormationStatus::Archived) {
             throw ValidationException::withMessages([
                 'formation_id' => "Cette formation est archivée. Aucune inscription n'est possible.",
             ]);
         }
+    }
+
+    /**
+     * Enrolls a learner in a formation that is open to new learners.
+     *
+     * @throws ValidationException
+     */
+    public function execute(Formation $formation, Learner $learner): void
+    {
+        $this->ensureEnrollable($formation);
 
         if ($formation->learners()->where('learner_id', $learner->id)->exists()) {
             throw ValidationException::withMessages([
-                'learner_id' => "Cet apprenant est déjà inscrit à cette formation.",
+                'learner_id' => 'Cet apprenant est déjà inscrit à cette formation.',
             ]);
         }
 
@@ -49,7 +60,7 @@ class EnrollLearner
         }
 
         $formation->learners()->attach($learner->id, [
-            'status'      => LearnerStatus::InProgress->value,
+            'status' => LearnerStatus::InProgress->value,
             'enrolled_at' => now(),
         ]);
     }

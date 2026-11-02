@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Learner;
 
 use App\Actions\EnrollLearner;
-use App\Enums\ProjectStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Learner\EnrollLearnerRequest;
 use App\Http\Requests\Learner\StoreLearnerRequest;
@@ -14,8 +13,7 @@ use App\Models\LastDiploma;
 use App\Models\Learner;
 use App\Models\Vulnerability;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -36,22 +34,13 @@ class EnrollLearnerController extends Controller
 
         return Inertia::render('Formations/Enroll', [
             'formation' => $formation,
-            'learners'  => $learners,
+            'learners' => $learners,
         ]);
     }
 
     /** Action : inscrire un apprenant existant */
     public function store(EnrollLearnerRequest $request, Formation $formation, EnrollLearner $action): RedirectResponse
     {
-        $formation->load('project');
-
-        // Vérifier si le projet est terminé ou archivé
-        if ($formation->project && ($formation->project->status === ProjectStatus::Completed->value || $formation->project->status === ProjectStatus::Archived->value)) {
-            throw ValidationException::withMessages([
-                'formation_id' => "Le projet de cette formation est terminé/archivé. Aucune inscription n'est possible.",
-            ]);
-        }
-
         $learner = Learner::findOrFail($request->validated('learner_id'));
 
         $action->execute($formation, $learner);
@@ -69,25 +58,19 @@ class EnrollLearnerController extends Controller
         $formation->load('project');
 
         return Inertia::render('Formations/CreateLearner', [
-            'formation'       => $formation,
+            'formation' => $formation,
             'educationLevels' => EducationLevel::orderBy('created_at')->get(),
-            'ageRanges'       => AgeRange::orderBy('order')->orderBy('age_min')->get(),
+            'ageRanges' => AgeRange::orderBy('order')->orderBy('age_min')->get(),
             'vulnerabilities' => Vulnerability::orderBy('created_at')->get(),
-            'lastDiplomas'    => LastDiploma::orderBy('created_at')->get(),
+            'lastDiplomas' => LastDiploma::orderBy('created_at')->get(),
         ]);
     }
 
     /** Action : créer + inscrire */
     public function storeLearner(StoreLearnerRequest $request, Formation $formation, EnrollLearner $action): RedirectResponse
     {
-        $formation->load('project');
-
-        // Vérifier si le projet est terminé ou archivé
-        if ($formation->project && ($formation->project->status === ProjectStatus::Completed->value || $formation->project->status === ProjectStatus::Archived->value)) {
-            throw ValidationException::withMessages([
-                'formation_id' => "Le projet de cette formation est terminé/archivé. Aucune inscription n'est possible.",
-            ]);
-        }
+        // Refuse before creating anything: a refused enrolment must not leave a learner behind.
+        $action->ensureEnrollable($formation);
 
         $data = $request->validated();
 
@@ -105,8 +88,12 @@ class EnrollLearnerController extends Controller
         }
         unset($data['photo'], $data['cnib'], $data['cv']);
 
-        $learner = Learner::create($data);
-        $action->execute($formation, $learner);
+        $learner = DB::transaction(function () use ($data, $formation, $action) {
+            $learner = Learner::create($data);
+            $action->execute($formation, $learner);
+
+            return $learner;
+        });
 
         return redirect()
             ->route('formations.show', $formation)
