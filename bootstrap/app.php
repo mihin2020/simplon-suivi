@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureCohortIsOpen;
 use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\SecurityHeaders;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'permission' => EnsureUserHasPermission::class,
+            'cohort.open' => EnsureCohortIsOpen::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

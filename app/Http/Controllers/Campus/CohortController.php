@@ -3,19 +3,31 @@
 namespace App\Http\Controllers\Campus;
 
 use App\Actions\Campus\AbandonCohortLearner;
-use App\Actions\Campus\ApplyFormationPaymentPlanToLearner;
+use App\Actions\Campus\CloseCohort;
+use App\Actions\Campus\CreateCohortLearner;
+use App\Actions\Campus\EnrollCohortLearners;
+use App\Actions\Campus\MoveCohortLearner;
 use App\Enums\CohortStatus;
 use App\Exports\CohortLearnerTemplateExport;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Campus\AbandonCohortLearnerRequest;
+use App\Http\Requests\Campus\EnrollCohortLearnersRequest;
+use App\Http\Requests\Campus\ImportCohortLearnersRequest;
+use App\Http\Requests\Campus\MoveCohortLearnerRequest;
+use App\Http\Requests\Campus\RemoveCohortLearnersRequest;
+use App\Http\Requests\Campus\StoreCohortLearnerRequest;
+use App\Http\Requests\Campus\StoreCohortRequest;
+use App\Http\Requests\Campus\UpdateCohortLearnerRequest;
+use App\Http\Requests\Campus\UpdateCohortRequest;
 use App\Imports\CohortLearnersImport;
 use App\Models\CampusFormation;
 use App\Models\Cohort;
 use App\Models\EducationLevel;
 use App\Models\Learner;
-use App\Models\Payment;
+use App\Services\Campus\CohortPaymentStats;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
 use Maatwebsite\Excel\Facades\Excel;
@@ -25,28 +37,18 @@ class CohortController extends Controller
 {
     public function index(Request $request): Response
     {
-        $query = Cohort::with(['campusFormation' => fn ($q) => $q->withTrashed()])
+        $cohorts = Cohort::with(['campusFormation' => fn ($q) => $q->withTrashed()])
             ->withCount('learners')
-            ->orderBy('started_at', 'desc');
-
-        if ($request->filled('formation')) {
-            $query->where('campus_formation_id', $request->input('formation'));
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->input('status'));
-        }
-
-        $cohorts = $query->paginate(15)->withQueryString();
+            ->when($request->filled('formation'), fn ($q) => $q->where('campus_formation_id', $request->input('formation')))
+            ->when($request->filled('status'), fn ($q) => $q->where('status', $request->input('status')))
+            ->orderBy('started_at', 'desc')
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render('Campus/Cohorts/Index', [
             'cohorts' => $cohorts,
             'formations' => CampusFormation::active()->orderBy('name')->get(['id', 'name']),
-            'statuses' => collect(CohortStatus::cases())->map(fn ($s) => [
-                'value' => $s->value,
-                'label' => $s->label(),
-                'color' => $s->color(),
-            ]),
+            'statuses' => $this->statuses(withColor: true),
             'filters' => [
                 'formation' => $request->input('formation', ''),
                 'status' => $request->input('status', ''),
@@ -62,67 +64,29 @@ class CohortController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreCohortRequest $request): RedirectResponse
     {
-        $data = $request->validate([
-            'campus_formation_id' => ['required', 'uuid', 'exists:campus_formations,id'],
-            'name' => ['required', 'string', 'max:255'],
-            'started_at' => ['required', 'date'],
-            'ended_at' => ['required', 'date', 'after:started_at'],
-        ]);
-
-        Cohort::create($data);
+        Cohort::create($request->validated());
 
         return redirect()->route('campus.cohorts.index')
             ->with('success', 'Cohorte créée avec succès.');
     }
 
-    public function show(Cohort $cohort): Response
+    public function show(Cohort $cohort, CohortPaymentStats $stats): Response
     {
         $cohort->load(['campusFormation' => fn ($q) => $q->withTrashed()]);
 
         $enrolledIds = $cohort->learners()->pluck('learners.id');
 
-        $learners = $cohort->learners()
-            ->withPivot(['enrolled_at', 'status', 'abandon_motif', 'abandoned_at'])
-            ->with('educationLevel')
-            ->orderBy('last_name')
-            ->paginate(10)
-            ->withQueryString();
-
-        $unitCost = $cohort->campusFormation?->total_cost ?? 0;
-        $totalCollected = $cohort->total_collected;
-        $totalExpected = $cohort->total_expected;
-
-        // Soldés : apprenants ayant payé l'intégralité du coût de la formation
-        $paidPerLearner = $cohort->payments()
-            ->where('status', 'paye')
-            ->selectRaw('learner_id, SUM(amount) as total_paid')
-            ->groupBy('learner_id')
-            ->pluck('total_paid', 'learner_id');
-
-        $fullyPaidCount = $unitCost > 0
-            ? $paidPerLearner->filter(fn ($paid) => $paid >= $unitCost)->count()
-            : 0;
-
-        // En retard : apprenants avec au moins une échéance dépassée ET non payée
-        $overdueCount = $cohort->payments()
-            ->overdue()
-            ->distinct('learner_id')
-            ->count('learner_id');
-
-        $paymentStats = [
-            'total_collected' => $totalCollected,
-            'total_expected' => $totalExpected,
-            'total_remaining' => max(0, $totalExpected - $totalCollected),
-            'paid_count' => $fullyPaidCount,
-            'overdue_count' => $overdueCount,
-        ];
-
         return Inertia::render('Campus/Cohorts/Show', [
             'cohort' => $cohort,
-            'learners' => $learners,
-            'paymentStats' => $paymentStats,
+            'learners' => $cohort->learners()
+                ->withPivot(['enrolled_at', 'status', 'abandon_motif', 'abandoned_at'])
+                ->with('educationLevel')
+                ->orderBy('last_name')
+                ->paginate(10)
+                ->withQueryString(),
+            'paymentStats' => $stats->for($cohort),
             'availableLearners' => Learner::whereNotIn('id', $enrolledIds)->orderBy('last_name')->get(['id', 'first_name', 'last_name', 'email']),
             'educationLevels' => EducationLevel::orderBy('name')->get(['id', 'name']),
             'availableCohorts' => Cohort::with(['campusFormation' => fn ($q) => $q->withTrashed()->select('id', 'name', 'total_cost')])
@@ -130,17 +94,13 @@ class CohortController extends Controller
                 ->where('status', '!=', CohortStatus::Cloturee->value)
                 ->orderBy('name')
                 ->get(['id', 'name', 'campus_formation_id'])
-                ->map(fn ($c) => [
+                ->map(fn (Cohort $c) => [
                     'id' => $c->id,
                     'name' => $c->name,
-                    'formation_name' => $c->campusFormation?->name ?? '(Formation supprimée)',
-                    'total_cost' => $c->campusFormation?->total_cost ?? 0,
+                    'formation_name' => $c->campusFormation->name ?? '(Formation supprimée)',
+                    'total_cost' => $c->campusFormation->total_cost ?? 0,
                 ]),
-            'statuses' => collect(CohortStatus::cases())->map(fn ($s) => [
-                'value' => $s->value,
-                'label' => $s->label(),
-                'color' => $s->color(),
-            ]),
+            'statuses' => $this->statuses(withColor: true),
         ]);
     }
 
@@ -149,23 +109,13 @@ class CohortController extends Controller
         return Inertia::render('Campus/Cohorts/Edit', [
             'cohort' => $cohort,
             'formations' => CampusFormation::active()->orderBy('name')->get(['id', 'name']),
-            'statuses' => collect(CohortStatus::cases())->map(fn ($s) => [
-                'value' => $s->value,
-                'label' => $s->label(),
-            ]),
+            'statuses' => $this->statuses(withColor: false),
         ]);
     }
 
-    public function update(Request $request, Cohort $cohort): RedirectResponse
+    public function update(UpdateCohortRequest $request, Cohort $cohort): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'started_at' => ['required', 'date'],
-            'ended_at' => ['required', 'date', 'after:started_at'],
-            'status' => ['required', 'in:planifiee,en_cours,cloturee'],
-        ]);
-
-        $cohort->update($data);
+        $cohort->update($request->validated());
 
         return redirect()->route('campus.cohorts.index')
             ->with('success', 'Cohorte mise à jour.');
@@ -179,58 +129,13 @@ class CohortController extends Controller
             ->with('success', 'Cohorte supprimée.');
     }
 
-    public function storeLearner(
-        Request $request,
-        Cohort $cohort,
-        ApplyFormationPaymentPlanToLearner $applyPlan,
-    ): RedirectResponse {
-        if ($cohort->status === CohortStatus::Cloturee) {
-            return back()->withErrors(['cohort' => 'Impossible de modifier une cohorte clôturée.']);
-        }
-        $data = $request->validate([
-            'last_name' => ['required', 'string', 'max:100'],
-            'first_name' => ['required', 'string', 'max:100'],
-            'email' => ['nullable', 'email', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'gender' => ['nullable', 'in:male,female'],
-            'birth_date' => ['nullable', 'date'],
-            'education_level_id' => ['nullable', 'exists:education_levels,id'],
-            'emergency_contact_name' => ['nullable', 'string', 'max:100'],
-            'emergency_contact_firstname' => ['nullable', 'string', 'max:100'],
-            'emergency_contact_phone' => ['nullable', 'string', 'max:30'],
-            'photo' => ['nullable', 'image', 'max:2048'],
-        ]);
+    public function storeLearner(StoreCohortLearnerRequest $request, Cohort $cohort, CreateCohortLearner $action): RedirectResponse
+    {
+        ['learner' => $learner, 'created' => $created] = $action->execute($cohort, $request->validated(), $request->file('photo'));
 
-        // Si l'email existe déjà, on inscrit l'apprenant existant sans créer de doublon
-        if (! empty($data['email'])) {
-            $existing = Learner::where('email', $data['email'])->first();
-
-            if ($existing) {
-                $wasEnrolled = $cohort->learners()->where('learners.id', $existing->id)->exists();
-                $cohort->learners()->syncWithoutDetaching([
-                    $existing->id => ['enrolled_at' => now(), 'status' => 'actif'],
-                ]);
-                if (! $wasEnrolled) {
-                    $applyPlan->execute($cohort, $existing);
-                }
-
-                return back()->with('success', "L'apprenant {$existing->first_name} {$existing->last_name} existe déjà et a été inscrit dans la cohorte.");
-            }
-        }
-
-        if ($request->hasFile('photo')) {
-            $data['photo_path'] = $request->file('photo')->store('learners/photos', 'public');
-        }
-        unset($data['photo']);
-
-        $learner = Learner::create($data);
-
-        $cohort->learners()->syncWithoutDetaching([
-            $learner->id => ['enrolled_at' => now(), 'status' => 'actif'],
-        ]);
-        $applyPlan->execute($cohort, $learner);
-
-        return back()->with('success', 'Apprenant créé et inscrit dans la cohorte.');
+        return back()->with('success', $created
+            ? 'Apprenant créé et inscrit dans la cohorte.'
+            : "L'apprenant {$learner->first_name} {$learner->last_name} existe déjà et a été inscrit dans la cohorte.");
     }
 
     public function downloadImportTemplate(): BinaryFileResponse
@@ -238,82 +143,34 @@ class CohortController extends Controller
         return Excel::download(new CohortLearnerTemplateExport, 'modele_import_cohorte.xlsx');
     }
 
-    public function importLearners(Request $request, Cohort $cohort): RedirectResponse
+    public function importLearners(ImportCohortLearnersRequest $request, Cohort $cohort): RedirectResponse
     {
-        if ($cohort->status === CohortStatus::Cloturee) {
-            return back()->withErrors(['cohort' => 'Impossible de modifier une cohorte clôturée.']);
-        }
-        $request->validate([
-            'file' => ['required', 'file', 'mimes:xlsx,xls,csv', 'max:5120'],
-        ]);
-
         $import = new CohortLearnersImport($cohort);
 
         Excel::import($import, $request->file('file'));
 
-        $msg = "{$import->imported} apprenant(s) importé(s) et inscrit(s)";
+        $message = "{$import->imported} apprenant(s) importé(s) et inscrit(s)";
         if ($import->skipped > 0) {
-            $msg .= ", {$import->skipped} ignoré(s) (doublons ou données manquantes)";
+            $message .= ", {$import->skipped} ignoré(s) (doublons ou données manquantes)";
         }
 
-        return back()->with('success', $msg.'.');
+        return back()->with('success', $message.'.');
     }
 
-    public function enrollLearners(
-        Request $request,
-        Cohort $cohort,
-        ApplyFormationPaymentPlanToLearner $applyPlan,
-    ): RedirectResponse {
-        if ($cohort->status === CohortStatus::Cloturee) {
-            return back()->withErrors(['cohort' => 'Impossible de modifier une cohorte clôturée.']);
-        }
-        $request->validate([
-            'learner_ids' => ['required', 'array'],
-            'learner_ids.*' => ['uuid', 'exists:learners,id'],
-        ]);
-
-        $alreadyEnrolled = $cohort->learners()
-            ->whereIn('learners.id', $request->learner_ids)
-            ->pluck('learners.id')
-            ->all();
-
-        $cohort->learners()->syncWithoutDetaching(
-            collect($request->learner_ids)->mapWithKeys(fn ($id) => [
-                $id => ['enrolled_at' => now(), 'status' => 'actif'],
-            ])->all()
-        );
-
-        $newlyEnrolled = array_diff($request->learner_ids, $alreadyEnrolled);
-        foreach ($newlyEnrolled as $learnerId) {
-            $learner = Learner::find($learnerId);
-            if ($learner) {
-                $applyPlan->execute($cohort, $learner);
-            }
-        }
+    public function enrollLearners(EnrollCohortLearnersRequest $request, Cohort $cohort, EnrollCohortLearners $action): RedirectResponse
+    {
+        $action->execute($cohort, $request->validated('learner_ids'));
 
         return back()->with('success', 'Apprenants inscrits avec succès.');
     }
 
-    public function updateLearner(Request $request, Cohort $cohort, Learner $learner): RedirectResponse
+    public function updateLearner(UpdateCohortLearnerRequest $request, Cohort $cohort, Learner $learner): RedirectResponse
     {
-        $data = $request->validate([
-            'last_name' => ['required', 'string', 'max:100'],
-            'first_name' => ['required', 'string', 'max:100'],
-            'email' => ['nullable', 'email', 'max:255', 'unique:learners,email,'.$learner->id],
-            'phone' => ['nullable', 'string', 'max:30'],
-            'gender' => ['nullable', 'in:male,female'],
-            'birth_date' => ['nullable', 'date'],
-            'education_level_id' => ['nullable', 'exists:education_levels,id'],
-            'emergency_contact_name' => ['nullable', 'string', 'max:100'],
-            'emergency_contact_firstname' => ['nullable', 'string', 'max:100'],
-            'emergency_contact_phone' => ['nullable', 'string', 'max:30'],
-            'photo' => ['nullable', 'image', 'max:2048'],
-        ]);
+        $data = $request->safe()->except('photo');
 
         if ($request->hasFile('photo')) {
             $data['photo_path'] = $request->file('photo')->store('learners/photos', 'public');
         }
-        unset($data['photo']);
 
         $learner->update($data);
 
@@ -322,33 +179,14 @@ class CohortController extends Controller
 
     public function removeLearner(Cohort $cohort, Learner $learner): RedirectResponse
     {
-        if ($cohort->status === CohortStatus::Cloturee) {
-            return back()->withErrors(['cohort' => 'Impossible de modifier une cohorte clôturée.']);
-        }
-
         $cohort->learners()->detach($learner->id);
 
         return back()->with('success', 'Apprenant retiré de la cohorte.');
     }
 
-    public function abandonLearner(
-        Request $request,
-        Cohort $cohort,
-        Learner $learner,
-        AbandonCohortLearner $action,
-    ): RedirectResponse {
-        if ($cohort->status === CohortStatus::Cloturee) {
-            return back()->withErrors(['cohort' => 'Impossible de modifier une cohorte clôturée.']);
-        }
-
-        $data = $request->validate([
-            'abandon_motif' => ['required', 'string', 'max:500'],
-        ], [
-            'abandon_motif.required' => 'Le motif de l\'abandon est obligatoire.',
-            'abandon_motif.max' => 'Le motif ne peut pas dépasser 500 caractères.',
-        ]);
-
-        $action->execute($cohort, $learner, $data['abandon_motif']);
+    public function abandonLearner(AbandonCohortLearnerRequest $request, Cohort $cohort, Learner $learner, AbandonCohortLearner $action): RedirectResponse
+    {
+        $action->execute($cohort, $learner, $request->validated('abandon_motif'));
 
         return back()->with(
             'success',
@@ -356,109 +194,46 @@ class CohortController extends Controller
         );
     }
 
-    public function removeLearners(Request $request, Cohort $cohort): RedirectResponse
+    public function removeLearners(RemoveCohortLearnersRequest $request, Cohort $cohort): RedirectResponse
     {
-        if ($cohort->status === CohortStatus::Cloturee) {
-            return back()->withErrors(['cohort' => 'Impossible de modifier une cohorte clôturée.']);
-        }
-        $request->validate([
-            'learner_ids' => ['required', 'array', 'min:1'],
-            'learner_ids.*' => ['uuid', 'exists:learners,id'],
-        ]);
+        $learnerIds = $request->validated('learner_ids');
 
-        $cohort->learners()->detach($request->learner_ids);
+        $cohort->learners()->detach($learnerIds);
 
-        $count = count($request->learner_ids);
-
-        return back()->with('success', "{$count} apprenant(s) retiré(s) de la cohorte.");
+        return back()->with('success', count($learnerIds).' apprenant(s) retiré(s) de la cohorte.');
     }
 
-    public function close(Cohort $cohort): RedirectResponse
+    public function close(Cohort $cohort, CloseCohort $action): RedirectResponse
     {
-        if ($cohort->status === CohortStatus::Cloturee) {
-            return back()->withErrors(['cohort' => 'Cette cohorte est déjà clôturée.']);
-        }
-
-        DB::table('cohort_learner')
-            ->where('cohort_id', $cohort->id)
-            ->where('status', 'actif')
-            ->update(['status' => 'diplome']);
-
-        $cohort->update(['status' => CohortStatus::Cloturee]);
+        $action->execute($cohort);
 
         return redirect()->route('campus.cohorts.show', $cohort)
             ->with('success', 'Cohorte clôturée. Les apprenants actifs ont été marqués « Formation terminée ».');
     }
 
-    public function moveLearner(Request $request, Cohort $cohort, Learner $learner): RedirectResponse
+    public function moveLearner(MoveCohortLearnerRequest $request, Cohort $cohort, Learner $learner, MoveCohortLearner $action): RedirectResponse
     {
-        $data = $request->validate([
-            'target_cohort_id' => ['required', 'uuid', 'exists:cohorts,id'],
-        ]);
+        $target = Cohort::findOrFail($request->validated('target_cohort_id'));
 
-        if ($data['target_cohort_id'] === $cohort->id) {
-            return back()->withErrors(['target_cohort_id' => 'La cohorte cible doit être différente de la cohorte source.']);
-        }
+        ['transferred' => $transferred, 'cancelled' => $cancelled] = $action->execute($cohort, $learner, $target);
 
-        $pivot = DB::table('cohort_learner')
-            ->where('cohort_id', $cohort->id)
-            ->where('learner_id', $learner->id)
-            ->first();
-
-        if (! $pivot || $pivot->status !== 'actif') {
-            return back()->withErrors(['learner' => 'Cet apprenant n\'est pas actif dans cette cohorte.']);
-        }
-
-        $targetCohort = Cohort::findOrFail($data['target_cohort_id']);
-
-        if ($targetCohort->status === CohortStatus::Cloturee) {
-            return back()->withErrors(['target_cohort_id' => 'La cohorte cible est clôturée.']);
-        }
-
-        // Mark deplace in source cohort
-        DB::table('cohort_learner')
-            ->where('cohort_id', $cohort->id)
-            ->where('learner_id', $learner->id)
-            ->update(['status' => 'deplace']);
-
-        // Enroll as actif in target cohort (ignore if already present)
-        DB::table('cohort_learner')->insertOrIgnore([
-            'cohort_id' => $targetCohort->id,
-            'learner_id' => $learner->id,
-            'enrolled_at' => now(),
-            'status' => 'actif',
-        ]);
-
-        // Transfer only paid payments - they represent real money received
-        $transferred = Payment::where('cohort_id', $cohort->id)
-            ->where('learner_id', $learner->id)
-            ->where('status', 'paye')
-            ->count();
-
-        Payment::where('cohort_id', $cohort->id)
-            ->where('learner_id', $learner->id)
-            ->where('status', 'paye')
-            ->update(['cohort_id' => $targetCohort->id]);
-
-        // Cancel pending/overdue installments - amounts were sized for the old formation
-        $cancelled = Payment::where('cohort_id', $cohort->id)
-            ->where('learner_id', $learner->id)
-            ->whereIn('status', ['en_attente', 'en_retard'])
-            ->count();
-
-        Payment::where('cohort_id', $cohort->id)
-            ->where('learner_id', $learner->id)
-            ->whereIn('status', ['en_attente', 'en_retard'])
-            ->update(['status' => 'annule']);
-
-        $msg = "{$learner->first_name} {$learner->last_name} déplacé vers « {$targetCohort->name} ».";
+        $message = "{$learner->first_name} {$learner->last_name} déplacé vers « {$target->name} ».";
         if ($transferred > 0) {
-            $msg .= " {$transferred} versement(s) transféré(s).";
+            $message .= " {$transferred} versement(s) transféré(s).";
         }
         if ($cancelled > 0) {
-            $msg .= " {$cancelled} tranche(s) en attente annulée(s) (à replanifier dans la nouvelle cohorte).";
+            $message .= " {$cancelled} tranche(s) en attente annulée(s) (à replanifier dans la nouvelle cohorte).";
         }
 
-        return back()->with('success', $msg);
+        return back()->with('success', $message);
+    }
+
+    private function statuses(bool $withColor): Collection
+    {
+        return collect(CohortStatus::cases())->map(fn (CohortStatus $status) => [
+            'value' => $status->value,
+            'label' => $status->label(),
+            ...($withColor ? ['color' => $status->color()] : []),
+        ]);
     }
 }

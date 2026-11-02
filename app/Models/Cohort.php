@@ -25,10 +25,13 @@ class Cohort extends Model
 
     protected $casts = [
         'started_at' => 'date',
-        'ended_at'   => 'date',
-        'status'     => CohortStatus::class,
+        'ended_at' => 'date',
+        'status' => CohortStatus::class,
     ];
 
+    /**
+     * @return BelongsTo<CampusFormation, $this>
+     */
     public function campusFormation(): BelongsTo
     {
         return $this->belongsTo(CampusFormation::class);
@@ -45,6 +48,9 @@ class Cohort extends Model
         return $this->learners()->wherePivot('status', 'actif');
     }
 
+    /**
+     * @return HasMany<Payment, $this>
+     */
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
@@ -59,6 +65,7 @@ class Cohort extends Model
     public function getTotalExpectedAttribute(): int
     {
         $this->loadMissing(['campusFormation' => fn ($q) => $q->withTrashed()]);
+
         return $this->activeLearners()->count() * ($this->campusFormation?->total_cost ?? 0);
     }
 

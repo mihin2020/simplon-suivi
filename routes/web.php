@@ -183,19 +183,19 @@ Route::middleware('auth')->group(function () {
                 Route::patch('cohorts/{cohort}', [CohortController::class, 'update']);
                 Route::delete('cohorts/{cohort}', [CohortController::class, 'destroy'])->name('cohorts.destroy');
                 Route::patch('cohorts/{cohort}/close', [CohortController::class, 'close'])->name('cohorts.close');
-                Route::post('cohorts/{cohort}/import', [CohortController::class, 'importLearners'])->name('cohorts.import');
+                Route::post('cohorts/{cohort}/import', [CohortController::class, 'importLearners'])->middleware('cohort.open')->name('cohorts.import');
             });
 
         // ── Workforce - gestion des apprenants dans les cohortes ─────────────
         // Séparé : avoir workforce ne donne PAS accès à la gestion des cohortes
         Route::middleware('permission:campus.workforce.view,campus.workforce.enroll,campus.workforce.remove,campus.workforce.move')
             ->group(function () {
-                Route::post('cohorts/{cohort}/enroll', [CohortController::class, 'enrollLearners'])->name('cohorts.enroll');
-                Route::post('cohorts/{cohort}/learners', [CohortController::class, 'storeLearner'])->name('cohorts.learners.store');
+                Route::post('cohorts/{cohort}/enroll', [CohortController::class, 'enrollLearners'])->middleware('cohort.open')->name('cohorts.enroll');
+                Route::post('cohorts/{cohort}/learners', [CohortController::class, 'storeLearner'])->middleware('cohort.open')->name('cohorts.learners.store');
                 Route::post('cohorts/{cohort}/learners/{learner}', [CohortController::class, 'updateLearner'])->name('cohorts.learners.update');
-                Route::delete('cohorts/{cohort}/learners/{learner}', [CohortController::class, 'removeLearner'])->name('cohorts.learners.remove');
-                Route::post('cohorts/{cohort}/learners/{learner}/abandon', [CohortController::class, 'abandonLearner'])->name('cohorts.learners.abandon');
-                Route::delete('cohorts/{cohort}/learners', [CohortController::class, 'removeLearners'])->name('cohorts.learners.remove-bulk');
+                Route::delete('cohorts/{cohort}/learners/{learner}', [CohortController::class, 'removeLearner'])->middleware('cohort.open')->name('cohorts.learners.remove');
+                Route::post('cohorts/{cohort}/learners/{learner}/abandon', [CohortController::class, 'abandonLearner'])->middleware('cohort.open')->name('cohorts.learners.abandon');
+                Route::delete('cohorts/{cohort}/learners', [CohortController::class, 'removeLearners'])->middleware('cohort.open')->name('cohorts.learners.remove-bulk');
                 Route::post('cohorts/{cohort}/learners/{learner}/move', [CohortController::class, 'moveLearner'])->name('cohorts.learners.move');
             });
 
