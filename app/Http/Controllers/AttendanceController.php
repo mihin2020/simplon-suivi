@@ -71,7 +71,8 @@ class AttendanceController extends Controller
 
     public function recap(AttendanceRecapRequest $request, Formation $formation, AttendanceService $service): Response
     {
-        $period = $service->period($formation, $request->recapView(RecapView::Week), $request->validated('anchor'));
+        $courseDays = $service->courseDays($formation);
+        $period = $service->period($formation, $request->recapView(RecapView::Week), $request->validated('anchor'), $courseDays);
 
         return Inertia::render('Attendances/Index', [
             ...$this->sharedProps($formation),
@@ -91,7 +92,7 @@ class AttendanceController extends Controller
                     'anchor' => $period->from->toDateString(),
                 ] : null,
                 ...($period
-                    ? $service->recap($formation, $period->from, $period->to)
+                    ? $service->recap($formation, $period->from, $period->to, $courseDays)
                     : ['days' => [], 'weeks' => [], 'rows' => [], 'dayStats' => [], 'reasons' => []]),
             ],
         ]);

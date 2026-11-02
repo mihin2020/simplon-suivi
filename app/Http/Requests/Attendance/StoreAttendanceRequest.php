@@ -4,8 +4,10 @@ namespace App\Http\Requests\Attendance;
 
 use App\Enums\AttendanceCode;
 use App\Models\Attendance;
+use App\Services\AttendanceService;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
 
 class StoreAttendanceRequest extends FormRequest
@@ -29,13 +31,18 @@ class StoreAttendanceRequest extends FormRequest
     {
         return [
             function (Validator $validator) {
+                $formation = $this->route('formation');
                 $learnerIds = array_keys((array) $this->input('records', []));
-                $enrolled = $this->route('formation')->learners()
-                    ->whereIn('learners.id', $learnerIds)
-                    ->count();
+
+                $enrolled = $formation->learners()->whereIn('learners.id', $learnerIds)->count();
 
                 if ($enrolled !== count($learnerIds)) {
                     $validator->errors()->add('records', "Un apprenant n'est pas inscrit à cette formation.");
+                }
+
+                if ($this->input('date') && ! $validator->errors()->has('date')
+                    && ! app(AttendanceService::class)->isWithinFormation($formation, Carbon::parse($this->input('date')))) {
+                    $validator->errors()->add('date', 'Cette date est en dehors de la période de la formation.');
                 }
             },
         ];

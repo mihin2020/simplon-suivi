@@ -218,4 +218,64 @@ class AttendanceTest extends TestCase
             ->postJson(route('attendances.store-single', $this->formation), $payload)
             ->assertOk();
     }
+
+    public function test_day_strip_ignores_withdrawn_learners_records(): void
+    {
+        $a = $this->enroll('Awa', 'Zongo');
+        $this->enroll('Zacharie', 'Bambara');
+        $gone = $this->enroll('Moussa', 'Ouedraogo');
+        $this->actingAsSuperAdmin();
+        $url = route('attendances.store-single', $this->formation);
+
+        foreach ([$a, $gone] as $learner) {
+            $this->postJson($url, ['learner_id' => $learner->id, 'date' => '2026-10-13', 'code' => 'P'])->assertOk();
+        }
+        $this->formation->learners()->updateExistingPivot($gone->id, ['status' => LearnerStatus::Withdrawn->value, 'withdrawn_at' => '2026-10-14']);
+
+        $this->get(route('attendances.index', ['formation' => $this->formation, 'date' => '2026-10-13']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('dayStrip.6.date', '2026-10-13')
+                ->where('dayStrip.6.state', 'partial')
+                ->etc());
+    }
+
+    public function test_recap_keeps_history_of_withdrawn_learner(): void
+    {
+        $this->enroll('Awa', 'Zongo');
+        $gone = $this->enroll('Moussa', 'Ouedraogo');
+        $this->actingAsSuperAdmin();
+        $this->postJson(route('attendances.store-single', $this->formation), ['learner_id' => $gone->id, 'date' => '2026-10-06', 'code' => 'P'])->assertOk();
+        $this->formation->learners()->updateExistingPivot($gone->id, ['status' => LearnerStatus::Withdrawn->value, 'withdrawn_at' => '2026-10-07']);
+
+        $this->get(route('attendances.recap', ['formation' => $this->formation, 'view' => 'all']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('recap.rows.0.name', 'OUEDRAOGO Moussa')
+                ->where('recap.rows.0.recorded', 1)
+                ->where('recap.rows.0.expected', 3)
+                ->etc());
+    }
+
+    public function test_date_outside_formation_period_is_rejected(): void
+    {
+        $learner = $this->enroll('Awa', 'Zongo');
+        $this->actingAsSuperAdmin();
+
+        $this->postJson(route('attendances.store-single', $this->formation), ['learner_id' => $learner->id, 'date' => '2026-09-28', 'code' => 'P'])
+            ->assertUnprocessable()->assertJsonValidationErrors('date');
+
+        $this->post(route('attendances.store', $this->formation), ['date' => '2026-09-28', 'records' => [$learner->id => ['code' => 'P']]])
+            ->assertSessionHasErrors('date');
+    }
+
+    public function test_week_view_includes_exceptional_saturday(): void
+    {
+        $learner = $this->enroll('Awa', 'Zongo');
+        $this->actingAsSuperAdmin();
+        $this->postJson(route('attendances.store-single', $this->formation), ['learner_id' => $learner->id, 'date' => '2026-10-10', 'code' => 'P'])->assertOk();
+
+        $this->get(route('attendances.recap', ['formation' => $this->formation, 'view' => 'week', 'anchor' => '2026-10-07']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('recap.rows.0.days.2026-10-10.code', 'P')
+                ->etc());
+    }
 }

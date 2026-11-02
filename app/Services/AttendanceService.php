@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\AttendanceCode;
 use App\Enums\DayType;
+use App\Enums\LearnerStatus;
 use App\Enums\RecapView;
 use App\Models\Formation;
 use App\Models\Learner;
@@ -63,10 +64,14 @@ class AttendanceService
             return DayType::Weekend;
         }
 
-        $outside = ($formation->started_at && $date->lt($formation->started_at))
-            || ($formation->ended_at && $date->gt($formation->ended_at));
+        return $this->isWithinFormation($formation, $date) ? DayType::Course : DayType::OutsidePeriod;
+    }
 
-        return $outside ? DayType::OutsidePeriod : DayType::Course;
+    /** Weekends stay allowed (exceptional class); only dates outside the formation period are refused. */
+    public function isWithinFormation(Formation $formation, Carbon $date): bool
+    {
+        return ! (($formation->started_at && $date->lt($formation->started_at))
+            || ($formation->ended_at && $date->gt($formation->ended_at)));
     }
 
     /** Date from which the learner counts in the attendance sheets (null = since the start). */
@@ -75,6 +80,39 @@ class AttendanceService
         $enrolledAt = $learner->pivot?->enrolled_at;
 
         return $enrolledAt ? Carbon::parse($enrolledAt)->toDateString() : null;
+    }
+
+    /**
+     * Last day the learner counts in the sheets: null while in progress, false when they left
+     * without a known date (only the days actually recorded then count).
+     */
+    public function enrolledUntil(Learner $learner): string|false|null
+    {
+        if ($learner->pivot?->status === LearnerStatus::InProgress->value) {
+            return null;
+        }
+
+        $left = $learner->pivot?->withdrawn_at ?? $learner->pivot?->completed_at;
+
+        return $left ? Carbon::parse($left)->toDateString() : false;
+    }
+
+    /**
+     * Learners of the recap: those in progress plus those who left but have days recorded in the
+     * period, so the attendance history stays visible.
+     *
+     * @return Collection<int, Learner>
+     */
+    private function recapLearners(Formation $formation, Carbon $from, Carbon $to): Collection
+    {
+        return $formation->learners()
+            ->where(function ($query) use ($formation, $from, $to) {
+                $query->where('formation_learner.status', LearnerStatus::InProgress->value)
+                    ->orWhereIn('learners.id', $formation->attendances()->toBase()->whereBetween('date', [$from->toDateString(), $to->toDateString()])->select('learner_id'));
+            })
+            ->orderBy('learners.last_name')
+            ->orderBy('learners.first_name')
+            ->get();
     }
 
     /**
@@ -118,10 +156,14 @@ class AttendanceService
     {
         $learners = $this->orderedLearners($formation);
 
+        // An aggregate cannot be expressed without a raw select; it takes no user input.
         $recordedPerDay = $formation->attendances()
             ->toBase()
-            ->pluck('date')
-            ->countBy(fn ($date) => substr((string) $date, 0, 10));
+            ->whereIn('learner_id', $learners->modelKeys())
+            ->selectRaw('date, count(*) as total')
+            ->groupBy('date')
+            ->pluck('total', 'date')
+            ->mapWithKeys(fn ($total, $date) => [substr((string) $date, 0, 10) => (int) $total]);
 
         $enrolledFrom = $learners->map(fn (Learner $learner) => $this->enrolledFrom($learner));
 
@@ -140,9 +182,9 @@ class AttendanceService
     }
 
     /** Null when the formation has no course day yet. */
-    public function period(Formation $formation, RecapView $view, ?string $anchor): ?AttendancePeriod
+    public function period(Formation $formation, RecapView $view, ?string $anchor, ?Collection $courseDays = null): ?AttendancePeriod
     {
-        $days = $this->courseDays($formation);
+        $days = $courseDays ?? $this->courseDays($formation);
 
         if ($days->isEmpty()) {
             return null;
@@ -156,13 +198,13 @@ class AttendanceService
      *
      * @return array<string, mixed>
      */
-    public function recap(Formation $formation, Carbon $from, Carbon $to): array
+    public function recap(Formation $formation, Carbon $from, Carbon $to, ?Collection $courseDays = null): array
     {
-        $days = $this->courseDays($formation)
+        $days = ($courseDays ?? $this->courseDays($formation))
             ->filter(fn (string $day) => $day >= $from->toDateString() && $day <= $to->toDateString())
             ->values();
 
-        $learners = $this->orderedLearners($formation);
+        $learners = $this->recapLearners($formation, $from, $to);
 
         $attendances = $formation->attendances()
             ->whereBetween('date', [$from->toDateString(), $to->toDateString()])
@@ -174,6 +216,7 @@ class AttendanceService
 
         $rows = $learners->map(function (Learner $learner) use ($days, $attendances, &$dayStats) {
             $enrolledFrom = $this->enrolledFrom($learner);
+            $enrolledUntil = $this->enrolledUntil($learner);
             $own = $attendances->get($learner->id, collect());
             $counts = array_fill_keys(array_column(AttendanceCode::cases(), 'value'), 0);
             $cells = [];
@@ -183,7 +226,8 @@ class AttendanceService
 
             foreach ($days as $day) {
                 $attendance = $own->get($day);
-                $enrolled = $enrolledFrom === null || $enrolledFrom <= $day || $attendance !== null;
+                $enrolled = $attendance !== null
+                    || (($enrolledFrom === null || $enrolledFrom <= $day) && ($enrolledUntil === false || $enrolledUntil === null || $day <= $enrolledUntil));
 
                 $cells[$day] = [
                     'enrolled' => $enrolled,

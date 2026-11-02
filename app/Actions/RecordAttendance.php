@@ -7,6 +7,7 @@ use App\Models\Attendance;
 use App\Models\Formation;
 use App\Models\User;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class RecordAttendance
 {
@@ -17,22 +18,24 @@ class RecordAttendance
      */
     public function execute(Formation $formation, Carbon $date, array $records, User $recorder): void
     {
-        foreach ($records as $learnerId => $record) {
-            $code = AttendanceCode::from($record['code']);
-            $comment = isset($record['comment']) ? trim($record['comment']) : null;
+        DB::transaction(function () use ($formation, $date, $records, $recorder) {
+            foreach ($records as $learnerId => $record) {
+                $code = AttendanceCode::from($record['code']);
+                $comment = isset($record['comment']) ? trim($record['comment']) : null;
 
-            Attendance::updateOrCreate(
-                [
-                    'formation_id' => $formation->id,
-                    'learner_id' => $learnerId,
-                    'date' => $date->toDateString(),
-                ],
-                [
-                    'code' => $code->value,
-                    'comment' => $code->acceptsReason() && $comment !== '' ? $comment : null,
-                    'recorded_by' => $recorder->id,
-                ]
-            );
-        }
+                Attendance::updateOrCreate(
+                    [
+                        'formation_id' => $formation->id,
+                        'learner_id' => $learnerId,
+                        'date' => $date->toDateString(),
+                    ],
+                    [
+                        'code' => $code->value,
+                        'comment' => $code->acceptsReason() && $comment !== '' ? $comment : null,
+                        'recorded_by' => $recorder->id,
+                    ]
+                );
+            }
+        });
     }
 }

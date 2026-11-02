@@ -35,8 +35,9 @@ final class AttendancePeriod
 
         if ($view === RecapView::Week) {
             $from = $reference->copy()->startOfWeek(Carbon::MONDAY);
-            $to = $from->copy()->addDays(4);
-            $label = 'Semaine du '.$from->locale('fr')->isoFormat('D MMM').' au '.$to->locale('fr')->isoFormat('D MMM YYYY');
+            // The range runs to Sunday so exceptional weekend classes stay in the recap.
+            $to = $from->copy()->addDays(6);
+            $label = 'Semaine du '.$from->locale('fr')->isoFormat('D MMM').' au '.$from->copy()->addDays(4)->locale('fr')->isoFormat('D MMM YYYY');
             $prev = $from->copy()->subWeek();
             $next = $from->copy()->addWeek();
         } else {
